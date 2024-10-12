@@ -1,0 +1,11 @@
+[package]
+name = "ming-os-kernel"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+blake2 = { version = "0.10.6", default-features = false }
+linux_framebuffer = { package = "framebuffer", version = "0.3.1" }
+bmp-rust = "0.4.1"
