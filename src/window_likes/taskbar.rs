@@ -8,7 +8,6 @@ use crate::framebuffer::Dimensions;
 use crate::themes::ThemeInfo;
 use crate::components::Component;
 use crate::components::toggle_button::{ ToggleButton, ToggleButtonAlignment };
-use crate::window_likes::start_menu::StartMenu;
 
 const PADDING: usize = 4;
 const META_WIDTH: usize = 175; //of the window button

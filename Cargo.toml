@@ -9,3 +9,4 @@ edition = "2018"
 blake2 = { version = "0.10.6", default-features = false }
 linux_framebuffer = { package = "framebuffer", version = "0.3.1" }
 bmp-rust = "0.4.1"
+termion = "4.0.3"

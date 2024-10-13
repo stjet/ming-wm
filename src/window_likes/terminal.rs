@@ -1,5 +1,9 @@
 use std::vec::Vec;
 use std::vec;
+use std::process::{ Command, Output };
+use std::str::from_utf8;
+use std::path::PathBuf;
+use std::io;
 
 use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType, WINDOW_TOP_HEIGHT };
 use crate::messages::{ WindowMessage, WindowMessageResponse };
@@ -10,6 +14,11 @@ const MONO_WIDTH: u8 = 8;
 const LINE_HEIGHT: usize = 15;
 const PADDING: usize = 4;
 
+enum CommandResponse {
+  ActualCommand(io::Result<Output>),
+  Custom,
+}
+
 #[derive(Default)]
 pub struct Terminal {
   dimensions: Dimensions,
@@ -17,6 +26,7 @@ pub struct Terminal {
   actual_lines: Vec<String>, //wrapping
   actual_line_num: usize, //what line # is at the top, for scrolling
   current_input: String,
+  current_path: String,
 }
 
 //for some reason key presses, then moving the window leaves the old window still there, behind it. weird
@@ -26,13 +36,40 @@ impl WindowLike for Terminal {
     match message {
       WindowMessage::Init(dimensions) => {
         self.dimensions = dimensions;
+        self.current_path = "/".to_string();
         self.lines = vec!["Mingde Terminal".to_string(), "".to_string()];
         self.calc_actual_lines();
         WindowMessageResponse::JustRerender
       },
       WindowMessage::KeyPress(key_press) => {
-        self.current_input += &key_press.key.to_string();
+        if key_press.key == '𐘁' { //backspace
+          if self.current_input.len() > 0 {
+            self.current_input = self.current_input[..self.current_input.len() - 1].to_string();
+          } else {
+            return WindowMessageResponse::DoNothing;
+          }
+        } else if key_press.key == '𐘂' { //the enter key
+          self.lines.push("$ ".to_string() + &self.current_input);
+          if let CommandResponse::ActualCommand(maybe_output) = self.process_command() {
+            if let Ok(output) = maybe_output {
+              let write_output = if output.status.success() {
+                output.stdout
+              } else {
+                output.stderr
+              };
+              for line in from_utf8(&write_output).unwrap_or("Failed to parse process output as utf-8").split("\n") {
+                self.lines.push(line.to_string());
+              }
+            } else {
+              self.lines.push("Failed to execute process".to_string());
+            }
+          }
+          self.current_input = String::new();
+        } else {
+          self.current_input += &key_press.key.to_string();
+        }
         self.calc_actual_lines();
+        self.actual_line_num = self.actual_lines.len().checked_sub(self.get_max_lines()).unwrap_or(0);
         WindowMessageResponse::JustRerender
       },
       WindowMessage::ChangeDimensions(dimensions) => {
@@ -50,7 +87,7 @@ impl WindowLike for Terminal {
       //
     ];
     //add the visible lines of text
-    let end_line = self.actual_line_num + (self.dimensions[1] - WINDOW_TOP_HEIGHT- PADDING * 2) / LINE_HEIGHT;
+    let end_line = self.actual_line_num + self.get_max_lines();
     let mut text_y = WINDOW_TOP_HEIGHT + PADDING;
     for line_num in self.actual_line_num..end_line {
       if line_num == self.actual_lines.len() {
@@ -83,6 +120,49 @@ impl WindowLike for Terminal {
 impl Terminal {
   pub fn new() -> Self {
     Default::default()
+  }
+
+  fn get_max_lines(&self) -> usize {
+    (self.dimensions[1] - WINDOW_TOP_HEIGHT- PADDING * 2) / LINE_HEIGHT
+  }
+
+  fn process_command(&mut self) -> CommandResponse {
+    if self.current_input.starts_with("clear ") || self.current_input == "clear" {
+      self.lines = Vec::new();
+      CommandResponse::Custom
+    } else if self.current_input.starts_with("cd ") {
+      let mut cd_split = self.current_input.split(" ");
+      cd_split.next().unwrap();
+      let mut failed = false;
+      let arg = cd_split.next().unwrap();
+      let mut new_path = PathBuf::from(&self.current_path);
+      if arg.starts_with("/") {
+        //absolute path
+        new_path = PathBuf::from(arg);
+      } else {
+        //relative path
+        for part in arg.split("/") {
+          if part == ".." {
+            if let Some(parent) = new_path.parent() {
+              new_path = parent.to_path_buf();
+            } else {
+              failed = true;
+            }
+          } else {
+            new_path.push(part);
+          }
+        }
+      }
+      if !failed {
+        //see if path exists
+        if new_path.exists() {
+          self.current_path = new_path.to_str().unwrap().to_string();
+        }
+      }
+      CommandResponse::Custom
+    } else {
+      CommandResponse::ActualCommand(Command::new("sh").arg("-c").arg(&self.current_input).current_dir(&self.current_path).output())
+    }
   }
 
   fn calc_actual_lines(&mut self) {

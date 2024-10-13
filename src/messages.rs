@@ -46,7 +46,6 @@ pub enum WindowMessageResponse {
 
 pub struct KeyPress {
   pub key: char,
-  pub held_special_keys: Vec<&'static str>,
   //
 }
 

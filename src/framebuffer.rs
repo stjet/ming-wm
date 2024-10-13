@@ -42,9 +42,9 @@ pub struct FramebufferWriter {
 }
 
 impl FramebufferWriter {
-  pub fn init(&mut self, info: FramebufferInfo, buffer: Vec<u8>) {
+  pub fn init(&mut self, info: FramebufferInfo, buffer_length: usize) {
     self.info = info;
-    self.buffer = buffer;
+    self.buffer = vec![0; buffer_length];
   }
   
   pub fn get_info(&self) -> FramebufferInfo {
@@ -65,6 +65,7 @@ impl FramebufferWriter {
   }
 
   fn _draw_pixel(&mut self, start_pos: usize, color: RGBColor) {
+    let color = [color[2], color[1], color[0]];
     self.buffer[start_pos..(start_pos + 3)]
       .copy_from_slice(&color[..]);
   }
@@ -109,29 +110,16 @@ impl FramebufferWriter {
     self._draw_pixel(start_pos, color);
   }
   
-  //(lines are rectangles of height 1)
-  pub fn draw_line(&mut self, left: Point, width: usize, color: RGBColor) {
-    self.draw_rect(left, [width, 1], color);
-  }
-
   //shapes
 
   pub fn draw_rect(&mut self, top_left: Point, dimensions: Dimensions, color: RGBColor) {
     let line_bytes = if self.info.bytes_per_pixel > 3 {
-      [color[0], color[1], color[2], 255].repeat(dimensions[0])
+      [color[2], color[1], color[0], 255].repeat(dimensions[0])
     } else {
       color.repeat(dimensions[0])
     };
     let mut start_pos = (top_left[1] * self.info.stride + top_left[0]) * self.info.bytes_per_pixel;
     for _row in 0..dimensions[1] {
-      /*
-       * for _col in 0..dimensions[0] {
-        self._draw_pixel(start_pos, color);
-        start_pos += self.info.bytes_per_pixel;
-      }
-      //assumes stride is same as bytes_per_pixel * width
-      //start_pos = start_pos + top_left[0] * self.info.bytes_per_pixel;
-      */
       //use _draw_line instead for MUCH more efficiency
       self._draw_line(start_pos, &line_bytes[..]);
       start_pos += self.info.stride * self.info.bytes_per_pixel;
@@ -157,7 +145,7 @@ impl FramebufferWriter {
           color = [(start_color[0] as f32 + (delta_r * s as f32)) as u8, (start_color[1] as f32 + (delta_g * s as f32)) as u8, (start_color[2] as f32 + (delta_b * s as f32)) as u8];
         };
         let line_bytes = if self.info.bytes_per_pixel > 3 {
-          [color[0], color[1], color[2], 255].repeat(dimensions[0])
+          [color[2], color[1], color[0], 255].repeat(dimensions[0])
         } else {
           color.repeat(dimensions[0])
         };

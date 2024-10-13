@@ -1,9 +1,9 @@
 use std::fs::read_dir;
-use std::path::Path;
 
 use bmp_rust::bmp::BMP;
 
 pub fn get_font_char(dir: &str, c: char) -> Option<(char, Vec<Vec<u8>>, u8)> {
+  let c = if c == '/' { '𐘋' } else { c };
   let mut font: Vec<(char, Vec<Vec<u8>>, u8)> = Vec::new();
   for entry in read_dir(dir).unwrap() {
     let path = entry.unwrap().path();

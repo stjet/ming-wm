@@ -3,9 +3,14 @@ use std::vec;
 use std::collections::HashMap;
 use std::fmt;
 use std::boxed::Box;
+use std::sync::{ LazyLock, Mutex };
+use std::io::{ stdin, stdout, Write };
+use std::process::exit;
 
 use linux_framebuffer::Framebuffer;
-use std::sync::{ LazyLock, Mutex };
+use termion::input::TermRead;
+use termion::raw::IntoRawMode;
+use termion::cursor;
 
 use crate::framebuffer::{ FramebufferWriter, FramebufferInfo, Point, Dimensions, RGBColor };
 use crate::window_likes::desktop_background::DesktopBackground;
@@ -13,7 +18,7 @@ use crate::window_likes::taskbar::Taskbar;
 use crate::window_likes::lock_screen::LockScreen;
 use crate::window_likes::workspace_indicator::WorkspaceIndicator;
 use crate::themes::{ ThemeInfo, Themes, get_theme_info };
-use crate::keyboard::{ KeyChar, uppercase_or_special };
+use crate::keyboard::{ KeyChar, key_to_char };
 use crate::messages::*;
 
 use crate::window_likes::start_menu::StartMenu;
@@ -26,17 +31,32 @@ pub const WINDOW_TOP_HEIGHT: usize = 26;
 
 static WRITER: LazyLock<Mutex<FramebufferWriter>> = LazyLock::new(|| Mutex::new(Default::default()));
 
-//todo: close start menu if window focus next shortcut done
-
 pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
   let dimensions = [framebuffer_info.width, framebuffer_info.height];
 
-  let mut temp_vec = vec![0 as u8; framebuffer_info.height * framebuffer_info.stride * framebuffer_info.bytes_per_pixel];
-  WRITER.lock().unwrap().init(framebuffer_info.clone(), temp_vec);
+  WRITER.lock().unwrap().init(framebuffer_info.clone(), framebuffer_info.height * framebuffer_info.stride * framebuffer_info.bytes_per_pixel);
 
   let mut wm: WindowManager = WindowManager::new(framebuffer, dimensions);
 
   wm.render(None, false);
+
+  let stdin = stdin().lock();
+  let mut stdout = stdout().into_raw_mode().unwrap();
+
+  write!(stdout, "{}", cursor::Hide).unwrap();
+  stdout.flush().unwrap();
+
+  for c in stdin.keys() {
+    if let Some(kc) = key_to_char(c.unwrap()) {
+      if kc == KeyChar::Alt('e') {
+        write!(stdout, "{}", cursor::Show).unwrap();
+        stdout.suspend_raw_mode().unwrap();
+        exit(0);
+      } else {
+        wm.handle_message(WindowManagerMessage::KeyChar(kc.clone()));
+      }
+    }
+  }
 
   //
 }
@@ -44,19 +64,6 @@ pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
 pub fn min(one: usize, two: usize) -> usize {
   if one > two { two } else { one } 
 }
-
-/*
-pub fn keyboard_emit(key_char: KeyChar) {
-  let mut kc = key_char;
-  if let KeyChar::Press(c) = kc {
-    if WM.lock().held_special_keys.contains(&"shift") {
-      kc = KeyChar::Press(uppercase_or_special(c));
-    }
-  }
-  //unsafe { SERIAL1.lock().write_text(&format!("{:?}", &kc)); }
-  WM.lock().handle_message(WindowManagerMessage::KeyChar(kc));
-}
-*/
 
 #[derive(Debug)]
 pub enum DrawInstructions {
@@ -119,7 +126,6 @@ pub struct WindowManager {
   dimensions: Dimensions,
   theme: Themes,
   focused_id: usize,
-  held_special_keys: Vec<&'static str>,
   locked: bool,
   current_workspace: u8,
   framebuffer: Framebuffer,
@@ -135,7 +141,6 @@ impl WindowManager {
       dimensions,
       theme: Themes::Standard,
       focused_id: 0,
-      held_special_keys: Vec::new(),
       locked: false,
       current_workspace: 0,
       framebuffer,
@@ -232,9 +237,9 @@ impl WindowManager {
         //check if is special key (key releases are guaranteed to be special keys)
         //eg: ctrl, alt, command/windows, shift, or caps lock
         match key_char {
-          KeyChar::Press(c) => {
+          KeyChar::Alt(c) => {
             let mut press_response = WindowMessageResponse::DoNothing;
-            if self.held_special_keys.contains(&"alt") && !self.locked {
+            if !self.locked {
               //keyboard shortcut
               let shortcuts = HashMap::from([
                 ('s', ShortcutType::StartMenu),
@@ -424,33 +429,24 @@ impl WindowManager {
                   }
                 };
               }
-            } else {
-              //send to focused window
-              if let Some(focused_index) = self.get_focused_index() {
-                press_response = self.window_infos[focused_index].window_like.handle_message(WindowMessage::KeyPress(KeyPress {
-                  key: c,
-                  held_special_keys: self.held_special_keys.clone(),
-                }));
-                //at most, only the focused window needs to be rerendered
-                redraw_ids = Some(vec![self.window_infos[focused_index].id]);
-                //requests can result in window openings and closings, etc
-                if press_response != WindowMessageResponse::JustRerender {
-                  redraw_ids = None;
-                }
-              }
             }
             press_response
           },
-          KeyChar::SpecialPress(special_key) => {
-            //add to pressed keys
-            self.held_special_keys.push(special_key);
-            WindowMessageResponse::DoNothing
-          },
-          KeyChar::SpecialRelease(special_key) => {
-            //remove it from pressed keys
-            let index = self.held_special_keys.iter().position(|sk| sk == &special_key).unwrap();
-            self.held_special_keys.remove(index);
-            WindowMessageResponse::DoNothing
+          KeyChar::Press(c) => {
+            let mut press_response = WindowMessageResponse::DoNothing;
+            //send to focused window
+            if let Some(focused_index) = self.get_focused_index() {
+              press_response = self.window_infos[focused_index].window_like.handle_message(WindowMessage::KeyPress(KeyPress {
+                key: c,
+              }));
+              //at most, only the focused window needs to be rerendered
+              redraw_ids = Some(vec![self.window_infos[focused_index].id]);
+              //requests can result in window openings and closings, etc
+              if press_response != WindowMessageResponse::JustRerender {
+                redraw_ids = None;
+              }
+            }
+            press_response
           },
         }
       },
@@ -579,8 +575,7 @@ impl WindowManager {
       framebuffer_info.stride = window_width;
       //make a writer just for the window
       let mut window_writer: FramebufferWriter = Default::default();
-      let mut temp_vec = vec![0 as u8; window_width * window_height * bytes_per_pixel];
-      window_writer.init(framebuffer_info, temp_vec);
+      window_writer.init(framebuffer_info, window_width * window_height * bytes_per_pixel);
       for instruction in instructions {
         //unsafe { SERIAL1.lock().write_text(&format!("{:?}\n", instruction)); }
         match instruction {

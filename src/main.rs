@@ -28,10 +28,7 @@ fn main() {
     bytes_per_pixel,
     stride: fb.fix_screen_info.line_length as usize / bytes_per_pixel,
   };
-  println!("{:?}", fb_info);
 
   init(fb, fb_info);
-
-  //
 }
 
