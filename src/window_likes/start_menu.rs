@@ -141,6 +141,8 @@ impl StartMenu {
             let mut to_add: Vec<&str> = Vec::new();
             if name == "Games" {
               to_add.push("Minesweeper");
+            } else if name == "Editing" {
+              to_add.push("Malvim");
             } else if name == "Files" {
               to_add.push("Terminal");
             }

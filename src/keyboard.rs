@@ -13,6 +13,7 @@ pub fn key_to_char(key: Key) -> Option<KeyChar> {
     Key::Char(c) => Some(KeyChar::Press(c)),
     Key::Alt(c) => Some(KeyChar::Alt(c)),
     Key::Backspace => Some(KeyChar::Press('𐘁')),
+    Key::Esc => Some(KeyChar::Press('𐘃')),
     _ => None,
   }
 }

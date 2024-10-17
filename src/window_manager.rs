@@ -1,6 +1,6 @@
 use std::vec::Vec;
 use std::vec;
-use std::collections::HashMap;
+use std::collections::{ HashMap, VecDeque };
 use std::fmt;
 use std::boxed::Box;
 use std::sync::{ LazyLock, Mutex };
@@ -24,10 +24,13 @@ use crate::messages::*;
 use crate::window_likes::start_menu::StartMenu;
 use crate::window_likes::minesweeper::Minesweeper;
 use crate::window_likes::terminal::Terminal;
+use crate::window_likes::malvim::Malvim;
+
+//todo, better error handling for windows
 
 pub const TASKBAR_HEIGHT: usize = 38;
 pub const INDICATOR_HEIGHT: usize = 20;
-pub const WINDOW_TOP_HEIGHT: usize = 26;
+const WINDOW_TOP_HEIGHT: usize = 26;
 
 static WRITER: LazyLock<Mutex<FramebufferWriter>> = LazyLock::new(|| Mutex::new(Default::default()));
 
@@ -48,7 +51,9 @@ pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
 
   for c in stdin.keys() {
     if let Some(kc) = key_to_char(c.unwrap()) {
+      //do not allow exit when locked unless debugging
       if kc == KeyChar::Alt('e') {
+      //if kc == KeyChar::Alt('e') && !wm.locked {
         write!(stdout, "{}", cursor::Show).unwrap();
         stdout.suspend_raw_mode().unwrap();
         exit(0);
@@ -68,7 +73,7 @@ pub fn min(one: usize, two: usize) -> usize {
 #[derive(Debug)]
 pub enum DrawInstructions {
   Rect(Point, Dimensions, RGBColor),
-  Text(Point, &'static str, String, RGBColor, RGBColor, Option<u8>), //font and text
+  Text(Point, &'static str, String, RGBColor, RGBColor, Option<usize>, Option<u8>), //font and text
   Gradient(Point, Dimensions, RGBColor, RGBColor, usize),
   Mingde(Point),
 }
@@ -126,7 +131,7 @@ pub struct WindowManager {
   dimensions: Dimensions,
   theme: Themes,
   focused_id: usize,
-  locked: bool,
+  pub locked: bool,
   current_workspace: u8,
   framebuffer: Framebuffer,
 }
@@ -156,6 +161,7 @@ impl WindowManager {
     let id = self.id_count;
     self.focused_id = id;
     window_like.handle_message(WindowMessage::Init(dimensions));
+    let dimensions = if window_like.subtype() == WindowLikeType::Window { [dimensions[0], dimensions[1] + WINDOW_TOP_HEIGHT] } else { dimensions };
     self.window_infos.push(WindowLikeInfo {
       id,
       window_like,
@@ -242,11 +248,13 @@ impl WindowManager {
             if !self.locked {
               //keyboard shortcut
               let shortcuts = HashMap::from([
+                //alt+e is terminate program (ctrl+c)
                 ('s', ShortcutType::StartMenu),
                 (']', ShortcutType::FocusNextWindow),
                 ('q', ShortcutType::QuitWindow),
                 ('c', ShortcutType::CenterWindow),
                 ('f', ShortcutType::FullscreenWindow),
+                ('w', ShortcutType::HalfWidthWindow),
                 //move window a small amount
                 ('h', ShortcutType::MoveWindow(Direction::Left)),
                 ('j', ShortcutType::MoveWindow(Direction::Down)),
@@ -422,11 +430,14 @@ impl WindowManager {
                         } else {
                           new_dimensions = self.window_infos[focused_index].dimensions;
                         }
-                        self.window_infos[focused_index].window_like.handle_message(WindowMessage::ChangeDimensions(new_dimensions));
+                        self.window_infos[focused_index].window_like.handle_message(WindowMessage::ChangeDimensions([new_dimensions[0], new_dimensions[1] - WINDOW_TOP_HEIGHT]));
                         press_response = WindowMessageResponse::JustRerender;
                       }
                     }
-                  }
+                  },
+                  &ShortcutType::HalfWidthWindow => {
+                    //
+                  },
                 };
               }
             }
@@ -471,6 +482,7 @@ impl WindowManager {
         }
         let w: WindowBox = match w {
           "Minesweeper" => Box::new(Minesweeper::new()),
+          "Malvim" => Box::new(Malvim::new()),
           "Terminal" => Box::new(Terminal::new()),
           "StartMenu" => Box::new(StartMenu::new()),
           _ => panic!("no such window"),
@@ -510,6 +522,10 @@ impl WindowManager {
     };
   }
 
+  fn get_true_top_left(top_left: &Point, is_window: bool) -> Point {
+    [top_left[0], top_left[1] + if is_window { WINDOW_TOP_HEIGHT } else { 0 }]
+  }
+
   //another issue with a huge vector of draw instructions; it takes up heap memory
   pub fn render(&mut self, maybe_redraw_ids: Option<Vec<usize>>, use_saved_buffer: bool) {
     let theme_info = get_theme_info(&self.theme).unwrap();
@@ -540,17 +556,24 @@ impl WindowManager {
       } else {
         window_info.dimensions
       };
-      let mut instructions = Vec::new();
-      if window_info.window_like.subtype() == WindowLikeType::Window {
+      let mut instructions = VecDeque::from(window_info.window_like.draw(&theme_info));
+      let is_window = window_info.window_like.subtype() == WindowLikeType::Window;
+      if is_window {
         //if this is the top most window to draw, snapshot
         if w_index == max_index && !use_saved_buffer && redraw_ids.len() == 0 {
           WRITER.lock().unwrap().save_buffer();
         }
+        //offset top left by the window top height for windows (because windows can't draw in that region)
+        instructions = instructions.iter().map(|instruction| {
+          match instruction {
+            DrawInstructions::Rect(top_left, dimensions, color) => DrawInstructions::Rect(WindowManager::get_true_top_left(top_left, is_window), *dimensions, *color),
+            DrawInstructions::Text(top_left, font_name, text, color, bg_color, horiz_spacing, mono_width) => DrawInstructions::Text(WindowManager::get_true_top_left(top_left, is_window), font_name, text.clone(), *color, *bg_color, *horiz_spacing, *mono_width),
+            DrawInstructions::Mingde(top_left) => DrawInstructions::Mingde(WindowManager::get_true_top_left(top_left, is_window)),
+            DrawInstructions::Gradient(top_left, dimensions, start_color, end_color, steps) => DrawInstructions::Gradient(WindowManager::get_true_top_left(top_left, is_window), *dimensions, *start_color, *end_color, *steps),
+          }
+        }).collect();
         //draw window background
-        instructions.push(DrawInstructions::Rect([0, 0], window_dimensions, theme_info.background));
-      }
-      instructions.extend(window_info.window_like.draw(&theme_info));
-      if window_info.window_like.subtype() == WindowLikeType::Window {
+        instructions.push_front(DrawInstructions::Rect([0, 0], window_dimensions, theme_info.background));
         //draw window top decorations and what not
         instructions.extend(vec![
           //left top border
@@ -558,7 +581,7 @@ impl WindowManager {
           DrawInstructions::Rect([0, 0], [1, window_dimensions[1]], theme_info.border_left_top),
           //top
           DrawInstructions::Rect([1, 1], [window_dimensions[0] - 2, WINDOW_TOP_HEIGHT - 3], theme_info.top),
-          DrawInstructions::Text([4, 4], "times-new-roman", window_info.window_like.title().to_string(), theme_info.text_top, theme_info.top, None),
+          DrawInstructions::Text([4, 4], "times-new-roman", window_info.window_like.title().to_string(), theme_info.top_text, theme_info.top, None, None),
           //top bottom border
           DrawInstructions::Rect([1, WINDOW_TOP_HEIGHT - 2], [window_dimensions[0] - 2, 2], theme_info.border_left_top),
           //right bottom border
@@ -587,8 +610,8 @@ impl WindowManager {
             ];
             window_writer.draw_rect(top_left, true_dimensions, color);
           },
-          DrawInstructions::Text(top_left, font_name, text, color, bg_color, mono_width) => {
-            window_writer.draw_text(top_left, font_name, &text, color, bg_color, 1, mono_width);
+          DrawInstructions::Text(top_left, font_name, text, color, bg_color, horiz_spacing, mono_width) => {
+            window_writer.draw_text(top_left, font_name, &text, color, bg_color, horiz_spacing.unwrap_or(1), mono_width);
           },
           DrawInstructions::Mingde(top_left) => {
             window_writer._draw_mingde(top_left);

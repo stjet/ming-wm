@@ -164,27 +164,26 @@ impl FramebufferWriter {
     //todo, config space
     for c in text.chars() {
       if c == ' ' {
-        top_left[0] += 5;
+        top_left[0] += mono_width.unwrap_or(5) as usize;
       } else {
-        let char_info = get_font_char(&("./bmps/".to_string() + font_name), c);
-        if let Some(char_info) = char_info {
-          let char_width = char_info.1[0].len();
-          let add_after: usize;
-          if let Some(mono_width) = mono_width {
-            let mono_width = mono_width as usize;
-            let remainder = if mono_width < char_width {
-              0
-            } else {
-              mono_width - char_width
-            };
+        //so a ? char must be in every font
+        let char_info = get_font_char(&("./bmps/".to_string() + font_name), c).unwrap_or(get_font_char(&("./bmps/".to_string() + font_name), '?').unwrap());
+        let char_width = char_info.1[0].len();
+        let add_after: usize;
+        if let Some(mono_width) = mono_width {
+          let mono_width = mono_width as usize;
+          if mono_width < char_width {
+            add_after = mono_width;
+          } else {
+            let remainder = mono_width - char_width;
             top_left[0] += remainder / 2;
             add_after = remainder - remainder / 2 + char_width;
-          } else {
-            add_after = char_width + horiz_spacing;
-          }
-          self.draw_char(top_left, &char_info, color, bg_color);
-          top_left[0] += add_after;
+          };
+        } else {
+          add_after = char_width + horiz_spacing;
         }
+        self.draw_char(top_left, &char_info, color, bg_color);
+        top_left[0] += add_after;
       }
     }
   }

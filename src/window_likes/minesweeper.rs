@@ -3,7 +3,7 @@ use std::vec;
 use std::collections::VecDeque;
 use core::convert::TryFrom;
 
-use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType, WINDOW_TOP_HEIGHT };
+use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
 use crate::messages::{ WindowMessage, WindowMessageResponse };
 use crate::framebuffer::Dimensions;
 use crate::themes::ThemeInfo;
@@ -156,20 +156,20 @@ impl WindowLike for Minesweeper {
   fn draw(&self, theme_info: &ThemeInfo) -> Vec<DrawInstructions> {
     if self.state == MinesweeperState::Seed {
       vec![
-        DrawInstructions::Text([4, WINDOW_TOP_HEIGHT + 4], "times-new-roman", "Type in random characters to initalise the seed".to_string(), theme_info.text, theme_info.background, None),
-        DrawInstructions::Text([4, WINDOW_TOP_HEIGHT + 4 + 16], "times-new-roman", self.random_chars.clone(), theme_info.text, theme_info.background, None),
+        DrawInstructions::Text([4, 4], "times-new-roman", "Type in random characters to initalise the seed".to_string(), theme_info.text, theme_info.background, None, None),
+        DrawInstructions::Text([4, 4 + 16], "times-new-roman", self.random_chars.clone(), theme_info.text, theme_info.background, None, None),
       ]
     } else {
       let mut instructions = vec![
         //top border
-        DrawInstructions::Rect([1, WINDOW_TOP_HEIGHT], [self.dimensions[0] - 7, 5], [128, 128, 128]),
-        DrawInstructions::Rect([self.dimensions[0] - 6, WINDOW_TOP_HEIGHT], [4, 1], [128, 128, 128]),
-        DrawInstructions::Rect([self.dimensions[0] - 6, WINDOW_TOP_HEIGHT + 1], [3, 1], [128, 128, 128]),
-        DrawInstructions::Rect([self.dimensions[0] - 6, WINDOW_TOP_HEIGHT + 2], [2, 1], [128, 128, 128]),
-        DrawInstructions::Rect([self.dimensions[0] - 6, WINDOW_TOP_HEIGHT + 3], [1, 1], [128, 128, 128]),
-        DrawInstructions::Rect([self.dimensions[0] - 6, WINDOW_TOP_HEIGHT + 4], [1, 1], [128, 128, 128]),
+        DrawInstructions::Rect([1, 0], [self.dimensions[0] - 7, 5], [128, 128, 128]),
+        DrawInstructions::Rect([self.dimensions[0] - 6, 0], [4, 1], [128, 128, 128]),
+        DrawInstructions::Rect([self.dimensions[0] - 6, 1], [3, 1], [128, 128, 128]),
+        DrawInstructions::Rect([self.dimensions[0] - 6, 2], [2, 1], [128, 128, 128]),
+        DrawInstructions::Rect([self.dimensions[0] - 6, 3], [1, 1], [128, 128, 128]),
+        DrawInstructions::Rect([self.dimensions[0] - 6, 4], [1, 1], [128, 128, 128]),
         //left border
-        DrawInstructions::Rect([1, WINDOW_TOP_HEIGHT], [5, self.dimensions[1] - WINDOW_TOP_HEIGHT - 5], [128, 128, 128]),
+        DrawInstructions::Rect([1, 0], [5, self.dimensions[1] - 5], [128, 128, 128]),
         DrawInstructions::Rect([1, self.dimensions[1] - 5], [1, 4], [128, 128, 128]),
         DrawInstructions::Rect([2, self.dimensions[1] - 5], [1, 3], [128, 128, 128]),
         DrawInstructions::Rect([3, self.dimensions[1] - 5], [1, 2], [128, 128, 128]),
@@ -181,12 +181,12 @@ impl WindowLike for Minesweeper {
         DrawInstructions::Rect([3, self.dimensions[1] - 3], [1, 2], [255, 255, 255]),
         DrawInstructions::Rect([2, self.dimensions[1] - 2], [1, 1], [255, 255, 255]),
         //right border
-        DrawInstructions::Rect([self.dimensions[0] - 6, WINDOW_TOP_HEIGHT + 5], [5, self.dimensions[1] - WINDOW_TOP_HEIGHT], [255, 255, 255]),
-        DrawInstructions::Rect([self.dimensions[0] - 2, WINDOW_TOP_HEIGHT], [1, 5], [255, 255, 255]),
-        DrawInstructions::Rect([self.dimensions[0] - 3, WINDOW_TOP_HEIGHT + 1], [1, 4], [255, 255, 255]),
-        DrawInstructions::Rect([self.dimensions[0] - 4, WINDOW_TOP_HEIGHT + 2], [1, 3], [255, 255, 255]),
-        DrawInstructions::Rect([self.dimensions[0] - 5, WINDOW_TOP_HEIGHT + 3], [1, 2], [255, 255, 255]),
-        DrawInstructions::Rect([self.dimensions[0] - 6, WINDOW_TOP_HEIGHT + 4], [1, 1], [255, 255, 255]),
+        DrawInstructions::Rect([self.dimensions[0] - 6, 5], [5, self.dimensions[1]], [255, 255, 255]),
+        DrawInstructions::Rect([self.dimensions[0] - 2, 0], [1, 5], [255, 255, 255]),
+        DrawInstructions::Rect([self.dimensions[0] - 3, 1], [1, 4], [255, 255, 255]),
+        DrawInstructions::Rect([self.dimensions[0] - 4, 2], [1, 3], [255, 255, 255]),
+        DrawInstructions::Rect([self.dimensions[0] - 5, 3], [1, 2], [255, 255, 255]),
+        DrawInstructions::Rect([self.dimensions[0] - 6, 4], [1, 1], [255, 255, 255]),
       ];
       let tile_size = (self.dimensions[0] - 10) / 16;
       for y in 0..16 {
@@ -194,7 +194,7 @@ impl WindowLike for Minesweeper {
           let tile = &self.tiles[y][x];
           if tile.revealed {
             if tile.mine {
-              instructions.push(DrawInstructions::Text([x * tile_size + tile_size / 2 + 2, WINDOW_TOP_HEIGHT + y * tile_size + tile_size / 2], "times-new-roman", "x".to_string(), [255, 0, 0], theme_info.background, None));
+              instructions.push(DrawInstructions::Text([x * tile_size + tile_size / 2 + 2, y * tile_size + tile_size / 2], "times-new-roman", "x".to_string(), [255, 0, 0], theme_info.background, None, None));
             } else {
               let color = match tile.touching {
                 1 => [0, 0, 255],
@@ -207,10 +207,10 @@ impl WindowLike for Minesweeper {
                 //8
                 _ => [128, 128, 128],
               };
-              instructions.push(DrawInstructions::Text([x * tile_size + tile_size / 2 + 5, WINDOW_TOP_HEIGHT + y * tile_size + tile_size / 2 + 2], "times-new-roman", tile.touching.to_string(), color, theme_info.background, None));
+              instructions.push(DrawInstructions::Text([x * tile_size + tile_size / 2 + 5, y * tile_size + tile_size / 2 + 2], "times-new-roman", tile.touching.to_string(), color, theme_info.background, None, None));
             }
           } else {
-            let top_left = [x * tile_size + 6, WINDOW_TOP_HEIGHT + y * tile_size + 5];
+            let top_left = [x * tile_size + 6, y * tile_size + 5];
             //do not do the corners in respect of our poor poor heap (vector size too big would be bad)
             instructions.extend(vec![
               //top border
@@ -225,15 +225,15 @@ impl WindowLike for Minesweeper {
               //right bottom
               DrawInstructions::Rect([top_left[0] + tile_size - 4, top_left[1] + 3], [3, tile_size - 4], [128, 128, 128]),
               //
-              DrawInstructions::Text([x * tile_size + tile_size / 2 - 2, WINDOW_TOP_HEIGHT + y * tile_size + tile_size / 2], "times-new-roman", u8_to_hex((y * 16 + x) as u8), theme_info.text, theme_info.background, None),
+              DrawInstructions::Text([x * tile_size + tile_size / 2 - 2, y * tile_size + tile_size / 2], "times-new-roman", u8_to_hex((y * 16 + x) as u8), theme_info.text, theme_info.background, None, None),
             ]);
           }
         }
       }
       if self.state == MinesweeperState::Lost {
-        instructions.extend(vec![DrawInstructions::Text([4, WINDOW_TOP_HEIGHT + 4], "times-new-roman", "You LOST!!! Press a key to play again.".to_string(), theme_info.text, theme_info.background, None)]);
+        instructions.extend(vec![DrawInstructions::Text([4, 4], "times-new-roman", "You LOST!!! Press a key to play again.".to_string(), theme_info.text, theme_info.background, None, None)]);
       } else if self.state == MinesweeperState::Won {
-        instructions.extend(vec![DrawInstructions::Text([4, WINDOW_TOP_HEIGHT + 4], "times-new-roman", "You WON!!! Press a key to play again.".to_string(), theme_info.text, theme_info.background, None)]);
+        instructions.extend(vec![DrawInstructions::Text([4, 4], "times-new-roman", "You WON!!! Press a key to play again.".to_string(), theme_info.text, theme_info.background, None, None)]);
       }
       instructions
     }
@@ -249,7 +249,7 @@ impl WindowLike for Minesweeper {
   }
 
   fn ideal_dimensions(&self, _dimensions: Dimensions) -> Dimensions {
-    [410, 410 + WINDOW_TOP_HEIGHT]
+    [410, 410]
   }
 }
 

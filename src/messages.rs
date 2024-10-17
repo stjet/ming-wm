@@ -69,6 +69,7 @@ pub enum ShortcutType {
   MoveWindowToEdge(Direction),
   CenterWindow,
   FullscreenWindow,
+  HalfWidthWindow, //half width, full height
   //
 }
 

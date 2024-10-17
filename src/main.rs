@@ -18,6 +18,8 @@ mod messages;
 
 mod fs;
 
+mod utils;
+
 fn main() {
   let mut fb = Framebuffer::new("/dev/fb0").unwrap();
   let bytes_per_pixel = (fb.var_screen_info.bits_per_pixel as usize) / 8;

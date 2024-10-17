@@ -6,4 +6,5 @@ pub mod workspace_indicator;
 
 pub mod minesweeper;
 pub mod terminal;
+pub mod malvim;
 

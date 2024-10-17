@@ -5,12 +5,12 @@ use std::str::from_utf8;
 use std::path::PathBuf;
 use std::io;
 
-use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType, WINDOW_TOP_HEIGHT };
+use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
 use crate::messages::{ WindowMessage, WindowMessageResponse };
 use crate::framebuffer::Dimensions;
 use crate::themes::ThemeInfo;
 
-const MONO_WIDTH: u8 = 8;
+const MONO_WIDTH: u8 = 10;
 const LINE_HEIGHT: usize = 15;
 const PADDING: usize = 4;
 
@@ -84,17 +84,16 @@ impl WindowLike for Terminal {
   fn draw(&self, theme_info: &ThemeInfo) -> Vec<DrawInstructions> {
     let mut instructions = vec![
       DrawInstructions::Rect([0, 0], self.dimensions, theme_info.alt_background),
-      //
     ];
     //add the visible lines of text
     let end_line = self.actual_line_num + self.get_max_lines();
-    let mut text_y = WINDOW_TOP_HEIGHT + PADDING;
+    let mut text_y = PADDING;
     for line_num in self.actual_line_num..end_line {
       if line_num == self.actual_lines.len() {
         break;
       }
       let line = self.actual_lines[line_num].clone();
-      instructions.push(DrawInstructions::Text([PADDING, text_y], "times-new-roman", line, theme_info.alt_text, theme_info.alt_background, Some(MONO_WIDTH)));
+      instructions.push(DrawInstructions::Text([PADDING, text_y], "times-new-romono", line, theme_info.alt_text, theme_info.alt_background, Some(0), Some(MONO_WIDTH)));
       text_y += LINE_HEIGHT;
     }
     instructions
@@ -109,7 +108,7 @@ impl WindowLike for Terminal {
   }
 
   fn ideal_dimensions(&self, _dimensions: Dimensions) -> Dimensions {
-    [410, 410 + WINDOW_TOP_HEIGHT]
+    [410, 410]
   }
 
   fn resizable(&self) -> bool {
@@ -123,7 +122,7 @@ impl Terminal {
   }
 
   fn get_max_lines(&self) -> usize {
-    (self.dimensions[1] - WINDOW_TOP_HEIGHT- PADDING * 2) / LINE_HEIGHT
+    (self.dimensions[1] - PADDING * 2) / LINE_HEIGHT
   }
 
   fn process_command(&mut self) -> CommandResponse {
@@ -177,13 +176,12 @@ impl Terminal {
       //cannot index or do .len() because those count bytes not characters
       loop {
         if working_line.chars().count() <= max_chars_per_line {
-          
           self.actual_lines.push(working_line);
           break;
         } else {
           let mut working_line_chars = working_line.chars();
           let mut push_string = String::new();
-          for i in 0..max_chars_per_line {
+          for _i in 0..max_chars_per_line {
             push_string += &working_line_chars.next().unwrap().to_string();
           }
           self.actual_lines.push(push_string);

@@ -44,9 +44,9 @@ impl WindowLike for WorkspaceIndicator {
     for w in 0..9 {
       if w == self.current_workspace as usize {
         instructions.push(DrawInstructions::Rect([w * WIDTH, 0], [WIDTH, self.dimensions[1]], theme_info.top));
-        instructions.push(DrawInstructions::Text([w * WIDTH + 5, 4], "times-new-roman", (w + 1).to_string(), theme_info.text_top, theme_info.top, None));
+        instructions.push(DrawInstructions::Text([w * WIDTH + 5, 4], "times-new-roman", (w + 1).to_string(), theme_info.top_text, theme_info.top, None, None));
       } else {
-        instructions.push(DrawInstructions::Text([w * WIDTH + 5, 4], "times-new-roman", (w + 1).to_string(), theme_info.text, theme_info.background, None));
+        instructions.push(DrawInstructions::Text([w * WIDTH + 5, 4], "times-new-roman", (w + 1).to_string(), theme_info.text, theme_info.background, None, None));
       }
     }
     instructions
