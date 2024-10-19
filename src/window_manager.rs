@@ -436,7 +436,17 @@ impl WindowManager {
                     }
                   },
                   &ShortcutType::HalfWidthWindow => {
-                    //
+                    if let Some(focused_index) = self.get_focused_index() {
+                      let window_like = &self.window_infos[focused_index].window_like;
+                      if window_like.subtype() == WindowLikeType::Window && window_like.resizable() {
+                        //full height, half width
+                        self.window_infos[focused_index].top_left = [0, INDICATOR_HEIGHT];
+                        let new_dimensions = [self.dimensions[0] / 2, self.dimensions[1] - INDICATOR_HEIGHT - TASKBAR_HEIGHT];
+                        self.window_infos[focused_index].dimensions = new_dimensions;
+                        self.window_infos[focused_index].window_like.handle_message(WindowMessage::ChangeDimensions([new_dimensions[0], new_dimensions[1] - WINDOW_TOP_HEIGHT]));
+                        press_response = WindowMessageResponse::JustRerender;
+                      }
+                    }
                   },
                 };
               }

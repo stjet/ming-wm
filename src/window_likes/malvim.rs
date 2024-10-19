@@ -8,7 +8,7 @@ use crate::messages::{ WindowMessage, WindowMessageResponse };
 use crate::themes::ThemeInfo;
 use crate::framebuffer::Dimensions;
 use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
-use crate::utils::calc_actual_lines;
+use crate::utils::{ calc_actual_lines, calc_new_cursor_pos, Substring };
 
 const MONO_WIDTH: u8 = 10;
 const LINE_HEIGHT: usize = 18;
@@ -21,6 +21,7 @@ struct FileInfo {
   pub changed: bool,
   pub top_line_pos: usize,
   pub line_pos: usize,
+  //max is length (yeah, not length + 1)
   pub cursor_pos: usize,
   pub content: Vec<String>,
   //
@@ -30,6 +31,11 @@ struct FileInfo {
 enum State {
   #[default]
   None,
+  Replace,
+  MaybeDelete,
+  Maybeg,
+  Find,
+  BackFind,
   //
 }
 
@@ -82,47 +88,163 @@ impl WindowLike for Malvim {
         WindowMessageResponse::JustRerender
       },
       WindowMessage::KeyPress(key_press) => {
+        let mut changed = true;
+        let mut new = false;
         if key_press.key == '𐘃' { //escape key
           self.mode = Mode::Normal;
           self.state = State::None;
+          changed = false;
         } else if key_press.key == ':' && self.mode == Mode::Normal && self.state == State::None {
           self.mode = Mode::Command;
           self.command = Some(String::new());
+          changed = false;
         } else if key_press.key == 'i' && self.mode == Mode::Normal && self.state == State::None && self.files.len() > 0 {
           self.mode = Mode::Insert;
+          changed = false;
         } else if self.mode == Mode::Insert {
-          let current_file = &self.files[self.current_file_index];
+          let current_file = &mut self.files[self.current_file_index];
+          let current_length = current_file.content[current_file.line_pos].len();
+          let line = &current_file.content[current_file.line_pos];
           if key_press.key == '𐘂' { //the enter key
-            //
+            let mut line = line.clone();
+            let (left, right) = line.split_at_mut(current_file.cursor_pos);
+            current_file.content[current_file.line_pos] = left.to_string();
+            current_file.content.insert(current_file.line_pos + 1, right.to_string());
+            current_file.line_pos += 1;
+            current_file.cursor_pos = 0;
           } else if key_press.key == '𐘁' { //backspace
-            //
+            if current_length > 0 && current_file.cursor_pos > 0 {
+              current_file.content[current_file.line_pos] = line.remove(current_file.cursor_pos, 1);
+              current_file.cursor_pos -= 1;
+            } else {
+              if current_file.line_pos > 0 {
+                //merge the prev line and this line
+                let old_previous_line_length = current_file.content[current_file.line_pos - 1].len();
+                let removed = current_file.content.remove(current_file.line_pos);
+                current_file.content[current_file.line_pos - 1] += &removed; 
+                current_file.line_pos -= 1;
+                current_file.cursor_pos = old_previous_line_length;
+              }
+            }
           } else {
-            //
+            current_file.content[current_file.line_pos] = line.substring(0, current_file.cursor_pos).to_string() + &key_press.key.to_string() + line.substring(current_file.cursor_pos, line.len());
+            current_file.cursor_pos += 1;
           }
         } else if self.mode == Mode::Normal && self.files.len() > 0 {
           let current_file = &mut self.files[self.current_file_index];
-          if key_press.key == 'h' {
-            current_file.cursor_pos = current_file.cursor_pos.checked_sub(1).unwrap_or(0);
-          } else if key_press.key == 'j' {
-            //
-          } else if key_press.key == 'k' {
-            //
-          } else if key_press.key == 'l' {
-            current_file.cursor_pos += 1;
-            if current_file.cursor_pos == current_file.content[current_file.line_pos].len() {
-              current_file.cursor_pos = current_file.content[current_file.line_pos].len() - 1;
+          let current_length = current_file.content[current_file.line_pos].len();
+          //
+          if self.state == State::Replace {
+            if current_length > 0 && current_file.cursor_pos < current_length {
+              let line = &current_file.content[current_file.line_pos];
+              current_file.content[current_file.line_pos] = line.substring(0, current_file.cursor_pos).to_string() + &key_press.key.to_string() + line.substring(current_file.cursor_pos + 1, line.len());
             }
+            self.state = State::None;
+          } else if self.state == State::MaybeDelete {
+            if key_press.key == 'd' {
+              current_file.content.remove(current_file.line_pos);
+              if current_file.content.len() == 0 {
+                current_file.content = vec![String::new()];
+              } else if current_file.line_pos == current_file.content.len() {
+                current_file.line_pos = current_file.content.len() - 1;
+              }
+              let new_length = current_file.content[current_file.line_pos].len();
+              current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
+            } else if key_press.key == 'w' {
+              let line = &current_file.content[current_file.line_pos];
+              if line.len() > 0 {
+                //offset until space or eol
+                let offset = line.chars().skip(current_file.cursor_pos).position(|c| c == ' ').unwrap_or(line.chars().count() - current_file.cursor_pos);
+                current_file.content[current_file.line_pos] = line.remove(current_file.cursor_pos, offset);
+                let new_length = current_file.content[current_file.line_pos].len();
+                current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
+              }
+            }
+            self.state = State::None;
+          } else if self.state == State::Maybeg {
+            if key_press.key == 'g' {
+              current_file.line_pos = 0;
+              let new_length = current_file.content[current_file.line_pos].len();
+              current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
+            }
+            self.state = State::None;
+          } else if self.state == State::Find || self.state == State::BackFind {
+            let old_pos = current_file.cursor_pos;
+            let find_pos = if self.state == State::Find {
+              old_pos + current_file.content[current_file.line_pos].chars().skip(old_pos + 1).position(|c| c == key_press.key).unwrap_or(0) + 1
+            } else {
+              old_pos - current_file.content[current_file.line_pos].chars().rev().skip(current_length - old_pos + 1).position(|c| c == key_press.key).unwrap_or(0)- 2
+            };
+            current_file.cursor_pos = find_pos;
+            self.state = State::None;
+          } else if key_press.key == 'x' {
+            if current_length > 0 && current_file.cursor_pos < current_length {
+              let line = &current_file.content[current_file.line_pos];
+              current_file.content[current_file.line_pos] = line.remove(current_file.cursor_pos, 1);
+              if current_length == 1 {
+                current_file.cursor_pos = 0;
+              }
+            }
+          } else if key_press.key == 'h' {
+            current_file.cursor_pos = current_file.cursor_pos.checked_sub(1).unwrap_or(0);
+            changed = false;
+          } else if key_press.key == 'j' || key_press.key == 'k' {
+            if key_press.key == 'j' {
+              current_file.line_pos += 1;
+              if current_file.line_pos == current_file.content.len() {
+                current_file.line_pos = current_file.content.len() - 1;
+              }
+            } else {
+              current_file.line_pos = current_file.line_pos.checked_sub(1).unwrap_or(0);
+            }
+            let new_length = current_file.content[current_file.line_pos].len();
+            current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
+            changed = false;
+          } else if key_press.key == 'l' {
+            if current_length > 0 {
+              current_file.cursor_pos += 1;
+              if current_file.cursor_pos > current_file.content[current_file.line_pos].len() {
+                current_file.cursor_pos = current_file.content[current_file.line_pos].len();
+              }
+            }
+            changed = false;
           } else if key_press.key == '0' {
             current_file.cursor_pos = 0;
+            changed = false;
           } else if key_press.key == '$' {
-            current_file.cursor_pos = current_file.content[current_file.line_pos].len().checked_sub(1).unwrap_or(0);
+            //yeah, no `- 1`, that's right
+            current_file.cursor_pos = current_file.content[current_file.line_pos].len();
+            changed = false;
+          } else if key_press.key == '^' {
+            current_file.line_pos = current_file.content[current_file.line_pos].chars().position(|c| c != ' ').unwrap_or(0);
+            changed = false;
+          } else if key_press.key == 'r' {
+            self.state = State::Replace;
+            changed = false;
+          } else if key_press.key == 'd' {
+            self.state = State::MaybeDelete;
+            changed = false;
+          } else if key_press.key == 'g' {
+            self.state = State::Maybeg;
+            changed = false;
+          } else if key_press.key == 'G' {
+            current_file.line_pos = current_file.content.len() - 1;
+            let new_length = current_file.content[current_file.line_pos].len();
+            current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
+            changed = false;
+          } else if key_press.key == 'f' {
+            self.state = State::Find;
+            changed = false;
+          } else if key_press.key == 'F' {
+            self.state = State::BackFind;
+            changed = false;
           }
           //
         } else if self.mode == Mode::Command {
           self.bottom_message = None;
           let command = self.command.clone().unwrap_or("".to_string());
           if key_press.key == '𐘂' { //the enter key
-            self.process_command();
+            new = self.process_command();
             self.command = None;
             self.mode = Mode::Normal;
           } else if key_press.key == '𐘁' { //backspace
@@ -132,10 +254,16 @@ impl WindowLike for Malvim {
           } else {
             self.command = Some(command.to_string() + &key_press.key.to_string());
           }
+          changed = false;
         } else {
           return WindowMessageResponse::DoNothing;
         }
-        self.calc_current(); //too over zealous but whatever
+        if changed || new {
+          self.calc_current(); //too over zealous but whatever
+          if changed {
+            self.files[self.current_file_index].changed = true;
+          }
+        }
         WindowMessageResponse::JustRerender
       },
       WindowMessage::ChangeDimensions(dimensions) => {
@@ -161,7 +289,7 @@ impl WindowLike for Malvim {
     let mut used_width = 0;
     for file_index in 0..self.files.len() {
       let file_info = &self.files[file_index];
-      let future_used_width = used_width + 4 + file_info.name.len() * MONO_WIDTH as usize;
+      let future_used_width = used_width + 4 + (file_info.name.len() + if file_info.changed { 2 } else { 0 }) * MONO_WIDTH as usize;
       //just cut off when too many file tabs open to fit
       if future_used_width > self.dimensions[0] {
         break;
@@ -172,8 +300,8 @@ impl WindowLike for Malvim {
         theme_info.alt_secondary
       };
       instructions.extend(vec![
-        DrawInstructions::Rect([used_width, 2], [file_info.name.len() * MONO_WIDTH as usize + 4, BAND_HEIGHT - 2], background),
-        DrawInstructions::Text([used_width + 2, 2], "times-new-romono", file_info.name.clone(), theme_info.alt_text, background, Some(0), Some(MONO_WIDTH)),
+        DrawInstructions::Rect([used_width, 2], [future_used_width, BAND_HEIGHT - 2], background),
+        DrawInstructions::Text([used_width + 2, 2], "times-new-romono", if file_info.changed { "+ ".to_string() } else { String::new() } + &file_info.name, theme_info.alt_text, background, Some(0), Some(MONO_WIDTH)),
       ]);
       used_width = future_used_width;
     }
@@ -206,7 +334,9 @@ impl WindowLike for Malvim {
           //the cursor is on this line, draw it
           instructions.push(DrawInstructions::Rect(top_left, [MONO_WIDTH as usize, LINE_HEIGHT], theme_info.top));
           //draw the char over it
-          instructions.push(DrawInstructions::Text(top_left, "times-new-romono", line.2.chars().nth(current_file.cursor_pos - min).unwrap().to_string(), theme_info.top_text, theme_info.top, Some(0), Some(MONO_WIDTH)));
+          if line.2.len() > 0 {
+            instructions.push(DrawInstructions::Text(top_left, "times-new-romono", line.2.chars().nth(current_file.cursor_pos - min).unwrap().to_string(), theme_info.top_text, theme_info.top, Some(0), Some(MONO_WIDTH)));
+          }
         }
       }
     }
@@ -258,7 +388,7 @@ impl Malvim {
     let current_file = &self.files[self.current_file_index];
     let line_num_width = current_file.content.len().to_string().len() * MONO_WIDTH as usize;
     let max_chars_per_line = (self.dimensions[0] - line_num_width - PADDING * 2) / MONO_WIDTH as usize;
-    let actual_lines = calc_actual_lines(current_file.content.iter(), max_chars_per_line);
+    let actual_lines = calc_actual_lines(current_file.content.iter(), max_chars_per_line, true);
     //now, see if the line_pos is still visible from the top_line_pos,
     //if not, move top_line_pos down until it is
     let max_lines = (self.dimensions[1] - BAND_HEIGHT * 3 - PADDING) / LINE_HEIGHT;
@@ -273,7 +403,7 @@ impl Malvim {
     };
   }
 
-  fn process_command(&mut self) {
+  fn process_command(&mut self) -> bool {
     let mut parts = self.command.as_ref().unwrap().split(" ");
     let first = parts.next().unwrap();
     let arg = parts.next().unwrap_or("");
@@ -324,6 +454,7 @@ impl Malvim {
               self.files.insert(self.current_file_index, file_info);
             }
           }
+          return true;
         } else {
           self.bottom_message = Some("Failed to open that file".to_string());
         }
@@ -341,14 +472,17 @@ impl Malvim {
       self.current_file_index = self.current_file_index.checked_sub(1).unwrap_or(0);
     } else if first == "p" || first == "tabp" {
       self.current_file_index = self.current_file_index.checked_sub(1).unwrap_or(self.files.len() - 1);
+      return true;
     } else if first == "n" || first == "tabn" {
       self.current_file_index += 1;
       if self.current_file_index == self.files.len() {
         self.current_file_index = 0;
       }
+      return true;
     } else {
       self.bottom_message = Some("Not a command".to_string());
     }
+    false
   }
 }
 
