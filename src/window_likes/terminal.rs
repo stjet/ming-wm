@@ -2,13 +2,13 @@ use std::vec::Vec;
 use std::vec;
 use std::process::{ Command, Output };
 use std::str::from_utf8;
-use std::path::PathBuf;
 use std::io;
 
 use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
 use crate::messages::{ WindowMessage, WindowMessageResponse };
 use crate::framebuffer::Dimensions;
 use crate::themes::ThemeInfo;
+use crate::utils::concat_paths;
 
 const MONO_WIDTH: u8 = 10;
 const LINE_HEIGHT: usize = 15;
@@ -39,6 +39,10 @@ impl WindowLike for Terminal {
         self.current_path = "/".to_string();
         self.lines = vec!["Mingde Terminal".to_string(), "".to_string()];
         self.calc_actual_lines();
+        WindowMessageResponse::JustRerender
+      },
+      WindowMessage::ChangeDimensions(dimensions) => {
+        self.dimensions = dimensions;
         WindowMessageResponse::JustRerender
       },
       WindowMessage::KeyPress(key_press) => {
@@ -72,11 +76,6 @@ impl WindowLike for Terminal {
         self.actual_line_num = self.actual_lines.len().checked_sub(self.get_max_lines()).unwrap_or(0);
         WindowMessageResponse::JustRerender
       },
-      WindowMessage::ChangeDimensions(dimensions) => {
-        self.dimensions = dimensions;
-        WindowMessageResponse::JustRerender
-      },
-      //
       _ => WindowMessageResponse::DoNothing,
     }
   }
@@ -132,28 +131,8 @@ impl Terminal {
     } else if self.current_input.starts_with("cd ") {
       let mut cd_split = self.current_input.split(" ");
       cd_split.next().unwrap();
-      let mut failed = false;
       let arg = cd_split.next().unwrap();
-      let mut new_path = PathBuf::from(&self.current_path);
-      if arg.starts_with("/") {
-        //absolute path
-        new_path = PathBuf::from(arg);
-      } else {
-        //relative path
-        for part in arg.split("/") {
-          if part == ".." {
-            if let Some(parent) = new_path.parent() {
-              new_path = parent.to_path_buf();
-            } else {
-              failed = true;
-            }
-          } else {
-            new_path.push(part);
-          }
-        }
-      }
-      if !failed {
-        //see if path exists
+      if let Ok(new_path) = concat_paths(&self.current_path, arg) {
         if new_path.exists() {
           self.current_path = new_path.to_str().unwrap().to_string();
         }

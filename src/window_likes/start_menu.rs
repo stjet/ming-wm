@@ -143,8 +143,10 @@ impl StartMenu {
               to_add.push("Minesweeper");
             } else if name == "Editing" {
               to_add.push("Malvim");
-            } else if name == "Files" {
+            } else if name == "Utils" {
               to_add.push("Terminal");
+            } else if name == "Files" {
+              to_add.push("Audio Player");
             }
             //
             for a in 0..to_add.len() {

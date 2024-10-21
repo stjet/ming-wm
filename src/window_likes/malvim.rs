@@ -264,6 +264,7 @@ impl WindowLike for Malvim {
             self.files[self.current_file_index].changed = true;
           }
         }
+        self.calc_top_line_pos();
         WindowMessageResponse::JustRerender
       },
       WindowMessage::ChangeDimensions(dimensions) => {
@@ -380,6 +381,21 @@ impl Malvim {
   pub fn new() -> Self {
     Default::default()
   }
+
+  fn calc_top_line_pos(&mut self) {
+    if self.files.len() == 0 {
+      return;
+    }
+    //now, see if the line_pos is still visible from the top_line_pos,
+    //if not, move top_line_pos down until it is
+    let current_file = &self.files[self.current_file_index];
+    let actual_line_pos = self.current.actual_lines.iter().position(|l| l.1 == current_file.line_pos).unwrap();
+    if current_file.top_line_pos + self.current.max_lines < actual_line_pos {
+      self.files[self.current_file_index].top_line_pos = actual_line_pos.checked_sub(self.current.max_lines - 1).unwrap_or(0);
+    } else if actual_line_pos < current_file.top_line_pos {
+      self.files[self.current_file_index].top_line_pos = actual_line_pos;
+    }
+  }
   
   fn calc_current(&mut self) {
     if self.files.len() == 0 {
@@ -389,12 +405,7 @@ impl Malvim {
     let line_num_width = current_file.content.len().to_string().len() * MONO_WIDTH as usize;
     let max_chars_per_line = (self.dimensions[0] - line_num_width - PADDING * 2) / MONO_WIDTH as usize;
     let actual_lines = calc_actual_lines(current_file.content.iter(), max_chars_per_line, true);
-    //now, see if the line_pos is still visible from the top_line_pos,
-    //if not, move top_line_pos down until it is
     let max_lines = (self.dimensions[1] - BAND_HEIGHT * 3 - PADDING) / LINE_HEIGHT;
-    if current_file.top_line_pos + max_lines < current_file.line_pos {
-      self.files[self.current_file_index].top_line_pos = current_file.line_pos.checked_sub(max_lines).unwrap_or(0);
-    }
     self.current = Current {
       actual_lines,
       line_num_width,

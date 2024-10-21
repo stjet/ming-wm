@@ -11,7 +11,7 @@ pub enum WindowManagerMessage {
   //
 }
 
-pub type WindowBox = Box<dyn WindowLike + Send>;
+pub type WindowBox = Box<dyn WindowLike>;
 
 /*
 impl PartialEq for WindowBox {
@@ -63,6 +63,7 @@ pub enum ShortcutType {
   StartMenu,
   SwitchWorkspace(u8),
   MoveWindowToWorkspace(u8),
+  FocusPrevWindow,
   FocusNextWindow,
   QuitWindow,
   MoveWindow(Direction),

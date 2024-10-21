@@ -25,6 +25,7 @@ use crate::window_likes::start_menu::StartMenu;
 use crate::window_likes::minesweeper::Minesweeper;
 use crate::window_likes::terminal::Terminal;
 use crate::window_likes::malvim::Malvim;
+use crate::window_likes::audio_player::AudioPlayer;
 
 //todo, better error handling for windows
 
@@ -112,7 +113,7 @@ pub enum Workspace {
 
 pub struct WindowLikeInfo {
   id: usize,
-  window_like: Box<dyn WindowLike + Send>,
+  window_like: WindowBox,
   top_left: Point,
   dimensions: Dimensions,
   workspace: Workspace,
@@ -154,7 +155,7 @@ impl WindowManager {
     wm
   }
 
-  pub fn add_window_like(&mut self, mut window_like: Box<dyn WindowLike + Send>, top_left: Point, dimensions: Option<Dimensions>) {
+  pub fn add_window_like(&mut self, mut window_like: Box<dyn WindowLike>, top_left: Point, dimensions: Option<Dimensions>) {
     let subtype = window_like.subtype();
     let dimensions = dimensions.unwrap_or(window_like.ideal_dimensions(self.dimensions));
     self.id_count = self.id_count + 1;
@@ -250,6 +251,7 @@ impl WindowManager {
               let shortcuts = HashMap::from([
                 //alt+e is terminate program (ctrl+c)
                 ('s', ShortcutType::StartMenu),
+                ('[', ShortcutType::FocusPrevWindow),
                 (']', ShortcutType::FocusNextWindow),
                 ('q', ShortcutType::QuitWindow),
                 ('c', ShortcutType::CenterWindow),
@@ -377,13 +379,21 @@ impl WindowManager {
                       }
                     }
                   },
-                  &ShortcutType::FocusNextWindow => {
+                  &ShortcutType::FocusPrevWindow | &ShortcutType::FocusNextWindow => {
                     let current_index = self.get_focused_index().unwrap_or(0);
                     let mut new_focus_index = current_index;
                     loop {
-                      new_focus_index += 1;
-                      if new_focus_index == self.window_infos.len() {
-                        new_focus_index = 0;
+                      if shortcut == &ShortcutType::FocusPrevWindow {
+                        if new_focus_index == 0 {
+                          new_focus_index = self.window_infos.len() - 1;
+                        } else {
+                          new_focus_index -= 1;
+                        }
+                      } else {
+                        new_focus_index += 1;
+                        if new_focus_index == self.window_infos.len() {
+                          new_focus_index = 0;
+                        }
                       }
                       if self.window_infos[new_focus_index].window_like.subtype() == WindowLikeType::Window && self.window_infos[new_focus_index].workspace == Workspace::Workspace(self.current_workspace) {
                         //switch focus to this
@@ -494,6 +504,7 @@ impl WindowManager {
           "Minesweeper" => Box::new(Minesweeper::new()),
           "Malvim" => Box::new(Malvim::new()),
           "Terminal" => Box::new(Terminal::new()),
+          "Audio Player" => Box::new(AudioPlayer::new()),
           "StartMenu" => Box::new(StartMenu::new()),
           _ => panic!("no such window"),
         };

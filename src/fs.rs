@@ -1,4 +1,5 @@
 use std::fs::read_dir;
+use std::path::PathBuf;
 
 use bmp_rust::bmp::BMP;
 
@@ -47,5 +48,18 @@ pub fn get_bmp(path: &str) -> Vec<Vec<Vec<u8>>> {
     bmp.push(row);
   }
   bmp
+}
+
+pub fn get_all_files(dir: PathBuf) -> Vec<PathBuf> {
+  let mut files = Vec::new();
+  for entry in read_dir(dir).unwrap() {
+    let path = entry.unwrap().path();
+    if path.is_dir() {
+      files.extend(get_all_files(path));
+    } else {
+      files.push(path);
+    }
+  }
+  files
 }
 

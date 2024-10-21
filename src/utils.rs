@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 
 pub trait Substring {
   fn substring(&self, start: usize, end: usize) -> &str;
@@ -67,4 +68,38 @@ pub fn calc_new_cursor_pos(cursor_pos: usize, new_length: usize) -> usize {
   }
 }
 
+pub fn concat_paths(current_path: &str, add_path: &str) -> Result<PathBuf, ()> {
+  let mut new_path = PathBuf::from(current_path);
+  if add_path.starts_with("/") {
+    //absolute path
+    new_path = PathBuf::from(add_path);
+  } else {
+    //relative path
+    for part in add_path.split("/") {
+      if part == ".." {
+        if let Some(parent) = new_path.parent() {
+          new_path = parent.to_path_buf();
+        } else {
+          return Err(());
+        }
+      } else {
+        new_path.push(part);
+      }
+    }
+  }
+  Ok(new_path)
+}
+
+//go from seconds to minutes:seconds
+pub fn format_seconds(seconds: u64) -> String {
+  let mut m = (seconds / 60).to_string(); //automatically rounds down
+  if m.len() == 1 {
+    m = "0".to_string() + &m;
+  }
+  let mut s = (seconds % 60).to_string();
+  if s.len() == 1 {
+    s = "0".to_string() + &s;
+  }
+  m + ":" + &s
+}
 

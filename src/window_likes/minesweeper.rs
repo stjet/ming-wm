@@ -31,7 +31,7 @@ struct MineTile {
 }
 
 #[derive(Default, PartialEq)]
-enum MinesweeperState {
+enum State {
   #[default]
   Seed,
   BeforePlaying,
@@ -43,7 +43,7 @@ enum MinesweeperState {
 #[derive(Default)]
 pub struct Minesweeper {
   dimensions: Dimensions,
-  state: MinesweeperState,
+  state: State,
   tiles: [[MineTile; 16]; 16],
   random_chars: String,
   random_seed: u32, //user types in random keyboard stuff at beginning
@@ -58,19 +58,19 @@ impl WindowLike for Minesweeper {
         WindowMessageResponse::JustRerender
       },
       WindowMessage::KeyPress(key_press) => {
-        if self.state == MinesweeperState::Seed {
+        if self.state == State::Seed {
           if self.random_chars.len() == 4 {
             let mut r_chars = self.random_chars.chars();
             self.random_seed = ((r_chars.next().unwrap() as u8 as u32) << 24) | ((r_chars.next().unwrap() as u8 as u32) << 16) | ((r_chars.next().unwrap() as u8 as u32) << 8) | (r_chars.next().unwrap() as u8 as u32);
             self.random_chars = String::new();
-            self.state = MinesweeperState::BeforePlaying;
+            self.state = State::BeforePlaying;
           } else {
             if u8::try_from(key_press.key).is_ok() {
               self.random_chars.push(key_press.key);
             }
           }
           WindowMessageResponse::JustRerender
-        } else if self.state == MinesweeperState::BeforePlaying || self.state == MinesweeperState::Playing {
+        } else if self.state == State::BeforePlaying || self.state == State::Playing {
           if key_press.key == '𐘁' { //backspace
             self.first_char = '\0';
             WindowMessageResponse::DoNothing
@@ -84,7 +84,7 @@ impl WindowLike for Minesweeper {
             let y = u / 16;
             let x = u % 16;
             if HEX_CHARS.iter().find(|c| c == &&key_press.key).is_some() {
-              if self.state == MinesweeperState::BeforePlaying {
+              if self.state == State::BeforePlaying {
                 loop {
                   self.new_tiles();
                   if self.tiles[y][x].touching == 0 && !self.tiles[y][x].mine {
@@ -92,11 +92,11 @@ impl WindowLike for Minesweeper {
                   }
                 }
               }
-              self.state = MinesweeperState::Playing;
+              self.state = State::Playing;
               //if that tile not reveal it, reveal it and all adjacent zero touching squares, etc
               if self.tiles[y][x].mine {
                 self.tiles[y][x].revealed = true;
-                self.state = MinesweeperState::Lost;
+                self.state = State::Lost;
               } else if self.tiles[y][x].touching == 0 {
                 let mut queue = VecDeque::new();
                 queue.push_back([x, y]);
@@ -121,7 +121,7 @@ impl WindowLike for Minesweeper {
                 self.tiles[y][x].revealed = true;
               }
               self.first_char = '\0';
-              if self.state != MinesweeperState::Lost {
+              if self.state != State::Lost {
                 //check for win
                 let mut won = true;
                 for y in 0..16 {
@@ -133,7 +133,7 @@ impl WindowLike for Minesweeper {
                   }
                 }
                 if won {
-                  self.state = MinesweeperState::Won;
+                  self.state = State::Won;
                 }
               }
               WindowMessageResponse::JustRerender
@@ -145,7 +145,7 @@ impl WindowLike for Minesweeper {
           }
         } else {
           self.tiles = Default::default();
-          self.state = MinesweeperState::Seed;
+          self.state = State::Seed;
           WindowMessageResponse::DoNothing
         }
       },
@@ -154,7 +154,7 @@ impl WindowLike for Minesweeper {
   }
 
   fn draw(&self, theme_info: &ThemeInfo) -> Vec<DrawInstructions> {
-    if self.state == MinesweeperState::Seed {
+    if self.state == State::Seed {
       vec![
         DrawInstructions::Text([4, 4], "times-new-roman", "Type in random characters to initalise the seed".to_string(), theme_info.text, theme_info.background, None, None),
         DrawInstructions::Text([4, 4 + 16], "times-new-roman", self.random_chars.clone(), theme_info.text, theme_info.background, None, None),
@@ -230,9 +230,9 @@ impl WindowLike for Minesweeper {
           }
         }
       }
-      if self.state == MinesweeperState::Lost {
+      if self.state == State::Lost {
         instructions.extend(vec![DrawInstructions::Text([4, 4], "times-new-roman", "You LOST!!! Press a key to play again.".to_string(), theme_info.text, theme_info.background, None, None)]);
-      } else if self.state == MinesweeperState::Won {
+      } else if self.state == State::Won {
         instructions.extend(vec![DrawInstructions::Text([4, 4], "times-new-roman", "You WON!!! Press a key to play again.".to_string(), theme_info.text, theme_info.background, None, None)]);
       }
       instructions
@@ -240,6 +240,7 @@ impl WindowLike for Minesweeper {
   }
 
   //properties
+
   fn title(&self) -> &'static str {
     "Minesweeper"
   }
