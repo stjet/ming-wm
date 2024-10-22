@@ -2,6 +2,8 @@ use std::boxed::Box;
 use std::fmt;
 use std::vec::Vec;
 
+use serde::{ Deserialize, Serialize };
+
 use crate::keyboard::KeyChar;
 use crate::framebuffer::Dimensions;
 use crate::window_manager::WindowLike;
@@ -22,9 +24,9 @@ impl PartialEq for WindowBox {
 }
 */
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Serialize, Deserialize)]
 pub enum WindowManagerRequest {
-  OpenWindow(&'static str),
+  OpenWindow(String),
   CloseStartMenu,
   Unlock,
   Lock,
@@ -37,19 +39,20 @@ impl fmt::Debug for WindowManagerRequest{
   }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub enum WindowMessageResponse {
   Request(WindowManagerRequest),
   JustRerender,
   DoNothing,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct KeyPress {
   pub key: char,
   //
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum Direction {
   Left,
   Down,
@@ -58,7 +61,7 @@ pub enum Direction {
 }
 
 //todo, rename to CommandType
-#[derive(PartialEq)]
+#[derive(PartialEq, Serialize, Deserialize)]
 pub enum ShortcutType {
   StartMenu,
   SwitchWorkspace(u8),
@@ -74,14 +77,16 @@ pub enum ShortcutType {
   //
 }
 
-pub type WindowsVec = Vec<(usize, &'static str)>;
+pub type WindowsVec = Vec<(usize, String)>;
 
+#[derive(Serialize, Deserialize)]
 pub enum InfoType {
   //let taskbar know what the current windows in the workspace are
   WindowsInWorkspace(WindowsVec, usize), //Vec<title, name)>, focused id
   //
 }
 
+#[derive(Serialize, Deserialize)]
 pub enum WindowMessage {
   Init(Dimensions),
   KeyPress(KeyPress),

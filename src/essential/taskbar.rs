@@ -33,7 +33,7 @@ impl WindowLike for Taskbar {
       WindowMessage::Init(dimensions) => {
         self.dimensions = dimensions;
         self.components = vec![
-          Box::new(ToggleButton::new("start-button".to_string(), [PADDING, PADDING], [44, self.dimensions[1] - (PADDING * 2)], "Start", TaskbarMessage::ShowStartMenu, TaskbarMessage::HideStartMenu, false, Some(ToggleButtonAlignment::Left))),
+          Box::new(ToggleButton::new("start-button".to_string(), [PADDING, PADDING], [44, self.dimensions[1] - (PADDING * 2)], "Start".to_string(), TaskbarMessage::ShowStartMenu, TaskbarMessage::HideStartMenu, false, Some(ToggleButtonAlignment::Left))),
         ];
         WindowMessageResponse::JustRerender
       },
@@ -79,7 +79,8 @@ impl WindowLike for Taskbar {
         break;
       }
       let info = &self.windows_in_workspace[wi];
-      let mut b = ToggleButton::new(info.1.to_string() + "-window", [PADDING * 2 + 44 + (META_WIDTH + PADDING) * wi, PADDING], [META_WIDTH, self.dimensions[1] - (PADDING * 2)], info.1, TaskbarMessage::Nothing, TaskbarMessage::Nothing, false, Some(ToggleButtonAlignment::Left));
+      let name = &info.1;
+      let mut b = ToggleButton::new(name.to_string() + "-window", [PADDING * 2 + 44 + (META_WIDTH + PADDING) * wi, PADDING], [META_WIDTH, self.dimensions[1] - (PADDING * 2)], name.to_string(), TaskbarMessage::Nothing, TaskbarMessage::Nothing, false, Some(ToggleButtonAlignment::Left));
       b.inverted = info.0 == self.focused_id;
       instructions.extend(b.draw(theme_info));
     }
@@ -110,7 +111,7 @@ impl Taskbar {
     if let Some(message) = message {
       match message {
         TaskbarMessage::ShowStartMenu => {
-          WindowMessageResponse::Request(WindowManagerRequest::OpenWindow("StartMenu"))
+          WindowMessageResponse::Request(WindowManagerRequest::OpenWindow("StartMenu".to_string()))
         },
         TaskbarMessage::HideStartMenu => {
           WindowMessageResponse::Request(WindowManagerRequest::CloseStartMenu)

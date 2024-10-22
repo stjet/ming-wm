@@ -7,12 +7,13 @@ use std::fs::File;
 use rodio::{ Decoder, OutputStream, Sink, Source };
 use rand::prelude::*;
 
-use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
-use crate::messages::{ WindowMessage, WindowMessageResponse };
-use crate::framebuffer::Dimensions;
-use crate::themes::ThemeInfo;
-use crate::utils::{ concat_paths, format_seconds };
-use crate::fs::get_all_files;
+use ming_wm::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
+use ming_wm::messages::{ WindowMessage, WindowMessageResponse };
+use ming_wm::framebuffer::Dimensions;
+use ming_wm::themes::ThemeInfo;
+use ming_wm::utils::{ concat_paths, format_seconds };
+use ming_wm::fs::get_all_files;
+use ming_wm::ipc::listen;
 
 const MONO_WIDTH: u8 = 10;
 const LINE_HEIGHT: usize = 18;
@@ -59,13 +60,13 @@ impl WindowLike for AudioPlayer {
   }
 
   fn draw(&self, theme_info: &ThemeInfo) -> Vec<DrawInstructions> {
-    let mut instructions = vec![DrawInstructions::Text([2, self.dimensions[1] - LINE_HEIGHT], "times-new-roman", if self.command.len() > 0 { self.command.clone() } else { self.response.clone() }, theme_info.text, theme_info.background, None, None)];
+    let mut instructions = vec![DrawInstructions::Text([2, self.dimensions[1] - LINE_HEIGHT], "times-new-roman".to_string(), if self.command.len() > 0 { self.command.clone() } else { self.response.clone() }, theme_info.text, theme_info.background, None, None)];
     if let Some(sink) = &self.sink {
       let current = &self.queue[self.queue.len() - sink.len()];
       let current_name = current.0.file_name().unwrap().to_string_lossy().into_owned();
-      instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - current_name.len() * MONO_WIDTH as usize / 2, 2], "times-new-romono", current_name.clone(), theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)));
+      instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - current_name.len() * MONO_WIDTH as usize / 2, 2], "times-new-romono".to_string(), current_name.clone(), theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)));
       let time_string = format!("{}/{}", format_seconds(sink.get_pos().as_secs()), format_seconds(current.1));
-      instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - time_string.len() * MONO_WIDTH as usize / 2, LINE_HEIGHT + 2], "times-new-romono", time_string, theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)));
+      instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - time_string.len() * MONO_WIDTH as usize / 2, LINE_HEIGHT + 2], "times-new-romono".to_string(), time_string, theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)));
     }
     //
     instructions
@@ -73,8 +74,8 @@ impl WindowLike for AudioPlayer {
 
   //properties
 
-  fn title(&self) -> &'static str {
-    "Audio Player"
+  fn title(&self) -> String {
+    "Audio Player".to_string()
   }
 
   fn subtype(&self) -> WindowLikeType {
@@ -98,13 +99,13 @@ impl AudioPlayer {
   }
 
   //t: toggle pause/play
-  //h: prev
   //l: next/skip
   //j: volume down
   //k: volume up
   //b <dir>: set base directory
   //p <dir>/<playlist file>: play directory or playlist in random order
-  //just hit enter to refresh
+  //todo: h for help?
+  //just hit enter or any key to refresh
   fn process_command(&mut self) -> String {
     if self.command.len() == 1 {
       if let Some(sink) = &mut self.sink {
@@ -173,5 +174,9 @@ impl AudioPlayer {
     }
     String::new()
   }
+}
+
+pub fn main() {
+  listen(AudioPlayer::new());
 }
 

@@ -17,7 +17,7 @@ pub struct ToggleButton<T> {
   name_: String,
   top_left: Point,
   size: Dimensions,
-  text: &'static str,
+  text: String,
   draw_bg: bool,
   pub inverted: bool, //whether is it clicked or not
   alignment: ToggleButtonAlignment,
@@ -54,7 +54,7 @@ impl<T: Clone> Component<T> for ToggleButton<T> {
       //the background if self.draw_bg
       //DrawInstructions::Rect(),
       //the text (for now, hardcoded top left)
-      DrawInstructions::Text([self.top_left[0] + 4, self.top_left[1] + (self.size[1] - font_height) / 2], "times-new-roman", self.text.to_string(), theme_info.text, theme_info.background, None, None),
+      DrawInstructions::Text([self.top_left[0] + 4, self.top_left[1] + (self.size[1] - font_height) / 2], "times-new-roman".to_string(), self.text.to_string(), theme_info.text, theme_info.background, None, None),
     ]
   }
 
@@ -73,7 +73,7 @@ impl<T: Clone> Component<T> for ToggleButton<T> {
 }
 
 impl<T> ToggleButton<T> {
-  pub fn new(name_: String, top_left: Point, size: Dimensions, text: &'static str, click_return: T, unclick_return: T, draw_bg: bool, alignment: Option<ToggleButtonAlignment>) -> Self {
+  pub fn new(name_: String, top_left: Point, size: Dimensions, text: String, click_return: T, unclick_return: T, draw_bg: bool, alignment: Option<ToggleButtonAlignment>) -> Self {
     Self {
       name_,
       top_left,

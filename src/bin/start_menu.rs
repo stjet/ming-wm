@@ -1,13 +1,18 @@
+#![allow(warnings)]
+
 use std::vec;
 use std::vec::Vec;
 use std::boxed::Box;
 
-use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
-use crate::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest };
-use crate::framebuffer::Dimensions;
-use crate::themes::ThemeInfo;
-use crate::components::Component;
-use crate::components::highlight_button::HighlightButton;
+use ming_wm::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
+use ming_wm::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest };
+use ming_wm::framebuffer::Dimensions;
+use ming_wm::themes::ThemeInfo;
+use ming_wm::components::Component;
+use ming_wm::components::highlight_button::HighlightButton;
+use ming_wm::ipc::listen;
+
+//todo: move to essential
 
 static CATEGORIES: [&'static str; 9] = ["About", "Utils", "Games", "Editing", "Files", "System", "Misc", "Help", "Logout"];
 
@@ -160,7 +165,7 @@ impl StartMenu {
         },
         StartMenuMessage::WindowClick(name) => {
           //open the selected window
-          WindowMessageResponse::Request(WindowManagerRequest::OpenWindow(name))
+          WindowMessageResponse::Request(WindowManagerRequest::OpenWindow(name.to_string()))
         },
         StartMenuMessage::Back => {
           self.add_category_components();
@@ -191,5 +196,9 @@ impl StartMenu {
   pub fn get_focus_index(&self) -> Option<usize> {
     self.components.iter().filter(|c| c.focusable()).position(|c| c.name() == &self.current_focus)
   }
+}
+
+pub fn main() {
+  listen(StartMenu::new());
 }
 

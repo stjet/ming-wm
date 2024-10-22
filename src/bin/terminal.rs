@@ -4,11 +4,12 @@ use std::process::{ Command, Output };
 use std::str::from_utf8;
 use std::io;
 
-use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
-use crate::messages::{ WindowMessage, WindowMessageResponse };
-use crate::framebuffer::Dimensions;
-use crate::themes::ThemeInfo;
-use crate::utils::concat_paths;
+use ming_wm::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
+use ming_wm::messages::{ WindowMessage, WindowMessageResponse };
+use ming_wm::framebuffer::Dimensions;
+use ming_wm::themes::ThemeInfo;
+use ming_wm::utils::concat_paths;
+use ming_wm::ipc::listen;
 
 const MONO_WIDTH: u8 = 10;
 const LINE_HEIGHT: usize = 15;
@@ -92,14 +93,14 @@ impl WindowLike for Terminal {
         break;
       }
       let line = self.actual_lines[line_num].clone();
-      instructions.push(DrawInstructions::Text([PADDING, text_y], "times-new-romono", line, theme_info.alt_text, theme_info.alt_background, Some(0), Some(MONO_WIDTH)));
+      instructions.push(DrawInstructions::Text([PADDING, text_y], "times-new-romono".to_string(), line, theme_info.alt_text, theme_info.alt_background, Some(0), Some(MONO_WIDTH)));
       text_y += LINE_HEIGHT;
     }
     instructions
   }
 
-  fn title(&self) -> &'static str {
-    "Terminal"
+  fn title(&self) -> String {
+    "Terminal".to_string()
   }
 
   fn subtype(&self) -> WindowLikeType {
@@ -169,5 +170,9 @@ impl Terminal {
       }
     }
   }
+}
+
+pub fn main() {
+  listen(Terminal::new());
 }
 

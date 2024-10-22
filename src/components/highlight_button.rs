@@ -38,12 +38,12 @@ impl<T: Clone> Component<T> for HighlightButton<T> {
       vec![
         //highlight background
         DrawInstructions::Rect(self.top_left, self.size, theme_info.top),
-        DrawInstructions::Text([self.top_left[0] + 4, self.top_left[1] + (self.size[1] - font_height) / 2], "times-new-roman", self.text.to_string(), theme_info.top_text, theme_info.top, None, None),
+        DrawInstructions::Text([self.top_left[0] + 4, self.top_left[1] + (self.size[1] - font_height) / 2], "times-new-roman".to_string(), self.text.to_string(), theme_info.top_text, theme_info.top, None, None),
       ]
     } else {
       vec![
         DrawInstructions::Rect(self.top_left, self.size, theme_info.background),
-        DrawInstructions::Text([self.top_left[0] + 4, self.top_left[1] + (self.size[1] - font_height) / 2], "times-new-roman", self.text.to_string(), theme_info.text, theme_info.background, None, None),
+        DrawInstructions::Text([self.top_left[0] + 4, self.top_left[1] + (self.size[1] - font_height) / 2], "times-new-roman".to_string(), self.text.to_string(), theme_info.text, theme_info.background, None, None),
       ]
     }
   }

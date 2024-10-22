@@ -1,24 +1,7 @@
 use linux_framebuffer::Framebuffer;
 
-mod framebuffer;
-use framebuffer::FramebufferInfo;
-
-mod window_manager;
-use window_manager::init;
-
-mod window_likes;
-
-mod components;
-
-mod themes;
-
-mod keyboard;
-
-mod messages;
-
-mod fs;
-
-mod utils;
+use ming_wm::framebuffer::FramebufferInfo;
+use ming_wm::window_manager::init;
 
 fn main() {
   let mut fb = Framebuffer::new("/dev/fb0").unwrap();

@@ -11,21 +11,17 @@ use linux_framebuffer::Framebuffer;
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 use termion::cursor;
+use serde::{ Deserialize, Serialize };
 
 use crate::framebuffer::{ FramebufferWriter, FramebufferInfo, Point, Dimensions, RGBColor };
-use crate::window_likes::desktop_background::DesktopBackground;
-use crate::window_likes::taskbar::Taskbar;
-use crate::window_likes::lock_screen::LockScreen;
-use crate::window_likes::workspace_indicator::WorkspaceIndicator;
 use crate::themes::{ ThemeInfo, Themes, get_theme_info };
 use crate::keyboard::{ KeyChar, key_to_char };
 use crate::messages::*;
-
-use crate::window_likes::start_menu::StartMenu;
-use crate::window_likes::minesweeper::Minesweeper;
-use crate::window_likes::terminal::Terminal;
-use crate::window_likes::malvim::Malvim;
-use crate::window_likes::audio_player::AudioPlayer;
+use crate::proxy_window_like::ProxyWindowLike;
+use crate::essential::desktop_background::DesktopBackground;
+use crate::essential::taskbar::Taskbar;
+use crate::essential::lock_screen::LockScreen;
+use crate::essential::workspace_indicator::WorkspaceIndicator;
 
 //todo, better error handling for windows
 
@@ -71,15 +67,15 @@ pub fn min(one: usize, two: usize) -> usize {
   if one > two { two } else { one } 
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum DrawInstructions {
   Rect(Point, Dimensions, RGBColor),
-  Text(Point, &'static str, String, RGBColor, RGBColor, Option<usize>, Option<u8>), //font and text
+  Text(Point, String, String, RGBColor, RGBColor, Option<usize>, Option<u8>), //font and text
   Gradient(Point, Dimensions, RGBColor, RGBColor, usize),
   Mingde(Point),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum WindowLikeType {
   LockScreen,
   Window,
@@ -92,15 +88,18 @@ pub enum WindowLikeType {
 pub trait WindowLike {
   fn handle_message(&mut self, message: WindowMessage) -> WindowMessageResponse;
 
+  fn draw(&self, theme_info: &ThemeInfo) -> Vec<DrawInstructions>;
+
   //properties
-  fn title(&self) -> &'static str {
-    ""
+  fn title(&self) -> String {
+    String::new()
   }
+
   fn resizable(&self) -> bool {
     false
   }
+
   fn subtype(&self) -> WindowLikeType;
-  fn draw(&self, theme_info: &ThemeInfo) -> Vec<DrawInstructions>;
 
   fn ideal_dimensions(&self, dimensions: Dimensions) -> Dimensions; //needs &self or its not object safe or some bullcrap
 }
@@ -222,7 +221,7 @@ impl WindowManager {
 
   fn taskbar_update_windows(&mut self) {
     let taskbar_index = self.window_infos.iter().position(|w| w.window_like.subtype() == WindowLikeType::Taskbar).unwrap();
-    let mut relevant: WindowsVec = self.get_windows_in_workspace(false).iter().map(|w| (w.id, w.window_like.title())).collect();
+    let mut relevant: WindowsVec = self.get_windows_in_workspace(false).iter().map(|w| (w.id, w.window_like.title().to_string())).collect();
     relevant.sort_by(|a, b| a.0.cmp(&b.0)); //sort by ids so order is consistent
     let message = WindowMessage::Info(InfoType::WindowsInWorkspace(
       relevant,
@@ -500,13 +499,13 @@ impl WindowManager {
         if subtype != WindowLikeType::Taskbar && subtype != WindowLikeType::StartMenu {
           return;
         }
-        let w: WindowBox = match w {
-          "Minesweeper" => Box::new(Minesweeper::new()),
-          "Malvim" => Box::new(Malvim::new()),
-          "Terminal" => Box::new(Terminal::new()),
-          "Audio Player" => Box::new(AudioPlayer::new()),
-          "StartMenu" => Box::new(StartMenu::new()),
-          _ => panic!("no such window"),
+        let w: WindowBox = match w.as_str() {
+          "Minesweeper" => Box::new(ProxyWindowLike::new("minesweeper")),
+          "Malvim" => Box::new(ProxyWindowLike::new("malvim")),
+          "Terminal" => Box::new(ProxyWindowLike::new("terminal")),
+          "Audio Player" => Box::new(ProxyWindowLike::new("audio_player")),
+          "StartMenu" => Box::new(ProxyWindowLike::new("start_menu")),
+          _ => panic!("window not found"), //todo: do not panic
         };
         //close start menu if open
         self.toggle_start_menu(true);
@@ -588,7 +587,7 @@ impl WindowManager {
         instructions = instructions.iter().map(|instruction| {
           match instruction {
             DrawInstructions::Rect(top_left, dimensions, color) => DrawInstructions::Rect(WindowManager::get_true_top_left(top_left, is_window), *dimensions, *color),
-            DrawInstructions::Text(top_left, font_name, text, color, bg_color, horiz_spacing, mono_width) => DrawInstructions::Text(WindowManager::get_true_top_left(top_left, is_window), font_name, text.clone(), *color, *bg_color, *horiz_spacing, *mono_width),
+            DrawInstructions::Text(top_left, font_name, text, color, bg_color, horiz_spacing, mono_width) => DrawInstructions::Text(WindowManager::get_true_top_left(top_left, is_window), font_name.clone(), text.clone(), *color, *bg_color, *horiz_spacing, *mono_width),
             DrawInstructions::Mingde(top_left) => DrawInstructions::Mingde(WindowManager::get_true_top_left(top_left, is_window)),
             DrawInstructions::Gradient(top_left, dimensions, start_color, end_color, steps) => DrawInstructions::Gradient(WindowManager::get_true_top_left(top_left, is_window), *dimensions, *start_color, *end_color, *steps),
           }
@@ -602,7 +601,7 @@ impl WindowManager {
           DrawInstructions::Rect([0, 0], [1, window_dimensions[1]], theme_info.border_left_top),
           //top
           DrawInstructions::Rect([1, 1], [window_dimensions[0] - 2, WINDOW_TOP_HEIGHT - 3], theme_info.top),
-          DrawInstructions::Text([4, 4], "times-new-roman", window_info.window_like.title().to_string(), theme_info.top_text, theme_info.top, None, None),
+          DrawInstructions::Text([4, 4], "times-new-roman".to_string(), window_info.window_like.title().to_string(), theme_info.top_text, theme_info.top, None, None),
           //top bottom border
           DrawInstructions::Rect([1, WINDOW_TOP_HEIGHT - 2], [window_dimensions[0] - 2, 2], theme_info.border_left_top),
           //right bottom border
@@ -632,7 +631,7 @@ impl WindowManager {
             window_writer.draw_rect(top_left, true_dimensions, color);
           },
           DrawInstructions::Text(top_left, font_name, text, color, bg_color, horiz_spacing, mono_width) => {
-            window_writer.draw_text(top_left, font_name, &text, color, bg_color, horiz_spacing.unwrap_or(1), mono_width);
+            window_writer.draw_text(top_left, &font_name, &text, color, bg_color, horiz_spacing.unwrap_or(1), mono_width);
           },
           DrawInstructions::Mingde(top_left) => {
             window_writer._draw_mingde(top_left);

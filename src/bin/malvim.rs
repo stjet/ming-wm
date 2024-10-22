@@ -4,11 +4,12 @@ use std::fmt;
 use std::path::PathBuf;
 use std::fs::{ read_to_string, write };
 
-use crate::messages::{ WindowMessage, WindowMessageResponse };
-use crate::themes::ThemeInfo;
-use crate::framebuffer::Dimensions;
-use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
-use crate::utils::{ calc_actual_lines, calc_new_cursor_pos, Substring };
+use ming_wm::messages::{ WindowMessage, WindowMessageResponse };
+use ming_wm::themes::ThemeInfo;
+use ming_wm::framebuffer::Dimensions;
+use ming_wm::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
+use ming_wm::utils::{ calc_actual_lines, calc_new_cursor_pos, Substring };
+use ming_wm::ipc::listen;
 
 const MONO_WIDTH: u8 = 10;
 const LINE_HEIGHT: usize = 18;
@@ -302,7 +303,7 @@ impl WindowLike for Malvim {
       };
       instructions.extend(vec![
         DrawInstructions::Rect([used_width, 2], [future_used_width, BAND_HEIGHT - 2], background),
-        DrawInstructions::Text([used_width + 2, 2], "times-new-romono", if file_info.changed { "+ ".to_string() } else { String::new() } + &file_info.name, theme_info.alt_text, background, Some(0), Some(MONO_WIDTH)),
+        DrawInstructions::Text([used_width + 2, 2], "times-new-romono".to_string(), if file_info.changed { "+ ".to_string() } else { String::new() } + &file_info.name, theme_info.alt_text, background, Some(0), Some(MONO_WIDTH)),
       ]);
       used_width = future_used_width;
     }
@@ -320,13 +321,13 @@ impl WindowLike for Malvim {
         //write line num text (if start of line)
         let y0 = BAND_HEIGHT + rel_line_num * LINE_HEIGHT + PADDING;
         if line.0 {
-          instructions.push(DrawInstructions::Text([PADDING, y0], "times-new-romono", line.1.to_string(), theme_info.alt_secondary, theme_info.alt_background, Some(0), Some(MONO_WIDTH)));
+          instructions.push(DrawInstructions::Text([PADDING, y0], "times-new-romono".to_string(), line.1.to_string(), theme_info.alt_secondary, theme_info.alt_background, Some(0), Some(MONO_WIDTH)));
           sub_line_num = 0;
         }
         let x1 = current.line_num_width + PADDING * 2;
         //write actual line
         //line.2
-        instructions.push(DrawInstructions::Text([x1, y0], "times-new-romono", line.2.clone(), theme_info.alt_text, theme_info.alt_background, Some(0), Some(MONO_WIDTH)));
+        instructions.push(DrawInstructions::Text([x1, y0], "times-new-romono".to_string(), line.2.clone(), theme_info.alt_text, theme_info.alt_background, Some(0), Some(MONO_WIDTH)));
         sub_line_num += 1;
         let max = sub_line_num * current.max_chars_per_line;
         let min = max - current.max_chars_per_line;
@@ -336,32 +337,32 @@ impl WindowLike for Malvim {
           instructions.push(DrawInstructions::Rect(top_left, [MONO_WIDTH as usize, LINE_HEIGHT], theme_info.top));
           //draw the char over it
           if line.2.len() > 0 {
-            instructions.push(DrawInstructions::Text(top_left, "times-new-romono", line.2.chars().nth(current_file.cursor_pos - min).unwrap().to_string(), theme_info.top_text, theme_info.top, Some(0), Some(MONO_WIDTH)));
+            instructions.push(DrawInstructions::Text(top_left, "times-new-romono".to_string(), line.2.chars().nth(current_file.cursor_pos - min).unwrap().to_string(), theme_info.top_text, theme_info.top, Some(0), Some(MONO_WIDTH)));
           }
         }
       }
     }
     //bottom blue band stuff
     //write mode
-    instructions.push(DrawInstructions::Text([0, self.dimensions[1] - BAND_HEIGHT * 2 + 1], "times-new-romono", self.mode.to_string(), theme_info.top_text, theme_info.top, Some(0), Some(MONO_WIDTH)));
+    instructions.push(DrawInstructions::Text([0, self.dimensions[1] - BAND_HEIGHT * 2 + 1], "times-new-romono".to_string(), self.mode.to_string(), theme_info.top_text, theme_info.top, Some(0), Some(MONO_WIDTH)));
     let file_status;
     if self.files.len() > 0 {
       file_status = self.files[self.current_file_index].name.clone();
     } else {
       file_status = "No file open".to_string();
     }
-    instructions.push(DrawInstructions::Text([self.dimensions[0] - file_status.len() * (MONO_WIDTH as usize), self.dimensions[1] - BAND_HEIGHT * 2 + 1], "times-new-romono", file_status, theme_info.top_text, theme_info.top, Some(0), Some(MONO_WIDTH)));
+    instructions.push(DrawInstructions::Text([self.dimensions[0] - file_status.len() * (MONO_WIDTH as usize), self.dimensions[1] - BAND_HEIGHT * 2 + 1], "times-new-romono".to_string(), file_status, theme_info.top_text, theme_info.top, Some(0), Some(MONO_WIDTH)));
     //write command or bottom message
     if self.mode == Mode::Command {
-      instructions.push(DrawInstructions::Text([0, self.dimensions[1] - BAND_HEIGHT], "times-new-romono", ":".to_string() + &self.command.clone().unwrap_or("".to_string()), theme_info.top_text, theme_info.top, Some(0), Some(MONO_WIDTH)));
+      instructions.push(DrawInstructions::Text([0, self.dimensions[1] - BAND_HEIGHT], "times-new-romono".to_string(), ":".to_string() + &self.command.clone().unwrap_or("".to_string()), theme_info.top_text, theme_info.top, Some(0), Some(MONO_WIDTH)));
     } else if self.mode == Mode::Normal && self.bottom_message.is_some() {
-      instructions.push(DrawInstructions::Text([0, self.dimensions[1] - BAND_HEIGHT], "times-new-romono", self.bottom_message.clone().unwrap(), theme_info.top_text, theme_info.top, Some(0), Some(MONO_WIDTH)));
+      instructions.push(DrawInstructions::Text([0, self.dimensions[1] - BAND_HEIGHT], "times-new-romono".to_string(), self.bottom_message.clone().unwrap(), theme_info.top_text, theme_info.top, Some(0), Some(MONO_WIDTH)));
     }
     instructions
   }
 
-  fn title(&self) -> &'static str {
-    "Malvim"
+  fn title(&self) -> String {
+    "Malvim".to_string()
   }
 
   fn subtype(&self) -> WindowLikeType {
@@ -495,5 +496,9 @@ impl Malvim {
     }
     false
   }
+}
+
+pub fn main() {
+  listen(Malvim::new());
 }
 

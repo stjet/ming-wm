@@ -1,7 +1,8 @@
 [package]
-name = "ming-os-kernel"
+name = "ming-wm"
 version = "0.1.0"
 edition = "2018"
+default-run = "main"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -12,3 +13,5 @@ bmp-rust = "0.4.1"
 termion = "4.0.3"
 rodio = "0.19.0"
 rand = "0.8.5"
+ron = "0.8"
+serde = { version = "1", features = ["derive"] }

@@ -3,10 +3,11 @@ use std::vec;
 use std::collections::VecDeque;
 use core::convert::TryFrom;
 
-use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
-use crate::messages::{ WindowMessage, WindowMessageResponse };
-use crate::framebuffer::Dimensions;
-use crate::themes::ThemeInfo;
+use ming_wm::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
+use ming_wm::messages::{ WindowMessage, WindowMessageResponse };
+use ming_wm::framebuffer::Dimensions;
+use ming_wm::themes::ThemeInfo;
+use ming_wm::ipc::listen;
 
 const HEX_CHARS: [char; 16] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'];
 
@@ -156,8 +157,8 @@ impl WindowLike for Minesweeper {
   fn draw(&self, theme_info: &ThemeInfo) -> Vec<DrawInstructions> {
     if self.state == State::Seed {
       vec![
-        DrawInstructions::Text([4, 4], "times-new-roman", "Type in random characters to initalise the seed".to_string(), theme_info.text, theme_info.background, None, None),
-        DrawInstructions::Text([4, 4 + 16], "times-new-roman", self.random_chars.clone(), theme_info.text, theme_info.background, None, None),
+        DrawInstructions::Text([4, 4], "times-new-roman".to_string(), "Type in random characters to initalise the seed".to_string(), theme_info.text, theme_info.background, None, None),
+        DrawInstructions::Text([4, 4 + 16], "times-new-roman".to_string(), self.random_chars.clone(), theme_info.text, theme_info.background, None, None),
       ]
     } else {
       let mut instructions = vec![
@@ -194,7 +195,7 @@ impl WindowLike for Minesweeper {
           let tile = &self.tiles[y][x];
           if tile.revealed {
             if tile.mine {
-              instructions.push(DrawInstructions::Text([x * tile_size + tile_size / 2 + 2, y * tile_size + tile_size / 2], "times-new-roman", "x".to_string(), [255, 0, 0], theme_info.background, None, None));
+              instructions.push(DrawInstructions::Text([x * tile_size + tile_size / 2 + 2, y * tile_size + tile_size / 2], "times-new-roman".to_string(), "x".to_string(), [255, 0, 0], theme_info.background, None, None));
             } else {
               let color = match tile.touching {
                 1 => [0, 0, 255],
@@ -207,7 +208,7 @@ impl WindowLike for Minesweeper {
                 //8
                 _ => [128, 128, 128],
               };
-              instructions.push(DrawInstructions::Text([x * tile_size + tile_size / 2 + 5, y * tile_size + tile_size / 2 + 2], "times-new-roman", tile.touching.to_string(), color, theme_info.background, None, None));
+              instructions.push(DrawInstructions::Text([x * tile_size + tile_size / 2 + 5, y * tile_size + tile_size / 2 + 2], "times-new-roman".to_string(), tile.touching.to_string(), color, theme_info.background, None, None));
             }
           } else {
             let top_left = [x * tile_size + 6, y * tile_size + 5];
@@ -225,15 +226,15 @@ impl WindowLike for Minesweeper {
               //right bottom
               DrawInstructions::Rect([top_left[0] + tile_size - 4, top_left[1] + 3], [3, tile_size - 4], [128, 128, 128]),
               //
-              DrawInstructions::Text([x * tile_size + tile_size / 2 - 2, y * tile_size + tile_size / 2], "times-new-roman", u8_to_hex((y * 16 + x) as u8), theme_info.text, theme_info.background, None, None),
+              DrawInstructions::Text([x * tile_size + tile_size / 2 - 2, y * tile_size + tile_size / 2], "times-new-roman".to_string(), u8_to_hex((y * 16 + x) as u8), theme_info.text, theme_info.background, None, None),
             ]);
           }
         }
       }
       if self.state == State::Lost {
-        instructions.extend(vec![DrawInstructions::Text([4, 4], "times-new-roman", "You LOST!!! Press a key to play again.".to_string(), theme_info.text, theme_info.background, None, None)]);
+        instructions.extend(vec![DrawInstructions::Text([4, 4], "times-new-roman".to_string(), "You LOST!!! Press a key to play again.".to_string(), theme_info.text, theme_info.background, None, None)]);
       } else if self.state == State::Won {
-        instructions.extend(vec![DrawInstructions::Text([4, 4], "times-new-roman", "You WON!!! Press a key to play again.".to_string(), theme_info.text, theme_info.background, None, None)]);
+        instructions.extend(vec![DrawInstructions::Text([4, 4], "times-new-roman".to_string(), "You WON!!! Press a key to play again.".to_string(), theme_info.text, theme_info.background, None, None)]);
       }
       instructions
     }
@@ -241,8 +242,8 @@ impl WindowLike for Minesweeper {
 
   //properties
 
-  fn title(&self) -> &'static str {
-    "Minesweeper"
+  fn title(&self) -> String {
+    "Minesweeper".to_string()
   }
 
   fn subtype(&self) -> WindowLikeType {
@@ -347,5 +348,9 @@ impl Minesweeper {
     }
   }
   //
+}
+
+pub fn main() {
+  listen(Minesweeper::new());
 }
 
