@@ -17,12 +17,16 @@ fn color_with_alpha(color: RGBColor, bg_color: RGBColor, alpha: u8) -> RGBColor 
     (bg_color[2] as f32 * (1.0 - factor)) as u8 + (color[2] as f32 * factor) as u8,
   ]*/
   //255 * 255 < max(u16)
-  let alpha = alpha as u16;
-  [
-    (bg_color[0] as u16 * (255 - alpha) / 255) as u8 + (color[0] as u16 * alpha / 255) as u8,
-    (bg_color[1] as u16 * (255 - alpha) / 255) as u8 + (color[1] as u16 * alpha / 255) as u8,
-    (bg_color[2] as u16 * (255 - alpha) / 255) as u8 + (color[2] as u16 * alpha / 255) as u8,
-  ]
+  if alpha == 255 {
+    color
+  } else {
+    let alpha = alpha as u16;
+    [
+      (bg_color[0] as u16 * (255 - alpha) / 255) as u8 + (color[0] as u16 * alpha / 255) as u8,
+      (bg_color[1] as u16 * (255 - alpha) / 255) as u8 + (color[1] as u16 * alpha / 255) as u8,
+      (bg_color[2] as u16 * (255 - alpha) / 255) as u8 + (color[2] as u16 * alpha / 255) as u8,
+    ]
+  }
 }
 
 #[derive(Clone, Default, Debug)]
@@ -126,6 +130,21 @@ impl FramebufferWriter {
     }
   }
 
+  //can optimise (?) by turning into lines and doing _draw_line instead?
+  pub fn draw_circle(&mut self, centre: Point, radius: usize, color: RGBColor) {
+    //x^2 + y^2 <= r^2
+    for y in 0..radius {
+      for x in 0..radius {
+        if (x.pow(2) + y.pow(2)) <= radius.pow(2) {
+          self.draw_pixel([centre[0] + x, centre[1] + y], color);
+          self.draw_pixel([centre[0] - x, centre[1] + y], color);
+          self.draw_pixel([centre[0] - x, centre[1] - y], color);
+          self.draw_pixel([centre[0] + x, centre[1] - y], color);
+        }
+      }
+    }
+  }
+
   //direction is top to bottom
   pub fn draw_gradient(&mut self, top_left: Point, dimensions: Dimensions, start_color: RGBColor, end_color: RGBColor, steps: usize) {
     let delta_r = (end_color[0] as f32 - start_color[0] as f32) / steps as f32;
@@ -159,6 +178,7 @@ impl FramebufferWriter {
 
   //text
 
+  //this, draw_char, and get_font_char should be more much optimised
   pub fn draw_text(&mut self, top_left: Point, font_name: &str, text: &str, color: RGBColor, bg_color: RGBColor, horiz_spacing: usize, mono_width: Option<u8>) {
     let mut top_left = top_left;
     //todo, config space

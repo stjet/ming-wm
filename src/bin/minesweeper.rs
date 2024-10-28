@@ -42,7 +42,7 @@ enum State {
 }
 
 #[derive(Default)]
-pub struct Minesweeper {
+struct Minesweeper {
   dimensions: Dimensions,
   state: State,
   tiles: [[MineTile; 16]; 16],

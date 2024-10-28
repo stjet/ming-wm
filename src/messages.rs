@@ -49,7 +49,6 @@ pub enum WindowMessageResponse {
 #[derive(Serialize, Deserialize)]
 pub struct KeyPress {
   pub key: char,
-  //
 }
 
 #[derive(Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -90,6 +89,7 @@ pub enum InfoType {
 pub enum WindowMessage {
   Init(Dimensions),
   KeyPress(KeyPress),
+  CtrlKeyPress(KeyPress),
   Shortcut(ShortcutType),
   Info(InfoType),
   Focus,

@@ -44,7 +44,7 @@ pub fn listen(mut window_like: impl WindowLike) {
     } else if method == "subtype" {
       println!("{}", ron::to_string(&window_like.subtype()).unwrap());
     } else if method == "ideal_dimensions" {
-      println!("{:?}", window_like.ideal_dimensions(ron::from_str(arg).unwrap()));
+      println!("{}", ron::to_string(&window_like.ideal_dimensions(ron::from_str(arg).unwrap())).unwrap());
     }
   }
 }

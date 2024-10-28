@@ -4,13 +4,13 @@ use std::vec;
 use std::vec::Vec;
 use std::boxed::Box;
 
-use ming_wm::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
-use ming_wm::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest };
-use ming_wm::framebuffer::Dimensions;
-use ming_wm::themes::ThemeInfo;
-use ming_wm::components::Component;
-use ming_wm::components::highlight_button::HighlightButton;
-use ming_wm::ipc::listen;
+use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
+use crate::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest };
+use crate::framebuffer::Dimensions;
+use crate::themes::ThemeInfo;
+use crate::components::Component;
+use crate::components::highlight_button::HighlightButton;
+use crate::ipc::listen;
 
 //todo: move to essential
 
@@ -145,7 +145,7 @@ impl StartMenu {
             //add window buttons
             let mut to_add: Vec<&str> = Vec::new();
             if name == "Games" {
-              to_add.push("Minesweeper");
+              to_add.extend(["Minesweeper", "Reversi"]);
             } else if name == "Editing" {
               to_add.push("Malvim");
             } else if name == "Utils" {

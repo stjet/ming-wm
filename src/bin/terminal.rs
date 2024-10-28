@@ -1,8 +1,7 @@
 use std::vec::Vec;
 use std::vec;
-use std::process::{ Command, Output };
-use std::str::from_utf8;
-use std::io;
+use std::process::{ Command, Child, Stdio };
+use std::io::Read;
 
 use ming_wm::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
 use ming_wm::messages::{ WindowMessage, WindowMessageResponse };
@@ -15,19 +14,23 @@ const MONO_WIDTH: u8 = 10;
 const LINE_HEIGHT: usize = 15;
 const PADDING: usize = 4;
 
-enum CommandResponse {
-  ActualCommand(io::Result<Output>),
-  Custom,
+#[derive(Default, PartialEq)]
+enum State {
+  #[default]
+  Input, //typing in to run command
+  Running, //running command
 }
 
 #[derive(Default)]
 pub struct Terminal {
   dimensions: Dimensions,
+  state: State,
   lines: Vec<String>,
   actual_lines: Vec<String>, //wrapping
   actual_line_num: usize, //what line # is at the top, for scrolling
   current_input: String,
   current_path: String,
+  running_process: Option<Child>,
 }
 
 //for some reason key presses, then moving the window leaves the old window still there, behind it. weird
@@ -47,35 +50,55 @@ impl WindowLike for Terminal {
         WindowMessageResponse::JustRerender
       },
       WindowMessage::KeyPress(key_press) => {
-        if key_press.key == '𐘁' { //backspace
-          if self.current_input.len() > 0 {
-            self.current_input = self.current_input[..self.current_input.len() - 1].to_string();
-          } else {
-            return WindowMessageResponse::DoNothing;
-          }
-        } else if key_press.key == '𐘂' { //the enter key
-          self.lines.push("$ ".to_string() + &self.current_input);
-          if let CommandResponse::ActualCommand(maybe_output) = self.process_command() {
-            if let Ok(output) = maybe_output {
-              let write_output = if output.status.success() {
-                output.stdout
-              } else {
-                output.stderr
-              };
-              for line in from_utf8(&write_output).unwrap_or("Failed to parse process output as utf-8").split("\n") {
-                self.lines.push(line.to_string());
-              }
+        if self.state == State::Input {
+          if key_press.key == '𐘁' { //backspace
+            if self.current_input.len() > 0 {
+              self.current_input = self.current_input[..self.current_input.len() - 1].to_string();
             } else {
-              self.lines.push("Failed to execute process".to_string());
+              return WindowMessageResponse::DoNothing;
             }
+          } else if key_press.key == '𐘂' { //the enter key
+            self.lines.push("$ ".to_string() + &self.current_input);
+            self.state = self.process_command();
+            self.current_input = String::new();
+          } else {
+            self.current_input += &key_press.key.to_string();
           }
-          self.current_input = String::new();
+          self.calc_actual_lines();
+          self.actual_line_num = self.actual_lines.len().checked_sub(self.get_max_lines()).unwrap_or(0);
+          WindowMessageResponse::JustRerender
         } else {
-          self.current_input += &key_press.key.to_string();
+          //update
+          let running_process = self.running_process.as_mut().unwrap();
+          if let Some(status) = running_process.try_wait().unwrap() {
+            //process exited
+            let mut output = String::new();
+            if status.success() {
+              let _ = running_process.stdout.as_mut().unwrap().read_to_string(&mut output);
+            } else {
+              let _ = running_process.stderr.as_mut().unwrap().read_to_string(&mut output);
+            }
+            for line in output.split("\n") {
+              self.lines.push(line.to_string());
+            }
+            self.state = State::Input;
+            self.calc_actual_lines();
+            WindowMessageResponse::JustRerender
+          } else {
+            //still running
+            WindowMessageResponse::DoNothing
+          }
         }
-        self.calc_actual_lines();
-        self.actual_line_num = self.actual_lines.len().checked_sub(self.get_max_lines()).unwrap_or(0);
-        WindowMessageResponse::JustRerender
+      },
+      WindowMessage::CtrlKeyPress(key_press) => {
+        if self.state == State::Running && key_press.key == 'c' {
+          //kills and running_process is now None
+          let _ = self.running_process.take().unwrap().kill();
+          self.state = State::Input;
+          WindowMessageResponse::JustRerender
+        } else {
+          WindowMessageResponse::DoNothing
+        }
       },
       _ => WindowMessageResponse::DoNothing,
     }
@@ -125,10 +148,10 @@ impl Terminal {
     (self.dimensions[1] - PADDING * 2) / LINE_HEIGHT
   }
 
-  fn process_command(&mut self) -> CommandResponse {
+  fn process_command(&mut self) -> State {
     if self.current_input.starts_with("clear ") || self.current_input == "clear" {
       self.lines = Vec::new();
-      CommandResponse::Custom
+      State::Input
     } else if self.current_input.starts_with("cd ") {
       let mut cd_split = self.current_input.split(" ");
       cd_split.next().unwrap();
@@ -138,16 +161,22 @@ impl Terminal {
           self.current_path = new_path.to_str().unwrap().to_string();
         }
       }
-      CommandResponse::Custom
+      State::Input
     } else {
-      CommandResponse::ActualCommand(Command::new("sh").arg("-c").arg(&self.current_input).current_dir(&self.current_path).output())
+      self.running_process = Some(Command::new("sh").arg("-c").arg(&self.current_input).current_dir(&self.current_path).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap());
+      State::Running
     }
   }
 
   fn calc_actual_lines(&mut self) {
     self.actual_lines = Vec::new();
     let max_chars_per_line = (self.dimensions[0] - PADDING * 2) / MONO_WIDTH as usize;
-    for line_num in 0..=self.lines.len() {
+    let end = if self.state == State::Input {
+      self.lines.len()
+    } else {
+      self.lines.len() - 1
+    };
+    for line_num in 0..=end {
       let mut working_line = if line_num == self.lines.len() {
         "$ ".to_string() + &self.current_input + "█"
       } else {

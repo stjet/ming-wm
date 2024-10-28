@@ -2,7 +2,7 @@ use std::vec::Vec;
 use std::vec;
 use std::io::BufReader;
 use std::path::PathBuf;
-use std::fs::File;
+use std::fs::{ read_to_string, File };
 
 use rodio::{ Decoder, OutputStream, Sink, Source };
 use rand::prelude::*;
@@ -19,7 +19,7 @@ const MONO_WIDTH: u8 = 10;
 const LINE_HEIGHT: usize = 18;
 
 #[derive(Default)]
-pub struct AudioPlayer {
+struct AudioPlayer {
   dimensions: Dimensions,
   base_directory: String,
   queue: Vec<(PathBuf, u64)>,
@@ -139,8 +139,18 @@ impl AudioPlayer {
               if let Some(sink) = &mut self.sink {
                 sink.clear();
               }
-              let mut queue = if new_path.ends_with(".playlist") {
-                Vec::new() //placeholder
+              let mut queue = if parts[1].ends_with(".playlist") {
+                let mut queue = Vec::new();
+                let contents = read_to_string(new_path).unwrap();
+                for line in contents.split("\n") {
+                  //todo: handle more edge cases later
+                  if line.ends_with("/*") {
+                    queue.extend(get_all_files(concat_paths(&self.base_directory, &line[..line.len() - 2]).unwrap()));
+                  } else if line.len() > 0 {
+                    queue.push(concat_paths(&self.base_directory, &(line.to_owned() + ".mp3")).unwrap());
+                  }
+                }
+                queue
               } else {
                 get_all_files(PathBuf::from(new_path))
               };

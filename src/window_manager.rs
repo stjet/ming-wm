@@ -22,8 +22,7 @@ use crate::essential::desktop_background::DesktopBackground;
 use crate::essential::taskbar::Taskbar;
 use crate::essential::lock_screen::LockScreen;
 use crate::essential::workspace_indicator::WorkspaceIndicator;
-
-//todo, better error handling for windows
+use crate::essential::start_menu::StartMenu;
 
 pub const TASKBAR_HEIGHT: usize = 38;
 pub const INDICATOR_HEIGHT: usize = 20;
@@ -45,6 +44,7 @@ pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
 
   write!(stdout, "{}", cursor::Hide).unwrap();
   stdout.flush().unwrap();
+
 
   for c in stdin.keys() {
     if let Some(kc) = key_to_char(c.unwrap()) {
@@ -73,6 +73,7 @@ pub enum DrawInstructions {
   Text(Point, String, String, RGBColor, RGBColor, Option<usize>, Option<u8>), //font and text
   Gradient(Point, Dimensions, RGBColor, RGBColor, usize),
   Mingde(Point),
+  Circle(Point, usize, RGBColor),
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -462,13 +463,19 @@ impl WindowManager {
             }
             press_response
           },
-          KeyChar::Press(c) => {
+          KeyChar::Press(c) | KeyChar::Ctrl(c) => {
             let mut press_response = WindowMessageResponse::DoNothing;
             //send to focused window
             if let Some(focused_index) = self.get_focused_index() {
-              press_response = self.window_infos[focused_index].window_like.handle_message(WindowMessage::KeyPress(KeyPress {
-                key: c,
-              }));
+              press_response = self.window_infos[focused_index].window_like.handle_message(if key_char == KeyChar::Press(c) {
+                WindowMessage::KeyPress(KeyPress {
+                  key: c,
+                })
+              } else {
+                WindowMessage::CtrlKeyPress(KeyPress {
+                  key: c,
+                })
+              });
               //at most, only the focused window needs to be rerendered
               redraw_ids = Some(vec![self.window_infos[focused_index].id]);
               //requests can result in window openings and closings, etc
@@ -499,14 +506,19 @@ impl WindowManager {
         if subtype != WindowLikeType::Taskbar && subtype != WindowLikeType::StartMenu {
           return;
         }
-        let w: WindowBox = match w.as_str() {
-          "Minesweeper" => Box::new(ProxyWindowLike::new("minesweeper")),
-          "Malvim" => Box::new(ProxyWindowLike::new("malvim")),
-          "Terminal" => Box::new(ProxyWindowLike::new("terminal")),
-          "Audio Player" => Box::new(ProxyWindowLike::new("audio_player")),
-          "StartMenu" => Box::new(ProxyWindowLike::new("start_menu")),
-          _ => panic!("window not found"), //todo: do not panic
+        let w: Option<WindowBox> = match w.as_str() {
+          "Minesweeper" => Some(Box::new(ProxyWindowLike::new_rust("minesweeper"))),
+          "Reversi" => Some(Box::new(ProxyWindowLike::new_rust("reversi"))),
+          "Malvim" => Some(Box::new(ProxyWindowLike::new_rust("malvim"))),
+          "Terminal" => Some(Box::new(ProxyWindowLike::new_rust("terminal"))),
+          "Audio Player" => Some(Box::new(ProxyWindowLike::new_rust("audio_player"))),
+          "StartMenu" => Some(Box::new(StartMenu::new())),
+          _ => None,
         };
+        if w.is_none() {
+          return;
+        }
+        let w = w.unwrap();
         //close start menu if open
         self.toggle_start_menu(true);
         let ideal_dimensions = w.ideal_dimensions(self.dimensions);
@@ -587,6 +599,7 @@ impl WindowManager {
         instructions = instructions.iter().map(|instruction| {
           match instruction {
             DrawInstructions::Rect(top_left, dimensions, color) => DrawInstructions::Rect(WindowManager::get_true_top_left(top_left, is_window), *dimensions, *color),
+            DrawInstructions::Circle(centre, radius, color) => DrawInstructions::Circle(WindowManager::get_true_top_left(centre, is_window), *radius, *color),
             DrawInstructions::Text(top_left, font_name, text, color, bg_color, horiz_spacing, mono_width) => DrawInstructions::Text(WindowManager::get_true_top_left(top_left, is_window), font_name.clone(), text.clone(), *color, *bg_color, *horiz_spacing, *mono_width),
             DrawInstructions::Mingde(top_left) => DrawInstructions::Mingde(WindowManager::get_true_top_left(top_left, is_window)),
             DrawInstructions::Gradient(top_left, dimensions, start_color, end_color, steps) => DrawInstructions::Gradient(WindowManager::get_true_top_left(top_left, is_window), *dimensions, *start_color, *end_color, *steps),
@@ -630,6 +643,9 @@ impl WindowManager {
             ];
             window_writer.draw_rect(top_left, true_dimensions, color);
           },
+          DrawInstructions::Circle(centre, radius, color) => {
+            window_writer.draw_circle(centre, radius, color);
+          },
           DrawInstructions::Text(top_left, font_name, text, color, bg_color, horiz_spacing, mono_width) => {
             window_writer.draw_text(top_left, &font_name, &text, color, bg_color, horiz_spacing.unwrap_or(1), mono_width);
           },
@@ -643,7 +659,6 @@ impl WindowManager {
       }
       WRITER.lock().unwrap().draw_buffer(window_info.top_left, window_dimensions[1], window_dimensions[0] * bytes_per_pixel, &window_writer.get_buffer());
       w_index += 1;
-      //core::mem::drop(temp_vec);
     }
     self.framebuffer.write_frame(WRITER.lock().unwrap().get_buffer());
   }

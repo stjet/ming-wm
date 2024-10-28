@@ -1,5 +1,6 @@
 use std::vec;
 use std::vec::Vec;
+use std::time::{ SystemTime, UNIX_EPOCH };
 
 use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType, INDICATOR_HEIGHT };
 use crate::messages::{ WindowMessage, WindowMessageResponse, ShortcutType };
@@ -7,6 +8,9 @@ use crate::framebuffer::Dimensions;
 use crate::themes::ThemeInfo;
 
 const WIDTH: usize = 15;
+const ONE_MINUTE: u64 = 60;
+const ONE_HOUR: u64 = 60 * ONE_MINUTE;
+const ONE_DAY: u64 = 24 * ONE_HOUR;
 
 pub struct WorkspaceIndicator {
   dimensions: Dimensions,
@@ -49,6 +53,12 @@ impl WindowLike for WorkspaceIndicator {
         instructions.push(DrawInstructions::Text([w * WIDTH + 5, 4], "times-new-roman".to_string(), (w + 1).to_string(), theme_info.text, theme_info.background, None, None));
       }
     }
+    //also add the utc time in the right edge
+    let today_secs = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() % ONE_DAY;
+    let hours = (today_secs / ONE_HOUR).to_string();
+    let minutes = ((today_secs % ONE_HOUR) / ONE_MINUTE).to_string();
+    let time_string = format!("{}:{}~ UTC", if hours.len() == 1 { "0".to_string() + &hours } else { hours }, if minutes.len() == 1 { "0".to_string() + &minutes } else { minutes });
+    instructions.push(DrawInstructions::Text([self.dimensions[0] - 90, 4], "times-new-roman".to_string(), time_string, theme_info.text, theme_info.background, None, None));
     instructions
   }
 

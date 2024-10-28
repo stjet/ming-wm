@@ -69,7 +69,7 @@ struct Current {
 }
 
 #[derive(Default)]
-pub struct Malvim {
+struct Malvim {
   dimensions: Dimensions,
   state: State,
   mode: Mode,
