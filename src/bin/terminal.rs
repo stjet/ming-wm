@@ -116,7 +116,7 @@ impl WindowLike for Terminal {
         break;
       }
       let line = self.actual_lines[line_num].clone();
-      instructions.push(DrawInstructions::Text([PADDING, text_y], "times-new-romono".to_string(), line, theme_info.alt_text, theme_info.alt_background, Some(0), Some(MONO_WIDTH)));
+      instructions.push(DrawInstructions::Text([PADDING, text_y], vec!["times-new-romono".to_string()], line, theme_info.alt_text, theme_info.alt_background, Some(0), Some(MONO_WIDTH)));
       text_y += LINE_HEIGHT;
     }
     instructions

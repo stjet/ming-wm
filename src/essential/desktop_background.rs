@@ -1,13 +1,19 @@
 use std::vec;
 use std::vec::Vec;
+use std::fs::File;
+use std::io::Read;
+
+use dirs::config_dir;
 
 use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType, TASKBAR_HEIGHT, INDICATOR_HEIGHT };
-use crate::messages::{ WindowMessage, WindowMessageResponse };
+use crate::messages::{ WindowMessage, WindowMessageResponse, ShortcutType };
 use crate::framebuffer::Dimensions;
 use crate::themes::ThemeInfo;
+use crate::utils::{ hex_to_u8, is_hex };
 
 pub struct DesktopBackground {
   dimensions: Dimensions,
+  current_workspace: u8,
 }
 
 impl WindowLike for DesktopBackground {
@@ -17,12 +23,41 @@ impl WindowLike for DesktopBackground {
         self.dimensions = dimensions;
         WindowMessageResponse::JustRerender
       },
+      WindowMessage::Shortcut(shortcut) => {
+        match shortcut {
+          ShortcutType::SwitchWorkspace(workspace) => {
+            self.current_workspace = workspace;
+            WindowMessageResponse::JustRerender
+          },
+          _ => WindowMessageResponse::DoNothing,
+        }
+      },
       _ => WindowMessageResponse::DoNothing,
     }
   }
 
   //simple
   fn draw(&self, _theme_info: &ThemeInfo) -> Vec<DrawInstructions> {
+    if let Ok(mut file) = File::open(format!("{}/ming-wm/desktop-background", config_dir().unwrap().into_os_string().into_string().unwrap())) {
+      let mut contents = String::new();
+      file.read_to_string(&mut contents).unwrap();
+      let lines: Vec<&str> = contents.split("\n").collect();
+      if lines.len() > self.current_workspace.into() {
+        let line = lines[self.current_workspace as usize];
+        if line.starts_with("#") && line.len() == 7 {
+          let line_hex = &line[1..];
+          //if all characters are valid hex
+          if line_hex.find(|c| !is_hex(c)).is_none() {
+            let mut chars = line_hex.chars();
+            let color = [hex_to_u8(chars.next().unwrap(), chars.next().unwrap()), hex_to_u8(chars.next().unwrap(), chars.next().unwrap()), hex_to_u8(chars.next().unwrap(), chars.next().unwrap())];
+            return vec![DrawInstructions::Rect([0, 0], self.dimensions, color)];
+          }
+        } else {
+          //first character of line is either r or any other character, but is not part of the path
+          return vec![DrawInstructions::Bmp([0, 0], line[1..].to_string(), line.chars().next().unwrap() == 'r')];
+        }
+      }
+    }
     vec![DrawInstructions::Rect([0, 0], self.dimensions, [0, 128, 128])]
   }
 
@@ -38,7 +73,10 @@ impl WindowLike for DesktopBackground {
 
 impl DesktopBackground {
   pub fn new() -> Self {
-    Self { dimensions: [0, 0] }
+    Self {
+      dimensions: [0, 0],
+      current_workspace: 0,
+    }
   }
 }
 

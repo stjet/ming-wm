@@ -27,7 +27,7 @@ pub trait WindowLike {
 */
 
 pub fn listen(mut window_like: impl WindowLike) {
-  let mut stdin = stdin();
+  let stdin = stdin();
   for line in stdin.lock().lines() {
     let line = line.unwrap().clone();
     let mut parts = line.split(" ");

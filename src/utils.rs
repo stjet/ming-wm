@@ -103,3 +103,20 @@ pub fn format_seconds(seconds: u64) -> String {
   m + ":" + &s
 }
 
+pub const HEX_CHARS: [char; 16] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'];
+
+pub fn u8_to_hex(u: u8) -> String {
+  let mut h = String::new();
+  h.push(HEX_CHARS[(u / 16) as usize]);
+  h.push(HEX_CHARS[(u % 16) as usize]);
+  h
+}
+
+pub fn hex_to_u8(c1: char, c2: char) -> u8 {
+  (HEX_CHARS.iter().position(|c| c == &c1).unwrap() * 16 + HEX_CHARS.iter().position(|c| c == &c2).unwrap()) as u8
+}
+
+pub fn is_hex(c: char) -> bool {
+  HEX_CHARS.iter().position(|hc| hc == &c).is_some()
+}
+

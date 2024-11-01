@@ -1,53 +1,30 @@
-use std::fs::read_dir;
+use std::fs::{ read_dir, File };
 use std::path::PathBuf;
+use std::io::Read;
 
-use bmp_rust::bmp::BMP;
-
-pub fn get_font_char(dir: &str, c: char) -> Option<(char, Vec<Vec<u8>>, u8)> {
-  let c = if c == '/' { '𐘋' } else { c };
-  for entry in read_dir(dir).unwrap() {
-    let path = entry.unwrap().path();
-    let path_chars: Vec<char> = path.file_name().unwrap().to_str().unwrap().to_string().chars().collect();
-    if path_chars[0] == c {
-      let mut ch: Vec<Vec<u8>> = Vec::new();
-      if !path.is_dir() {
-        let b = BMP::new_from_file(&path.clone().into_os_string().into_string().unwrap());
-        let dib_header = b.get_dib_header().unwrap();
-        let width = dib_header.width as usize;
-        let height = dib_header.height as usize;
-        for y in 0..height {
-          let mut row = Vec::new();
-          for x in 0..width {
-            let pixel_color = b.get_color_of_px(x, y).unwrap();
-            //if black, true
-            row.push(pixel_color[3]); //push alpha channel
-          }
-          ch.push(row);
-        }
-        return Some((path_chars[0], ch, path_chars[1].to_digit(10).unwrap() as u8));
-      }
+fn get_font_char(dir: &str, c: char) -> Option<(char, Vec<Vec<u8>>, u8)> {
+  let c = if c == '/' { '𐘋' } else if c == '.' { '𐘅' } else { c };
+  if let Ok(mut file) = File::open(dir.to_string() + "/" + &c.to_string() + ".alpha") {
+    let mut ch: Vec<Vec<u8>> = Vec::new();
+    let mut contents = String::new();
+    file.read_to_string(&mut contents).unwrap();
+    let lines: Vec<&str> = contents.split("\n").collect();
+    for l in 1..lines.len() {
+      ch.push(lines[l].split(",").map(|n| n.parse().unwrap()).collect());
     }
+    return Some((c, ch, lines[0].parse().unwrap()));
   }
   None
 }
 
-//the Vec<u8> should be [u8; 3] but thats a job for another day
-pub fn get_bmp(path: &str) -> Vec<Vec<Vec<u8>>> {
-  let mut bmp: Vec<Vec<Vec<u8>>> = Vec::new();
-  let b = BMP::new_from_file(path);
-  let dib_header = b.get_dib_header().unwrap();
-  let width = dib_header.width as usize;
-  let height = dib_header.height as usize;
-  for y in 0..height {
-    let mut row = Vec::new();
-    for x in 0..width {
-      let pixel_color = b.get_color_of_px(x, y).unwrap();
-      //if black, true
-      row.push(vec![pixel_color[0], pixel_color[1], pixel_color[2]]); //push alpha channel
+pub fn get_font_char_from_fonts(fonts: &[String], c: char) -> (char, Vec<Vec<u8>>, u8) {
+  for font in fonts {
+    if let Some(font_char) = get_font_char(&("./bmps/".to_string() + font), c) {
+      return font_char;
     }
-    bmp.push(row);
   }
-  bmp
+  //so a ? char must be in every font
+  get_font_char(&("./bmps/".to_string() + &fonts[0]), '?').unwrap()
 }
 
 pub fn get_all_files(dir: PathBuf) -> Vec<PathBuf> {

@@ -6,12 +6,17 @@ default-run = "main"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[build-dependencies]
+bmp-rust = "0.4.1"
+
 [dependencies]
 blake2 = { version = "0.10.6", default-features = false }
 linux_framebuffer = { package = "framebuffer", version = "0.3.1" }
-bmp-rust = "0.4.1"
 termion = "4.0.3"
 rodio = "0.19.0"
 rand = "0.8.5"
 ron = "0.8"
 serde = { version = "1", features = ["derive"] }
+audiotags = "0.5.0"
+bmp-rust = "0.4.1"
+dirs = "5.0.1"

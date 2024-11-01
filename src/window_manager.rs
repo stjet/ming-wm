@@ -32,6 +32,8 @@ static WRITER: LazyLock<Mutex<FramebufferWriter>> = LazyLock::new(|| Mutex::new(
 
 pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
   let dimensions = [framebuffer_info.width, framebuffer_info.height];
+  
+  println!("bg: {}x{}", dimensions[0], dimensions[1] - TASKBAR_HEIGHT - INDICATOR_HEIGHT);
 
   WRITER.lock().unwrap().init(framebuffer_info.clone(), framebuffer_info.height * framebuffer_info.stride * framebuffer_info.bytes_per_pixel);
 
@@ -70,9 +72,9 @@ pub fn min(one: usize, two: usize) -> usize {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum DrawInstructions {
   Rect(Point, Dimensions, RGBColor),
-  Text(Point, String, String, RGBColor, RGBColor, Option<usize>, Option<u8>), //font and text
+  Text(Point, Vec<String>, String, RGBColor, RGBColor, Option<usize>, Option<u8>), //font and text
   Gradient(Point, Dimensions, RGBColor, RGBColor, usize),
-  Mingde(Point),
+  Bmp(Point, String, bool),
   Circle(Point, usize, RGBColor),
 }
 
@@ -360,6 +362,9 @@ impl WindowManager {
                       //close start menu if open
                       self.toggle_start_menu(true);
                       self.current_workspace = workspace;
+                      //send to desktop background
+                      let desktop_background_index = self.window_infos.iter().position(|w| w.window_like.subtype() == WindowLikeType::DesktopBackground).unwrap();
+                      self.window_infos[desktop_background_index].window_like.handle_message(WindowMessage::Shortcut(ShortcutType::SwitchWorkspace(self.current_workspace)));
                       //send to workspace indicator
                       let indicator_index = self.window_infos.iter().position(|w| w.window_like.subtype() == WindowLikeType::WorkspaceIndicator).unwrap();
                       self.focused_id = self.window_infos[indicator_index].id;
@@ -600,8 +605,8 @@ impl WindowManager {
           match instruction {
             DrawInstructions::Rect(top_left, dimensions, color) => DrawInstructions::Rect(WindowManager::get_true_top_left(top_left, is_window), *dimensions, *color),
             DrawInstructions::Circle(centre, radius, color) => DrawInstructions::Circle(WindowManager::get_true_top_left(centre, is_window), *radius, *color),
-            DrawInstructions::Text(top_left, font_name, text, color, bg_color, horiz_spacing, mono_width) => DrawInstructions::Text(WindowManager::get_true_top_left(top_left, is_window), font_name.clone(), text.clone(), *color, *bg_color, *horiz_spacing, *mono_width),
-            DrawInstructions::Mingde(top_left) => DrawInstructions::Mingde(WindowManager::get_true_top_left(top_left, is_window)),
+            DrawInstructions::Text(top_left, fonts, text, color, bg_color, horiz_spacing, mono_width) => DrawInstructions::Text(WindowManager::get_true_top_left(top_left, is_window), fonts.clone(), text.clone(), *color, *bg_color, *horiz_spacing, *mono_width),
+            DrawInstructions::Bmp(top_left, path, reverse) => DrawInstructions::Bmp(WindowManager::get_true_top_left(top_left, is_window), path.to_string(), *reverse),
             DrawInstructions::Gradient(top_left, dimensions, start_color, end_color, steps) => DrawInstructions::Gradient(WindowManager::get_true_top_left(top_left, is_window), *dimensions, *start_color, *end_color, *steps),
           }
         }).collect();
@@ -614,7 +619,7 @@ impl WindowManager {
           DrawInstructions::Rect([0, 0], [1, window_dimensions[1]], theme_info.border_left_top),
           //top
           DrawInstructions::Rect([1, 1], [window_dimensions[0] - 2, WINDOW_TOP_HEIGHT - 3], theme_info.top),
-          DrawInstructions::Text([4, 4], "times-new-roman".to_string(), window_info.window_like.title().to_string(), theme_info.top_text, theme_info.top, None, None),
+          DrawInstructions::Text([4, 4], vec!["times-new-roman".to_string()], window_info.window_like.title().to_string(), theme_info.top_text, theme_info.top, None, None),
           //top bottom border
           DrawInstructions::Rect([1, WINDOW_TOP_HEIGHT - 2], [window_dimensions[0] - 2, 2], theme_info.border_left_top),
           //right bottom border
@@ -646,11 +651,11 @@ impl WindowManager {
           DrawInstructions::Circle(centre, radius, color) => {
             window_writer.draw_circle(centre, radius, color);
           },
-          DrawInstructions::Text(top_left, font_name, text, color, bg_color, horiz_spacing, mono_width) => {
-            window_writer.draw_text(top_left, &font_name, &text, color, bg_color, horiz_spacing.unwrap_or(1), mono_width);
+          DrawInstructions::Text(top_left, fonts, text, color, bg_color, horiz_spacing, mono_width) => {
+            window_writer.draw_text(top_left, fonts, &text, color, bg_color, horiz_spacing.unwrap_or(1), mono_width);
           },
-          DrawInstructions::Mingde(top_left) => {
-            window_writer._draw_mingde(top_left);
+          DrawInstructions::Bmp(top_left, path, reverse) => {
+            window_writer.draw_bmp(top_left, path, reverse);
           },
           DrawInstructions::Gradient(top_left, dimensions, start_color, end_color, steps) => {
             window_writer.draw_gradient(top_left, dimensions, start_color, end_color, steps);

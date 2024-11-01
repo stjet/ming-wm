@@ -50,11 +50,11 @@ impl WindowLike for LockScreen {
   fn draw(&self, _theme_info: &ThemeInfo) -> Vec<DrawInstructions> {
     vec![
       DrawInstructions::Rect([0, 0], self.dimensions, [0, 0, 0]),
-      DrawInstructions::Text([4, 4], "times-new-roman".to_string(), "The bulldozer outside the kitchen window was quite a big one.".to_string(), [255, 255, 255], [0, 0, 0], None, None),
-      DrawInstructions::Text([4, 4 + 16], "times-new-roman".to_string(), "\"Yellow,\" he thought, and stomped off back to his bedroom to get dressed.".to_string(), [255, 255, 255], [0, 0, 0], None, None),
-      DrawInstructions::Text([4, 4 + 16 * 2], "times-new-roman".to_string(), "He stared at it.".to_string(), [255, 255, 255], [0, 0, 0], None, None),
-      DrawInstructions::Text([4, 4 + 16 * 3], "times-new-roman".to_string(), "Password: ".to_string(), [255, 255, 255], [0, 0, 0], None, None),
-      DrawInstructions::Text([77, 4 + 16 * 3], "times-new-roman".to_string(), "*".repeat(self.input_password.len()), [255, 255, 255], [0, 0, 0], None, None),
+      DrawInstructions::Text([4, 4], vec!["times-new-roman".to_string()], "The bulldozer outside the kitchen window was quite a big one.".to_string(), [255, 255, 255], [0, 0, 0], None, None),
+      DrawInstructions::Text([4, 4 + 16], vec!["times-new-roman".to_string()], "\"Yellow,\" he thought, and stomped off back to his bedroom to get dressed.".to_string(), [255, 255, 255], [0, 0, 0], None, None),
+      DrawInstructions::Text([4, 4 + 16 * 2], vec!["times-new-roman".to_string()], "He stared at it.".to_string(), [255, 255, 255], [0, 0, 0], None, None),
+      DrawInstructions::Text([4, 4 + 16 * 3], vec!["times-new-roman".to_string()], "Password: ".to_string(), [255, 255, 255], [0, 0, 0], None, None),
+      DrawInstructions::Text([77, 4 + 16 * 3], vec!["times-new-roman".to_string()], "*".repeat(self.input_password.len()), [255, 255, 255], [0, 0, 0], None, None),
     ]
   }
   

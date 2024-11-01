@@ -4,7 +4,7 @@ use ming_wm::framebuffer::FramebufferInfo;
 use ming_wm::window_manager::init;
 
 fn main() {
-  let mut fb = Framebuffer::new("/dev/fb0").unwrap();
+  let fb = Framebuffer::new("/dev/fb0").unwrap();
   let bytes_per_pixel = (fb.var_screen_info.bits_per_pixel as usize) / 8;
   let fb_info = FramebufferInfo {
     byte_len: (fb.var_screen_info.yres_virtual * fb.fix_screen_info.line_length) as usize,

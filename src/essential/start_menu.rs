@@ -98,7 +98,7 @@ impl WindowLike for StartMenu {
       //background
       DrawInstructions::Rect([0, 1], [self.dimensions[0] - 1, self.dimensions[1] - 1], theme_info.background),
       //mingde logo
-      DrawInstructions::Mingde([2, 2]),
+      DrawInstructions::Bmp([2, 2], "./bmps/mingde.bmp".to_string(), false),
       //I truly don't know why, it should be - 44 but - 30 seems to work better :shrug:
       DrawInstructions::Gradient([2, 42], [40, self.dimensions[1] - 30], [255, 201, 14], [225, 219, 77], 15),
     ];

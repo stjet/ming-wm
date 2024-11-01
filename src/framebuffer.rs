@@ -1,7 +1,9 @@
 use std::vec::Vec;
-use core::ptr;
+//use core::ptr;
 
-use crate::fs::{ get_font_char, get_bmp };
+use bmp_rust::bmp::BMP;
+
+use crate::fs::get_font_char_from_fonts;
 
 pub type Point = [usize; 2]; //x, y
 pub type Dimensions = [usize; 2]; //width, height
@@ -87,7 +89,7 @@ impl FramebufferWriter {
     for _y in 0..height {
       self.buffer[start_pos..(start_pos + bytes_per_line)]
         .copy_from_slice(&bytes[start..(start + bytes_per_line)]);
-      let _ = unsafe { ptr::read_volatile(&self.buffer[start_pos]) };
+      //let _ = unsafe { ptr::read_volatile(&self.buffer[start_pos]) };
       start += bytes_per_line;
       start_pos += self.info.stride * self.info.bytes_per_pixel;
     }
@@ -178,16 +180,14 @@ impl FramebufferWriter {
 
   //text
 
-  //this, draw_char, and get_font_char should be more much optimised
-  pub fn draw_text(&mut self, top_left: Point, font_name: &str, text: &str, color: RGBColor, bg_color: RGBColor, horiz_spacing: usize, mono_width: Option<u8>) {
+  pub fn draw_text(&mut self, top_left: Point, fonts: Vec<String>, text: &str, color: RGBColor, bg_color: RGBColor, horiz_spacing: usize, mono_width: Option<u8>) {
     let mut top_left = top_left;
     //todo, config space
     for c in text.chars() {
       if c == ' ' {
         top_left[0] += mono_width.unwrap_or(5) as usize;
       } else {
-        //so a ? char must be in every font
-        let char_info = get_font_char(&("./bmps/".to_string() + font_name), c).unwrap_or(get_font_char(&("./bmps/".to_string() + font_name), '?').unwrap());
+        let char_info = get_font_char_from_fonts(&fonts, c);
         let char_width = char_info.1[0].len();
         let add_after: usize;
         if let Some(mono_width) = mono_width {
@@ -210,13 +210,19 @@ impl FramebufferWriter {
 
   //bmps
 
-  pub fn _draw_mingde(&mut self, top_left: Point) {
+  //reverse is workaround for when my bmp lib returns rgba instead of bgra
+  pub fn draw_bmp(&mut self, top_left: Point, path: String, reverse: bool) {
+    let b = BMP::new_from_file(&path);
+    let dib_header = b.get_dib_header().unwrap();
+    let pixel_data = b.get_pixel_data().unwrap();
+    let height = dib_header.height as usize;
+    let width = dib_header.width as usize;
     let mut start_pos;
-    let mingde = get_bmp("./bmps/mingde.bmp");
-    for row in 0..mingde.len() {
+    for row in 0..height {
       start_pos = ((top_left[1] + row) * self.info.stride + top_left[0]) * self.info.bytes_per_pixel;
-      for color in &mingde[row] {
-        self._draw_pixel(start_pos, [color[0], color[1], color[2]]);
+      for column in 0..width {
+        let color = b.get_color_of_pixel_efficient(column, row, &dib_header, &pixel_data).unwrap();
+        self._draw_pixel(start_pos, if reverse { [color[2], color[1], color[0]] } else { [color[0], color[1], color[2]] });
         start_pos += self.info.bytes_per_pixel;
       }
     }
