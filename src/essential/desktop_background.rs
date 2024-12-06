@@ -52,7 +52,7 @@ impl WindowLike for DesktopBackground {
             let color = [hex_to_u8(chars.next().unwrap(), chars.next().unwrap()), hex_to_u8(chars.next().unwrap(), chars.next().unwrap()), hex_to_u8(chars.next().unwrap(), chars.next().unwrap())];
             return vec![DrawInstructions::Rect([0, 0], self.dimensions, color)];
           }
-        } else {
+        } else if line.len() > 1 {
           //first character of line is either r or any other character, but is not part of the path
           return vec![DrawInstructions::Bmp([0, 0], line[1..].to_string(), line.chars().next().unwrap() == 'r')];
         }

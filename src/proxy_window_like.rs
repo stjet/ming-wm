@@ -2,6 +2,8 @@ use std::vec::Vec;
 use std::process::{ Command, Child, Stdio };
 use std::io::{ BufReader, BufRead, Write };
 use std::cell::RefCell;
+use std::path::Path;
+use std::io::Read;
 
 use ron;
 
@@ -81,7 +83,12 @@ impl ProxyWindowLike {
   }
 
   pub fn new_rust(file: &str) -> Self {
-    ProxyWindowLike::new(Command::new("cargo").arg("run").arg("--quiet").arg("--release").arg("--bin").arg(file).stdout(Stdio::piped()).stdin(Stdio::piped()).stderr(Stdio::null()))
+    let loc = format!("./target/release/{}", file);
+    if Path::new(&loc).exists() {
+      ProxyWindowLike::new(Command::new(loc).stdout(Stdio::piped()).stdin(Stdio::piped()).stderr(Stdio::null()))
+    } else {
+      ProxyWindowLike::new(Command::new("cargo").arg("run").arg("--quiet").arg("--release").arg("--bin").arg(file).stdout(Stdio::piped()).stdin(Stdio::piped()).stderr(Stdio::null()))
+    }
   }
 
   //return empty string if error, do not propogate Err becuase that's messy
