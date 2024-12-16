@@ -79,6 +79,7 @@ struct Malvim {
   files: Vec<FileInfo>,
   current_file_index: usize,
   current: Current,
+  autoindent: bool,
 }
 
 impl WindowLike for Malvim {
@@ -110,9 +111,23 @@ impl WindowLike for Malvim {
             let mut line = line.clone();
             let (left, right) = line.split_at_mut(current_file.cursor_pos);
             current_file.content[current_file.line_pos] = left.to_string();
-            current_file.content.insert(current_file.line_pos + 1, right.to_string());
+            let spaces = if self.autoindent {
+              //find out how many spaces the line starts with, copy that to the new line
+              let mut spaces = 0;
+              for c in left.chars() {
+                if c == ' ' {
+                  spaces += 1;
+                } else {
+                  break;
+                }
+              }
+              spaces
+            } else {
+              0
+            };
+            current_file.content.insert(current_file.line_pos + 1, " ".repeat(spaces) + right);
             current_file.line_pos += 1;
-            current_file.cursor_pos = 0;
+            current_file.cursor_pos = spaces;
           } else if key_press.key == '𐘁' { //backspace
             if current_length > 0 && current_file.cursor_pos > 0 {
               current_file.content[current_file.line_pos] = line.remove(current_file.cursor_pos, 1);
@@ -134,6 +149,7 @@ impl WindowLike for Malvim {
         } else if self.mode == Mode::Normal && self.files.len() > 0 {
           let current_file = &mut self.files[self.current_file_index];
           let current_length = current_file.content[current_file.line_pos].len();
+          let mut numbered = false;
           //
           if self.state == State::Replace {
             if current_length > 0 && current_file.cursor_pos < current_length {
@@ -164,10 +180,14 @@ impl WindowLike for Malvim {
             self.state = State::None;
           } else if self.state == State::Maybeg {
             if key_press.key == 'g' {
-              current_file.line_pos = 0;
+              current_file.line_pos = self.maybe_num.unwrap_or(0);
+              if current_file.line_pos >= current_file.content.len() {
+                current_file.line_pos = current_file.content.len() - 1;
+              }
               let new_length = current_file.content[current_file.line_pos].len();
               current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
             }
+            changed = false;
             self.state = State::None;
           } else if self.state == State::Find || self.state == State::BackFind {
             let old_pos = current_file.cursor_pos;
@@ -209,7 +229,7 @@ impl WindowLike for Malvim {
               }
             }
             changed = false;
-          } else if key_press.key == '0' {
+          } else if key_press.key == '0' && self.maybe_num.is_none() {
             current_file.cursor_pos = 0;
             changed = false;
           } else if key_press.key == '$' {
@@ -239,6 +259,13 @@ impl WindowLike for Malvim {
           } else if key_press.key == 'F' {
             self.state = State::BackFind;
             changed = false;
+          } else if key_press.key.is_digit(10) {
+            self.maybe_num = Some(self.maybe_num.unwrap_or(0) * 10 + key_press.key.to_digit(10).unwrap() as usize);
+            numbered = true;
+            changed = false;
+          }
+          if !numbered && self.state != State::Maybeg {
+            self.maybe_num = None;
           }
           //
         } else if self.mode == Mode::Command {
@@ -419,7 +446,10 @@ impl Malvim {
     let mut parts = self.command.as_ref().unwrap().split(" ");
     let first = parts.next().unwrap();
     let arg = parts.next().unwrap_or("");
-    if first == "e" || first == "edit" || ((first == "t" || first == "tabe") && self.files.len() > 0) {
+    if first == "autoindent" {
+      self.autoindent = !self.autoindent;
+      self.bottom_message = Some("Autoindent: ".to_string() + &self.autoindent.to_string());
+    } else if first == "e" || first == "edit" || ((first == "t" || first == "tabe") && self.files.len() > 0) {
       //find the file and open it
       let mut failed = false;
       let mut new_path = if self.files.len() > 0 {
@@ -477,7 +507,7 @@ impl Malvim {
       self.bottom_message = Some("No files are open, so can only do :e(dit)".to_string());
     } else if first == "w" || first == "write" {
       let current_file = &self.files[self.current_file_index];
-      write(&current_file.path, &current_file.content.join("\n"));
+      let _ = write(&current_file.path, &current_file.content.join("\n"));
       self.files[self.current_file_index].changed = false;
     } else if first == "q" || first == "quit" {
       self.files.remove(self.current_file_index);

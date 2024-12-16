@@ -11,6 +11,8 @@ Though just `cargo run --release` can be done.
 
 ## Config
 
+Config files should be protected so they can only be written to with root privileges.
+
 ### Desktop Backgrounds
 
 In `$XDG_CONFIG_DIR/ming-wm/desktop-background`, you can configure what the desktop background should be for each workspace. The first line decides the background for the first workspace, and so on. If lines are missing, or empty, or the config file is missing, the default green background is used.

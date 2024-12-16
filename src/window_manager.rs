@@ -517,6 +517,7 @@ impl WindowManager {
           "Malvim" => Some(Box::new(ProxyWindowLike::new_rust("malvim"))),
           "Terminal" => Some(Box::new(ProxyWindowLike::new_rust("terminal"))),
           "Audio Player" => Some(Box::new(ProxyWindowLike::new_rust("audio_player"))),
+          "File Explorer" => Some(Box::new(ProxyWindowLike::new_rust("file_explorer"))),
           "StartMenu" => Some(Box::new(StartMenu::new())),
           _ => None,
         };

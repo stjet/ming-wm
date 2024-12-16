@@ -151,7 +151,7 @@ impl StartMenu {
             } else if name == "Utils" {
               to_add.push("Terminal");
             } else if name == "Files" {
-              to_add.push("Audio Player");
+              to_add.extend(["File Explorer", "Audio Player"]);
             }
             //
             for a in 0..to_add.len() {
