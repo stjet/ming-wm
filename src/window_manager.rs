@@ -35,7 +35,7 @@ pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
   
   println!("bg: {}x{}", dimensions[0], dimensions[1] - TASKBAR_HEIGHT - INDICATOR_HEIGHT);
 
-  WRITER.lock().unwrap().init(framebuffer_info.clone(), framebuffer_info.height * framebuffer_info.stride * framebuffer_info.bytes_per_pixel);
+  WRITER.lock().unwrap().init(framebuffer_info.clone());
 
   let mut wm: WindowManager = WindowManager::new(framebuffer, dimensions);
 
@@ -51,8 +51,8 @@ pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
   for c in stdin.keys() {
     if let Some(kc) = key_to_char(c.unwrap()) {
       //do not allow exit when locked unless debugging
-      if kc == KeyChar::Alt('e') {
-      //if kc == KeyChar::Alt('e') && !wm.locked {
+      //if kc == KeyChar::Alt('e') {
+      if kc == KeyChar::Alt('e') && !wm.locked {
         write!(stdout, "{}", cursor::Show).unwrap();
         stdout.suspend_raw_mode().unwrap();
         exit(0);
@@ -454,6 +454,7 @@ impl WindowManager {
                     if let Some(focused_index) = self.get_focused_index() {
                       let window_like = &self.window_infos[focused_index].window_like;
                       if window_like.subtype() == WindowLikeType::Window && window_like.resizable() {
+                        self.window_infos[focused_index].fullscreen = false;
                         //full height, half width
                         self.window_infos[focused_index].top_left = [0, INDICATOR_HEIGHT];
                         let new_dimensions = [self.dimensions[0] / 2, self.dimensions[1] - INDICATOR_HEIGHT - TASKBAR_HEIGHT];
@@ -635,9 +636,10 @@ impl WindowManager {
       framebuffer_info.width = window_width;
       framebuffer_info.height = window_height;
       framebuffer_info.stride = window_width;
+      framebuffer_info.byte_len = window_width * window_height * bytes_per_pixel;
       //make a writer just for the window
       let mut window_writer: FramebufferWriter = Default::default();
-      window_writer.init(framebuffer_info, window_width * window_height * bytes_per_pixel);
+      window_writer.init(framebuffer_info);
       for instruction in instructions {
         //unsafe { SERIAL1.lock().write_text(&format!("{:?}\n", instruction)); }
         match instruction {

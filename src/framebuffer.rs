@@ -48,9 +48,9 @@ pub struct FramebufferWriter {
 }
 
 impl FramebufferWriter {
-  pub fn init(&mut self, info: FramebufferInfo, buffer_length: usize) {
+  pub fn init(&mut self, info: FramebufferInfo) {
     self.info = info;
-    self.buffer = vec![0; buffer_length];
+    self.buffer = vec![0; self.info.byte_len];
   }
   
   pub fn get_info(&self) -> FramebufferInfo {
@@ -102,7 +102,9 @@ impl FramebufferWriter {
       start_pos = ((top_left[1] + row + char_info.2 as usize) * self.info.stride + top_left[0]) * self.info.bytes_per_pixel;
       for col in &char_info.1[row] {
         if col > &0 {
-          self._draw_pixel(start_pos, color_with_alpha(color, bg_color, *col));
+          if start_pos < self.info.byte_len {
+            self._draw_pixel(start_pos, color_with_alpha(color, bg_color, *col));
+          }
         }
         start_pos += self.info.bytes_per_pixel;
       }

@@ -1,4 +1,5 @@
 use std::io::{ stdin, BufRead };
+use std::panic;
 
 //use serde::{ Deserialize, Serialize };
 use ron;
@@ -30,6 +31,20 @@ pub trait WindowLike {
 const LOG: bool = false;
 
 pub fn listen(mut window_like: impl WindowLike) {
+  panic::set_hook(Box::new(|panic_info| {
+    let (filename, line) = panic_info.location().map(|l| (l.file(), l.line())).unwrap_or(("<unknown>", 0));
+
+    let cause = if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
+      format!("{:?}", s)
+    } else if let Some(s) = panic_info.payload().downcast_ref::<String>() {
+      format!("{:?}", s)
+    } else {
+      "panic occurred".to_string()
+    };
+
+    log(&format!("A panic occurred at {}:{}: {}", filename, line, cause));
+  }));
+
   let stdin = stdin();
   for line in stdin.lock().lines() {
     let line = line.unwrap().clone();

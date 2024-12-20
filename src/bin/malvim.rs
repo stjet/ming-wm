@@ -130,7 +130,7 @@ impl WindowLike for Malvim {
             current_file.cursor_pos = spaces;
           } else if key_press.key == '𐘁' { //backspace
             if current_length > 0 && current_file.cursor_pos > 0 {
-              current_file.content[current_file.line_pos] = line.remove(current_file.cursor_pos, 1);
+              current_file.content[current_file.line_pos] = line.remove(current_file.cursor_pos - 1, 1);
               current_file.cursor_pos -= 1;
             } else {
               if current_file.line_pos > 0 {
@@ -168,6 +168,7 @@ impl WindowLike for Malvim {
               let new_length = current_file.content[current_file.line_pos].len();
               current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
             } else if key_press.key == 'w' {
+              //todo: currently doesn't work on a single space?
               let line = &current_file.content[current_file.line_pos];
               if line.len() > 0 {
                 //offset until space or eol
@@ -192,11 +193,21 @@ impl WindowLike for Malvim {
           } else if self.state == State::Find || self.state == State::BackFind {
             let old_pos = current_file.cursor_pos;
             let find_pos = if self.state == State::Find {
-              old_pos + current_file.content[current_file.line_pos].chars().skip(old_pos + 1).position(|c| c == key_press.key).unwrap_or(0) + 1
+              if old_pos < current_file.content[current_file.line_pos].len() {
+                old_pos + current_file.content[current_file.line_pos].chars().skip(old_pos + 1).position(|c| c == key_press.key).unwrap_or(0) + 1
+              } else {
+                old_pos
+              }
             } else {
-              old_pos - current_file.content[current_file.line_pos].chars().rev().skip(current_length - old_pos + 1).position(|c| c == key_press.key).unwrap_or(0)- 2
+              //how does this work again? no idea
+              if old_pos != 0 {
+                old_pos - current_file.content[current_file.line_pos].chars().rev().skip(current_length - old_pos + 1).position(|c| c == key_press.key).unwrap_or(0) - 2
+              } else {
+                old_pos //0
+              }
             };
             current_file.cursor_pos = find_pos;
+            changed = false;
             self.state = State::None;
           } else if key_press.key == 'x' {
             if current_length > 0 && current_file.cursor_pos < current_length {
@@ -237,7 +248,7 @@ impl WindowLike for Malvim {
             current_file.cursor_pos = current_file.content[current_file.line_pos].len();
             changed = false;
           } else if key_press.key == '^' {
-            current_file.line_pos = current_file.content[current_file.line_pos].chars().position(|c| c != ' ').unwrap_or(0);
+            current_file.cursor_pos = current_file.content[current_file.line_pos].chars().position(|c| c != ' ').unwrap_or(0);
             changed = false;
           } else if key_press.key == 'r' {
             self.state = State::Replace;
@@ -452,7 +463,7 @@ impl Malvim {
     } else if first == "e" || first == "edit" || ((first == "t" || first == "tabe") && self.files.len() > 0) {
       //find the file and open it
       let mut failed = false;
-      let mut new_path = if self.files.len() > 0 {
+      let mut new_path = if self.files.len() > 0 && !arg.starts_with("/") {
         PathBuf::from(self.files[self.current_file_index].path.clone()).parent().unwrap().to_path_buf()
       } else {
         PathBuf::from("/")
@@ -509,6 +520,7 @@ impl Malvim {
       let current_file = &self.files[self.current_file_index];
       let _ = write(&current_file.path, &current_file.content.join("\n"));
       self.files[self.current_file_index].changed = false;
+      self.bottom_message = Some("Written".to_string());
     } else if first == "q" || first == "quit" {
       self.files.remove(self.current_file_index);
       self.current_file_index = self.current_file_index.checked_sub(1).unwrap_or(0);

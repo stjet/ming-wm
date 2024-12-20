@@ -31,6 +31,7 @@ pub struct Terminal {
   current_input: String,
   current_path: String,
   running_process: Option<Child>,
+  last_command: Option<String>,
 }
 
 //for some reason key presses, then moving the window leaves the old window still there, behind it. weird
@@ -59,6 +60,7 @@ impl WindowLike for Terminal {
             }
           } else if key_press.key == '𐘂' { //the enter key
             self.lines.push("$ ".to_string() + &self.current_input);
+            self.last_command = Some(self.current_input.clone());
             self.state = self.process_command();
             self.current_input = String::new();
           } else {
@@ -96,6 +98,17 @@ impl WindowLike for Terminal {
           let _ = self.running_process.take().unwrap().kill();
           self.state = State::Input;
           WindowMessageResponse::JustRerender
+        } else if self.state == State::Input && (key_press.key == 'p' || key_press.key == 'n') {
+          //only the last command is saved unlike other terminals. good enough for me
+          if key_press.key == 'p' && self.last_command.is_some() {
+            self.current_input = self.last_command.clone().unwrap();
+            WindowMessageResponse::JustRerender
+          } else if key_press.key == 'n' {
+            self.current_input = String::new();
+            WindowMessageResponse::JustRerender
+          } else {
+            WindowMessageResponse::DoNothing
+          }
         } else {
           WindowMessageResponse::DoNothing
         }
