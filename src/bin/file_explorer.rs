@@ -9,6 +9,8 @@ use ming_wm::framebuffer::Dimensions;
 use ming_wm::themes::ThemeInfo;
 use ming_wm::ipc::listen;
 
+const HEIGHT: usize = 20;
+
 struct DirectoryChild {
   //if some, use instead of file/dir name
   override_name: Option<String>,
@@ -26,6 +28,7 @@ pub struct FileExplorer {
   current_dir_contents: Vec<DirectoryChild>,
   //for scrolling and selecting dirs
   position: usize,
+  top_position: usize,
 }
 
 impl WindowLike for FileExplorer {
@@ -49,25 +52,36 @@ impl WindowLike for FileExplorer {
               self.current_path = selected_entry.path.clone();
               self.current_dir_contents = self.get_current_dir_contents();
               self.position = 0;
+              self.top_position = 0;
               return WindowMessageResponse::JustRerender;
             }
           }
           WindowMessageResponse::DoNothing
-        } else if key_press.key == 'j' {
-          //down
-          if self.position == self.current_dir_contents.len() - 1 {
-            self.position = 0;
+        } else if key_press.key == 'j' || key_press.key == 'k' {
+          if key_press.key == 'j' {
+            //down
+            if self.position == self.current_dir_contents.len() - 1 {
+              self.position = 0;
+            } else {
+              self.position += 1;
+            }
           } else {
-            self.position += 1;
+            //up
+            if self.position == 0 {
+              self.position = self.current_dir_contents.len() - 1;
+            } else {
+              self.position -= 1;
+            }
           }
-          WindowMessageResponse::JustRerender
-        } else if key_press.key == 'k' {
-          //up
-          if self.position == 0 {
-            self.position = self.current_dir_contents.len() - 1;
+          //calculate position
+          if self.position > self.top_position {
+            let current_height = (self.position - self.top_position) * HEIGHT;
+            if current_height > self.dimensions[1] {
+              self.top_position += (current_height - self.dimensions[1]) / HEIGHT + 1;
+            }
           } else {
-            self.position -= 1;
-          }
+            self.top_position = self.position;
+          };
           WindowMessageResponse::JustRerender
         } else {
           WindowMessageResponse::DoNothing
@@ -83,14 +97,14 @@ impl WindowLike for FileExplorer {
     //
     //the actual files and directories
     let mut start_y = 0;
-    let mut i = 0;
-    for entry in &self.current_dir_contents {
+    let mut i = self.top_position;
+    for entry in self.current_dir_contents.iter().skip(self.top_position) {
       if start_y > self.dimensions[1] {
         break;
       }
       let is_selected = i == self.position;
       if is_selected {
-        instructions.push(DrawInstructions::Rect([0, start_y], [self.dimensions[0], 20], theme_info.top));
+        instructions.push(DrawInstructions::Rect([0, start_y], [self.dimensions[0], HEIGHT], theme_info.top));
       }
       //unwrap_or not used because "Arguments passed to unwrap_or are eagerly evaluated", apparently
       let name = entry.override_name.clone();
@@ -100,7 +114,7 @@ impl WindowLike for FileExplorer {
         name.unwrap()
       };
       instructions.push(DrawInstructions::Text([5, start_y], vec!["times-new-roman".to_string(), "shippori-mincho".to_string()], name, if is_selected { theme_info.top_text } else { theme_info.text }, if is_selected { theme_info.top } else { theme_info.background }, None, None));
-      start_y += 20;
+      start_y += HEIGHT;
       i += 1;
     }
     instructions

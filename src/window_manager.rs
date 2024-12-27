@@ -23,6 +23,7 @@ use crate::essential::taskbar::Taskbar;
 use crate::essential::lock_screen::LockScreen;
 use crate::essential::workspace_indicator::WorkspaceIndicator;
 use crate::essential::start_menu::StartMenu;
+use crate::logging::log;
 
 pub const TASKBAR_HEIGHT: usize = 38;
 pub const INDICATOR_HEIGHT: usize = 20;
@@ -137,6 +138,7 @@ pub struct WindowManager {
   pub locked: bool,
   current_workspace: u8,
   framebuffer: Framebuffer,
+  clipboard: Option<String>,
 }
 
 //1 is up, 2 is down
@@ -152,6 +154,7 @@ impl WindowManager {
       locked: false,
       current_workspace: 0,
       framebuffer,
+      clipboard: None,
     };
     wm.lock();
     wm
@@ -259,6 +262,8 @@ impl WindowManager {
                 ('c', ShortcutType::CenterWindow),
                 ('f', ShortcutType::FullscreenWindow),
                 ('w', ShortcutType::HalfWidthWindow),
+                ('C', ShortcutType::ClipboardCopy),
+                ('P', ShortcutType::ClipboardPaste(String::new())),
                 //move window a small amount
                 ('h', ShortcutType::MoveWindow(Direction::Left)),
                 ('j', ShortcutType::MoveWindow(Direction::Down)),
@@ -464,6 +469,22 @@ impl WindowManager {
                       }
                     }
                   },
+                  &ShortcutType::ClipboardCopy => {
+                    if let Some(focused_index) = self.get_focused_index() {
+                      let window_like = &self.window_infos[focused_index].window_like;
+                      if window_like.subtype() == WindowLikeType::Window {
+                        press_response = self.window_infos[focused_index].window_like.handle_message(WindowMessage::Shortcut(ShortcutType::ClipboardCopy));
+                      }
+                    }
+                  },
+                  &ShortcutType::ClipboardPaste(_) => {
+                    if let Some(focused_index) = self.get_focused_index() {
+                      let window_like = &self.window_infos[focused_index].window_like;
+                      if window_like.subtype() == WindowLikeType::Window && self.clipboard.is_some() {
+                        press_response = self.window_infos[focused_index].window_like.handle_message(WindowMessage::Shortcut(ShortcutType::ClipboardPaste(self.clipboard.clone().unwrap())));
+                      }
+                    }
+                  },
                 };
               }
             }
@@ -557,6 +578,10 @@ impl WindowManager {
           return;
         }
         self.lock();
+      },
+      WindowManagerRequest::ClipboardCopy(content) => {
+        self.clipboard = Some(content);
+        log(&format!("{:?}", self.clipboard));
       },
     };
   }
@@ -671,4 +696,3 @@ impl WindowManager {
     self.framebuffer.write_frame(WRITER.lock().unwrap().get_buffer());
   }
 }
-

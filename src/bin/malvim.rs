@@ -4,7 +4,7 @@ use std::fmt;
 use std::path::PathBuf;
 use std::fs::{ read_to_string, write };
 
-use ming_wm::messages::{ WindowMessage, WindowMessageResponse };
+use ming_wm::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest, ShortcutType };
 use ming_wm::themes::ThemeInfo;
 use ming_wm::framebuffer::Dimensions;
 use ming_wm::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
@@ -310,6 +310,33 @@ impl WindowLike for Malvim {
         self.dimensions = dimensions;
         WindowMessageResponse::JustRerender
       },
+      WindowMessage::Shortcut(shortcut) => {
+        match shortcut {
+          ShortcutType::ClipboardCopy => {
+            if self.files.len() > 0 {
+              let current_file = &mut self.files[self.current_file_index];
+              WindowMessageResponse::Request(WindowManagerRequest::ClipboardCopy(current_file.content[current_file.line_pos].clone()))
+            } else {
+              WindowMessageResponse::DoNothing
+            }
+          },
+          ShortcutType::ClipboardPaste(copy_string) => {
+            if self.mode == Mode::Insert {
+              let current_file = &mut self.files[self.current_file_index];
+              let line = &current_file.content[current_file.line_pos];
+              current_file.content[current_file.line_pos] = line.substring(0, current_file.cursor_pos).to_string() + &copy_string + line.substring(current_file.cursor_pos, line.len());
+              current_file.cursor_pos += copy_string.len();
+              self.calc_top_line_pos();
+              self.calc_current(); //too over zealous but whatever
+              self.files[self.current_file_index].changed = true;
+              WindowMessageResponse::JustRerender
+            } else {
+              WindowMessageResponse::DoNothing
+            }
+          },
+          _ => WindowMessageResponse::DoNothing,
+        }
+      },
       _ => WindowMessageResponse::DoNothing,
     }
   }
@@ -429,7 +456,7 @@ impl Malvim {
     //if not, move top_line_pos down until it is
     let current_file = &self.files[self.current_file_index];
     let actual_line_pos = self.current.actual_lines.iter().position(|l| l.1 == current_file.line_pos).unwrap();
-    if current_file.top_line_pos + self.current.max_lines < actual_line_pos {
+    if current_file.top_line_pos + self.current.max_lines <= actual_line_pos {
       self.files[self.current_file_index].top_line_pos = actual_line_pos.checked_sub(self.current.max_lines - 1).unwrap_or(0);
     } else if actual_line_pos < current_file.top_line_pos {
       self.files[self.current_file_index].top_line_pos = actual_line_pos;
@@ -516,6 +543,17 @@ impl Malvim {
       }
     } else if self.files.len() == 0 {
       self.bottom_message = Some("No files are open, so can only do :e(dit)".to_string());
+    } else if first.starts_with("/") {
+      let current_file = &mut self.files[self.current_file_index];
+      if current_file.content.len() > 0 {
+        let found_line_no = current_file.content.iter().skip(current_file.line_pos + 1).position(|line| {
+          line.contains(&first[1..])
+        });
+        if let Some(found_line_no) = found_line_no {
+          current_file.line_pos = found_line_no + current_file.line_pos + 1;
+          current_file.cursor_pos = 0;
+        }
+      }
     } else if first == "w" || first == "write" {
       let current_file = &self.files[self.current_file_index];
       let _ = write(&current_file.path, &current_file.content.join("\n"));
@@ -524,6 +562,7 @@ impl Malvim {
     } else if first == "q" || first == "quit" {
       self.files.remove(self.current_file_index);
       self.current_file_index = self.current_file_index.checked_sub(1).unwrap_or(0);
+      return true;
     } else if first == "p" || first == "tabp" {
       self.current_file_index = self.current_file_index.checked_sub(1).unwrap_or(self.files.len() - 1);
       return true;
@@ -543,4 +582,3 @@ impl Malvim {
 pub fn main() {
   listen(Malvim::new());
 }
-

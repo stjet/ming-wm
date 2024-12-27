@@ -27,6 +27,7 @@ impl PartialEq for WindowBox {
 #[derive(PartialEq, Serialize, Deserialize)]
 pub enum WindowManagerRequest {
   OpenWindow(String),
+  ClipboardCopy(String),
   CloseStartMenu,
   Unlock,
   Lock,
@@ -73,6 +74,8 @@ pub enum ShortcutType {
   CenterWindow,
   FullscreenWindow,
   HalfWidthWindow, //half width, full height
+  ClipboardCopy,
+  ClipboardPaste(String),
   //
 }
 
