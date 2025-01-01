@@ -24,7 +24,7 @@ impl WindowLike for ProxyWindowLike {
       let _ = stdin.write_all(("handle_message ".to_string() + &ron::to_string(&message).unwrap() + "\n").as_bytes());
     }
     let output = self.read_line();
-    ron::from_str(&output).unwrap_or(WindowMessageResponse::JustRerender)
+    ron::from_str(&output).unwrap_or(WindowMessageResponse::JustRedraw)
   }
 
   fn draw(&self, theme_info: &ThemeInfo) -> Vec<DrawInstructions> {

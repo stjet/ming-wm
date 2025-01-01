@@ -3,9 +3,9 @@ use std::vec;
 use std::collections::{ HashMap, VecDeque };
 use std::fmt;
 use std::boxed::Box;
-use std::sync::{ LazyLock, Mutex };
 use std::io::{ stdin, stdout, Write };
 use std::process::exit;
+use std::cell::RefCell;
 
 use linux_framebuffer::Framebuffer;
 use termion::input::TermRead;
@@ -23,24 +23,26 @@ use crate::essential::taskbar::Taskbar;
 use crate::essential::lock_screen::LockScreen;
 use crate::essential::workspace_indicator::WorkspaceIndicator;
 use crate::essential::start_menu::StartMenu;
-use crate::logging::log;
+use crate::essential::about::About;
+use crate::essential::help::Help;
+//use crate::logging::log;
 
 pub const TASKBAR_HEIGHT: usize = 38;
 pub const INDICATOR_HEIGHT: usize = 20;
 const WINDOW_TOP_HEIGHT: usize = 26;
-
-static WRITER: LazyLock<Mutex<FramebufferWriter>> = LazyLock::new(|| Mutex::new(Default::default()));
 
 pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
   let dimensions = [framebuffer_info.width, framebuffer_info.height];
   
   println!("bg: {}x{}", dimensions[0], dimensions[1] - TASKBAR_HEIGHT - INDICATOR_HEIGHT);
 
-  WRITER.lock().unwrap().init(framebuffer_info.clone());
+  let mut writer: FramebufferWriter = Default::default();
 
-  let mut wm: WindowManager = WindowManager::new(framebuffer, dimensions);
+  writer.init(framebuffer_info.clone());
 
-  wm.render(None, false);
+  let mut wm: WindowManager = WindowManager::new(writer, framebuffer, dimensions);
+
+  wm.draw(None, false);
 
   let stdin = stdin().lock();
   let mut stdout = stdout().into_raw_mode().unwrap();
@@ -52,8 +54,8 @@ pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
   for c in stdin.keys() {
     if let Some(kc) = key_to_char(c.unwrap()) {
       //do not allow exit when locked unless debugging
-      //if kc == KeyChar::Alt('e') {
-      if kc == KeyChar::Alt('e') && !wm.locked {
+      //if kc == KeyChar::Alt('E') {
+      if kc == KeyChar::Alt('E') && !wm.locked {
         write!(stdout, "{}", cursor::Show).unwrap();
         stdout.suspend_raw_mode().unwrap();
         exit(0);
@@ -130,6 +132,7 @@ impl fmt::Debug for WindowLikeInfo {
 }
 
 pub struct WindowManager {
+  writer: RefCell<FramebufferWriter>,
   id_count: usize,
   window_infos: Vec<WindowLikeInfo>,
   dimensions: Dimensions,
@@ -144,8 +147,9 @@ pub struct WindowManager {
 //1 is up, 2 is down
 
 impl WindowManager {
-  pub fn new(framebuffer: Framebuffer, dimensions: Dimensions) -> Self {
+  pub fn new(writer: FramebufferWriter, framebuffer: Framebuffer, dimensions: Dimensions) -> Self {
     let mut wm = WindowManager {
+      writer: RefCell::new(writer),
       id_count: 0,
       window_infos: Vec::new(),
       dimensions,
@@ -186,7 +190,7 @@ impl WindowManager {
     self.window_infos.iter().position(|w| w.id == self.focused_id)
   }
 
-  //should return an iterator but fuck it!
+  //used to return Vec<&WindowLikeInfo>, doesn't anymore for good reason
   fn get_windows_in_workspace(&self, include_non_window: bool) -> Vec<&WindowLikeInfo> {
     self.window_infos.iter().filter(|w| {
       match w.workspace {
@@ -303,7 +307,7 @@ impl WindowManager {
                     //send to taskbar
                     press_response = self.toggle_start_menu(false);
                     if press_response != WindowMessageResponse::Request(WindowManagerRequest::CloseStartMenu) {
-                      //only thing that needs to be rerendered is the start menu and taskbar
+                      //only thing that needs to be redrawed is the start menu and taskbar
                       let start_menu_id = self.id_count + 1;
                       let taskbar_id = self.window_infos.iter().find(|w| w.window_like.subtype() == WindowLikeType::Taskbar).unwrap().id;
                       redraw_ids = Some(vec![start_menu_id, taskbar_id]);
@@ -354,7 +358,7 @@ impl WindowManager {
                           }
                         }
                         if changed {
-                          press_response = WindowMessageResponse::JustRerender;
+                          press_response = WindowMessageResponse::JustRedraw;
                           //avoid drawing everything under the moving window, much more efficient
                           use_saved_buffer = true;
                           redraw_ids = Some(vec![self.focused_id]);
@@ -375,7 +379,7 @@ impl WindowManager {
                       self.focused_id = self.window_infos[indicator_index].id;
                       self.window_infos[indicator_index].window_like.handle_message(WindowMessage::Shortcut(ShortcutType::SwitchWorkspace(self.current_workspace)));
                       self.taskbar_update_windows();
-                      press_response = WindowMessageResponse::JustRerender;
+                      press_response = WindowMessageResponse::JustRedraw;
                     }
                   },
                   &ShortcutType::MoveWindowToWorkspace(workspace) => {
@@ -384,7 +388,7 @@ impl WindowManager {
                         if self.window_infos[focused_index].window_like.subtype() == WindowLikeType::Window {
                           self.window_infos[focused_index].workspace = Workspace::Workspace(workspace);
                           self.taskbar_update_windows();
-                          press_response = WindowMessageResponse::JustRerender;
+                          press_response = WindowMessageResponse::JustRedraw;
                         }
                       }
                     }
@@ -411,7 +415,7 @@ impl WindowManager {
                         //elevate it to the top
                         self.move_index_to_top(new_focus_index);
                         self.taskbar_update_windows();
-                        press_response = WindowMessageResponse::JustRerender;
+                        press_response = WindowMessageResponse::JustRedraw;
                         break;
                       } else if new_focus_index == current_index {
                         break; //did a full loop, found no windows
@@ -423,7 +427,7 @@ impl WindowManager {
                       if self.window_infos[focused_index].window_like.subtype() == WindowLikeType::Window {
                         self.window_infos.remove(focused_index);
                         self.taskbar_update_windows();
-                        press_response = WindowMessageResponse::JustRerender;
+                        press_response = WindowMessageResponse::JustRedraw;
                       }
                     }
                   },
@@ -432,7 +436,7 @@ impl WindowManager {
                       let window_dimensions = &self.window_infos[focused_index].dimensions;
                       self.window_infos[focused_index].top_left = [self.dimensions[0] / 2 - window_dimensions[0] / 2, self.dimensions[1] / 2 - window_dimensions[1] / 2];
                       use_saved_buffer = true;
-                      press_response = WindowMessageResponse::JustRerender;
+                      press_response = WindowMessageResponse::JustRedraw;
                     }
                   },
                   &ShortcutType::FullscreenWindow => {
@@ -451,7 +455,7 @@ impl WindowManager {
                           new_dimensions = self.window_infos[focused_index].dimensions;
                         }
                         self.window_infos[focused_index].window_like.handle_message(WindowMessage::ChangeDimensions([new_dimensions[0], new_dimensions[1] - WINDOW_TOP_HEIGHT]));
-                        press_response = WindowMessageResponse::JustRerender;
+                        press_response = WindowMessageResponse::JustRedraw;
                       }
                     }
                   },
@@ -465,7 +469,7 @@ impl WindowManager {
                         let new_dimensions = [self.dimensions[0] / 2, self.dimensions[1] - INDICATOR_HEIGHT - TASKBAR_HEIGHT];
                         self.window_infos[focused_index].dimensions = new_dimensions;
                         self.window_infos[focused_index].window_like.handle_message(WindowMessage::ChangeDimensions([new_dimensions[0], new_dimensions[1] - WINDOW_TOP_HEIGHT]));
-                        press_response = WindowMessageResponse::JustRerender;
+                        press_response = WindowMessageResponse::JustRedraw;
                       }
                     }
                   },
@@ -503,10 +507,10 @@ impl WindowManager {
                   key: c,
                 })
               });
-              //at most, only the focused window needs to be rerendered
+              //at most, only the focused window needs to be redrawed
               redraw_ids = Some(vec![self.window_infos[focused_index].id]);
               //requests can result in window openings and closings, etc
-              if press_response != WindowMessageResponse::JustRerender {
+              if press_response != WindowMessageResponse::JustRedraw {
                 redraw_ids = None;
               }
             }
@@ -521,7 +525,7 @@ impl WindowManager {
         WindowMessageResponse::Request(request) => self.handle_request(request),
         _ => {},
       };
-      self.render(redraw_ids, use_saved_buffer);
+      self.draw(redraw_ids, use_saved_buffer);
     }
   }
   
@@ -541,6 +545,8 @@ impl WindowManager {
           "Audio Player" => Some(Box::new(ProxyWindowLike::new_rust("audio_player"))),
           "File Explorer" => Some(Box::new(ProxyWindowLike::new_rust("file_explorer"))),
           "StartMenu" => Some(Box::new(StartMenu::new())),
+          "About" => Some(Box::new(About::new())),
+          "Help" => Some(Box::new(Help::new())),
           _ => None,
         };
         if w.is_none() {
@@ -581,7 +587,6 @@ impl WindowManager {
       },
       WindowManagerRequest::ClipboardCopy(content) => {
         self.clipboard = Some(content);
-        log(&format!("{:?}", self.clipboard));
       },
     };
   }
@@ -591,18 +596,18 @@ impl WindowManager {
   }
 
   //another issue with a huge vector of draw instructions; it takes up heap memory
-  pub fn render(&mut self, maybe_redraw_ids: Option<Vec<usize>>, use_saved_buffer: bool) {
+  pub fn draw(&mut self, maybe_redraw_ids: Option<Vec<usize>>, use_saved_buffer: bool) {
     let theme_info = get_theme_info(&self.theme).unwrap();
     //use in conjunction with redraw ids, so a window moving can work without redrawing everything,
     //can just redraw the saved state + window
     if use_saved_buffer {
-      WRITER.lock().unwrap().write_saved_buffer_to_raw();
+      self.writer.borrow_mut().write_saved_buffer_to_raw();
     }
     //get windows to redraw
     let redraw_ids = maybe_redraw_ids.unwrap_or(Vec::new());
-    let redraw_windows = self.get_windows_in_workspace(true);
-    let maybe_length = redraw_windows.len();
-    let redraw_windows = redraw_windows.iter().filter(|w| {
+    let all_in_workspace = self.get_windows_in_workspace(true);
+    let maybe_length = all_in_workspace.len();
+    let redraw_windows = all_in_workspace.iter().filter(|w| {
       //basically, maybe_redraw_ids was None
       if redraw_ids.len() > 0 {
         redraw_ids.contains(&w.id)
@@ -614,7 +619,6 @@ impl WindowManager {
     let max_index = if redraw_ids.len() > 0 { redraw_ids.len() } else { maybe_length } - 1;
     let mut w_index = 0;
     for window_info in redraw_windows {
-      //unsafe { SERIAL1.lock().write_text(&format!("{:?}\n", &window_info.window_like.subtype())); }
       let window_dimensions = if window_info.fullscreen {
         [self.dimensions[0], self.dimensions[1] - TASKBAR_HEIGHT - INDICATOR_HEIGHT]
       } else {
@@ -625,7 +629,7 @@ impl WindowManager {
       if is_window {
         //if this is the top most window to draw, snapshot
         if w_index == max_index && !use_saved_buffer && redraw_ids.len() == 0 {
-          WRITER.lock().unwrap().save_buffer();
+          self.writer.borrow_mut().save_buffer();
         }
         //offset top left by the window top height for windows (because windows can't draw in that region)
         instructions = instructions.iter().map(|instruction| {
@@ -654,7 +658,7 @@ impl WindowManager {
           DrawInstructions::Rect([1, window_dimensions[1] - 1], [window_dimensions[0] - 1, 1], theme_info.border_right_bottom),
         ]);
       }
-      let mut framebuffer_info = WRITER.lock().unwrap().get_info();
+      let mut framebuffer_info = self.writer.borrow().get_info();
       let bytes_per_pixel = framebuffer_info.bytes_per_pixel;
       let window_width = window_dimensions[0];
       let window_height = window_dimensions[1];
@@ -690,9 +694,9 @@ impl WindowManager {
           },
         }
       }
-      WRITER.lock().unwrap().draw_buffer(window_info.top_left, window_dimensions[1], window_dimensions[0] * bytes_per_pixel, &window_writer.get_buffer());
+      self.writer.borrow_mut().draw_buffer(window_info.top_left, window_dimensions[1], window_dimensions[0] * bytes_per_pixel, &window_writer.get_buffer());
       w_index += 1;
     }
-    self.framebuffer.write_frame(WRITER.lock().unwrap().get_buffer());
+    self.framebuffer.write_frame(self.writer.borrow().get_buffer());
   }
 }

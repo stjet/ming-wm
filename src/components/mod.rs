@@ -6,6 +6,7 @@ use crate::window_manager::DrawInstructions;
 
 pub mod toggle_button;
 pub mod highlight_button;
+pub mod paragraph;
 
 pub trait Component<T> {
   fn handle_message(&mut self, message: WindowMessage) -> Option<T>;

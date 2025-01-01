@@ -16,9 +16,6 @@ struct DirectoryChild {
   override_name: Option<String>,
   path: PathBuf,
   is_file: bool,
-  //can only be true if dir
-  //if true, means the contents of this dir should be visible too, even though it isn't the current path. like a tree
-  tree_open: bool,
 }
 
 #[derive(Default)]
@@ -38,11 +35,11 @@ impl WindowLike for FileExplorer {
         self.current_path = PathBuf::from("/");
         self.dimensions = dimensions;
         self.current_dir_contents = self.get_current_dir_contents();
-        WindowMessageResponse::JustRerender
+        WindowMessageResponse::JustRedraw
       },
       WindowMessage::ChangeDimensions(dimensions) => {
         self.dimensions = dimensions;
-        WindowMessageResponse::JustRerender
+        WindowMessageResponse::JustRedraw
       },
       WindowMessage::KeyPress(key_press) => {
         if key_press.key == '𐘂' { //the enter key
@@ -53,7 +50,7 @@ impl WindowLike for FileExplorer {
               self.current_dir_contents = self.get_current_dir_contents();
               self.position = 0;
               self.top_position = 0;
-              return WindowMessageResponse::JustRerender;
+              return WindowMessageResponse::JustRedraw;
             }
           }
           WindowMessageResponse::DoNothing
@@ -74,15 +71,16 @@ impl WindowLike for FileExplorer {
             }
           }
           //calculate position
+          let max_height = self.dimensions[1] - HEIGHT;
           if self.position > self.top_position {
             let current_height = (self.position - self.top_position) * HEIGHT;
             if current_height > self.dimensions[1] {
-              self.top_position += (current_height - self.dimensions[1]) / HEIGHT + 1;
+              self.top_position += (current_height - max_height) / HEIGHT + 1;
             }
           } else {
             self.top_position = self.position;
           };
-          WindowMessageResponse::JustRerender
+          WindowMessageResponse::JustRedraw
         } else {
           WindowMessageResponse::DoNothing
         }
@@ -93,10 +91,10 @@ impl WindowLike for FileExplorer {
 
   fn draw(&self, theme_info: &ThemeInfo) -> Vec<DrawInstructions> {
     let mut instructions = Vec::new();
-    //top bar with path name and editing
-    //
+    //top bar with path name
+    instructions.push(DrawInstructions::Text([5, 0], vec!["times-new-roman".to_string(), "shippori-mincho".to_string()], "Current: ".to_string() + &self.current_path.to_string_lossy().to_string(), theme_info.text, theme_info.background, None, None));
     //the actual files and directories
-    let mut start_y = 0;
+    let mut start_y = HEIGHT;
     let mut i = self.top_position;
     for entry in self.current_dir_contents.iter().skip(self.top_position) {
       if start_y > self.dimensions[1] {
@@ -149,7 +147,6 @@ impl FileExplorer {
       contents.push(DirectoryChild {
         override_name: Some("..".to_string()),
         is_file: false,
-        tree_open: false,
         path: self.current_path.parent().unwrap().to_owned(),
       });
     }
@@ -158,7 +155,6 @@ impl FileExplorer {
       DirectoryChild {
         override_name: None,
         is_file: path.is_file(),
-        tree_open: false,
         path,
       }
     }));

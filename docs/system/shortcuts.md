@@ -1,0 +1,20 @@
+- Alt+E: Exit ming-wm
+- Alt+s: Open start menu
+- Alt+[: Focus previous window
+- Alt+]: Focus next window
+- Alt+q: Quit window
+- Alt+c: Centre window
+- Alt+f: Fullscreen window
+- Alt+w: Half width window
+- Alt+C: Clipboard copy
+- Alt+P: Clipboard paste
+- Alt+h: Move window left
+- Alt+j: Move window down
+- Alt+k: Move window up
+- Alt+l: Move window right
+- Alt+H: Move window to left edge
+- Alt+J: Move window to bottom edge
+- Alt+K: Move window to top edge
+- Alt+L: Move window to right edge
+- Alt+1, Alt+2, ..., Alt+[n], ..., Alt+9: Switch to workspace [n]
+- Alt+shift+1, Alt+shift+2, ..., Alt+shift+[n], ..., Alt+shift+9: Move window to workspace [n]

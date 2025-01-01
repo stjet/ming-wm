@@ -7,7 +7,7 @@ use crate::messages::{ WindowMessage, WindowMessageResponse, WindowManagerReques
 use crate::framebuffer::Dimensions;
 use crate::themes::ThemeInfo;
 use crate::components::Component;
-use crate::components::toggle_button::{ ToggleButton, ToggleButtonAlignment };
+use crate::components::toggle_button::ToggleButton;
 
 const PADDING: usize = 4;
 const META_WIDTH: usize = 175; //of the window button
@@ -33,9 +33,9 @@ impl WindowLike for Taskbar {
       WindowMessage::Init(dimensions) => {
         self.dimensions = dimensions;
         self.components = vec![
-          Box::new(ToggleButton::new("start-button".to_string(), [PADDING, PADDING], [44, self.dimensions[1] - (PADDING * 2)], "Start".to_string(), TaskbarMessage::ShowStartMenu, TaskbarMessage::HideStartMenu, false, Some(ToggleButtonAlignment::Left))),
+          Box::new(ToggleButton::new("start-button".to_string(), [PADDING, PADDING], [44, self.dimensions[1] - (PADDING * 2)], "Start".to_string(), TaskbarMessage::ShowStartMenu, TaskbarMessage::HideStartMenu, false)),
         ];
-        WindowMessageResponse::JustRerender
+        WindowMessageResponse::JustRedraw
       },
       WindowMessage::Shortcut(shortcut) => {
         match shortcut {
@@ -52,7 +52,7 @@ impl WindowLike for Taskbar {
           InfoType::WindowsInWorkspace(windows, focused_id) => {
             self.windows_in_workspace = windows;
             self.focused_id = focused_id;
-            WindowMessageResponse::JustRerender
+            WindowMessageResponse::JustRedraw
           }
           _ => WindowMessageResponse::DoNothing,
         }
@@ -80,7 +80,7 @@ impl WindowLike for Taskbar {
       }
       let info = &self.windows_in_workspace[wi];
       let name = &info.1;
-      let mut b = ToggleButton::new(name.to_string() + "-window", [PADDING * 2 + 44 + (META_WIDTH + PADDING) * wi, PADDING], [META_WIDTH, self.dimensions[1] - (PADDING * 2)], name.to_string(), TaskbarMessage::Nothing, TaskbarMessage::Nothing, false, Some(ToggleButtonAlignment::Left));
+      let mut b = ToggleButton::new(name.to_string() + "-window", [PADDING * 2 + 44 + (META_WIDTH + PADDING) * wi, PADDING], [META_WIDTH, self.dimensions[1] - (PADDING * 2)], name.to_string(), TaskbarMessage::Nothing, TaskbarMessage::Nothing, false);
       b.inverted = info.0 == self.focused_id;
       instructions.extend(b.draw(theme_info));
     }
@@ -119,7 +119,7 @@ impl Taskbar {
         _ => WindowMessageResponse::DoNothing,
       }
     } else {
-      //maybe should be JustRerender?
+      //maybe should be JustRedraw?
       WindowMessageResponse::DoNothing
     }
   }

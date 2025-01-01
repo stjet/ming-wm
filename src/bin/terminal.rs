@@ -44,11 +44,11 @@ impl WindowLike for Terminal {
         self.current_path = "/".to_string();
         self.lines = vec!["Mingde Terminal".to_string(), "".to_string()];
         self.calc_actual_lines();
-        WindowMessageResponse::JustRerender
+        WindowMessageResponse::JustRedraw
       },
       WindowMessage::ChangeDimensions(dimensions) => {
         self.dimensions = dimensions;
-        WindowMessageResponse::JustRerender
+        WindowMessageResponse::JustRedraw
       },
       WindowMessage::KeyPress(key_press) => {
         if self.state == State::Input {
@@ -68,7 +68,7 @@ impl WindowLike for Terminal {
           }
           self.calc_actual_lines();
           self.actual_line_num = self.actual_lines.len().checked_sub(self.get_max_lines()).unwrap_or(0);
-          WindowMessageResponse::JustRerender
+          WindowMessageResponse::JustRedraw
         } else if key_press.key.len_utf8() == 1 {
           //update
           let running_process = self.running_process.as_mut().unwrap();
@@ -85,7 +85,7 @@ impl WindowLike for Terminal {
             }
             self.state = State::Input;
             self.calc_actual_lines();
-            WindowMessageResponse::JustRerender
+            WindowMessageResponse::JustRedraw
           } else {
             //still running
             WindowMessageResponse::DoNothing
@@ -101,15 +101,15 @@ impl WindowLike for Terminal {
           //kills and running_process is now None
           let _ = self.running_process.take().unwrap().kill();
           self.state = State::Input;
-          WindowMessageResponse::JustRerender
+          WindowMessageResponse::JustRedraw
         } else if self.state == State::Input && (key_press.key == 'p' || key_press.key == 'n') {
           //only the last command is saved unlike other terminals. good enough for me
           if key_press.key == 'p' && self.last_command.is_some() {
             self.current_input = self.last_command.clone().unwrap();
-            WindowMessageResponse::JustRerender
+            WindowMessageResponse::JustRedraw
           } else if key_press.key == 'n' {
             self.current_input = String::new();
-            WindowMessageResponse::JustRerender
+            WindowMessageResponse::JustRedraw
           } else {
             WindowMessageResponse::DoNothing
           }

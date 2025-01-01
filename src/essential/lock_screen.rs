@@ -7,7 +7,9 @@ use crate::messages::{ WindowMessage, WindowMessageResponse, WindowManagerReques
 use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
 use blake2::{ Blake2b512, Digest };
 
-const PASSWORD_HASH: [u8; 64] = [220, 88, 183, 188, 240, 27, 107, 181, 58, 191, 198, 170, 114, 38, 7, 148, 6, 179, 75, 128, 231, 171, 172, 220, 85, 38, 36, 113, 116, 146, 70, 197, 163, 179, 158, 192, 130, 53, 247, 48, 47, 209, 95, 96, 179, 211, 4, 122, 254, 127, 21, 165, 139, 199, 151, 226, 216, 176, 123, 41, 194, 221, 58, 69];
+include!(concat!(env!("OUT_DIR"), "/password.rs"));
+
+//const PASSWORD_HASH: [u8; 64] = [220, 88, 183, 188, 240, 27, 107, 181, 58, 191, 198, 170, 114, 38, 7, 148, 6, 179, 75, 128, 231, 171, 172, 220, 85, 38, 36, 113, 116, 146, 70, 197, 163, 179, 158, 192, 130, 53, 247, 48, 47, 209, 95, 96, 179, 211, 4, 122, 254, 127, 21, 165, 139, 199, 151, 226, 216, 176, 123, 41, 194, 221, 58, 69];
 
 pub struct LockScreen {
   dimensions: Dimensions,
@@ -19,28 +21,28 @@ impl WindowLike for LockScreen {
     match message {
       WindowMessage::Init(dimensions) => {
         self.dimensions = dimensions;
-        WindowMessageResponse::JustRerender
+        WindowMessageResponse::JustRedraw
       },
       WindowMessage::KeyPress(key_press) => {
         if key_press.key == '𐘂' { //the enter key
           //check password
           let mut hasher = Blake2b512::new();
-          hasher.update(self.input_password.as_bytes());
+          hasher.update((self.input_password.clone() + "salt?sorrycryptographers").as_bytes());
           if hasher.finalize() == PASSWORD_HASH.into() {
             WindowMessageResponse::Request(WindowManagerRequest::Unlock)
           } else {
             self.input_password = String::new();
-            WindowMessageResponse::JustRerender
+            WindowMessageResponse::JustRedraw
           }
         } else if key_press.key == '𐘁' { //backspace
           let p_len = self.input_password.len();
           if p_len != 0 {
             self.input_password = self.input_password[..p_len - 1].to_string();
           }
-          WindowMessageResponse::JustRerender
+          WindowMessageResponse::JustRedraw
         } else {
           self.input_password += &key_press.key.to_string();
-          WindowMessageResponse::JustRerender
+          WindowMessageResponse::JustRedraw
         }
       },
       _ => WindowMessageResponse::DoNothing,

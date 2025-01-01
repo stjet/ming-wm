@@ -1,6 +1,9 @@
-use std::fs::{ read_dir, File };
+use std::fs::{ read_dir, read_to_string, write, File };
 use std::io::Write;
+use std::env;
+use std::path::Path;
 
+use blake2::{ Blake2b512, Digest };
 use bmp_rust::bmp::BMP;
 
 fn font_chars_to_alphas(dir: &str) {
@@ -37,6 +40,14 @@ fn font_chars_to_alphas(dir: &str) {
 }
 
 fn main() {
+  //hash + "salt" password and add to build
+  let password = read_to_string("password.txt").unwrap_or("password".to_string()).replace("\n", "") + "salt?sorrycryptographers";
+  let mut hasher = Blake2b512::new();
+  hasher.update(password.as_bytes());
+  let out_dir = env::var_os("OUT_DIR").unwrap();
+  let dest_path = Path::new(&out_dir).join("password.rs");
+  write(&dest_path, format!("pub const PASSWORD_HASH: [u8; 64] = {:?};", hasher.finalize())).unwrap();
+  //process bmps
   for entry in read_dir("./bmps").unwrap() {
     let path = entry.unwrap().path();
     if path.is_dir() {

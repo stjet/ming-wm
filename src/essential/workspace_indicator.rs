@@ -22,13 +22,13 @@ impl WindowLike for WorkspaceIndicator {
     match message {
       WindowMessage::Init(dimensions) => {
         self.dimensions = dimensions;
-        WindowMessageResponse::JustRerender
+        WindowMessageResponse::JustRedraw
       },
       WindowMessage::Shortcut(shortcut) => {
         match shortcut {
           ShortcutType::SwitchWorkspace(workspace) => {
             self.current_workspace = workspace;
-            WindowMessageResponse::JustRerender
+            WindowMessageResponse::JustRedraw
           },
           _ => WindowMessageResponse::DoNothing,
         }

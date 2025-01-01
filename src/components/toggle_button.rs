@@ -7,12 +7,6 @@ use crate::themes::ThemeInfo;
 use crate::messages::WindowMessage;
 use crate::window_manager::DrawInstructions;
 
-//we need a text width and height measure function first
-pub enum ToggleButtonAlignment {
-  Centre,
-  Left,
-}
-
 pub struct ToggleButton<T> {
   name_: String,
   top_left: Point,
@@ -20,7 +14,6 @@ pub struct ToggleButton<T> {
   text: String,
   draw_bg: bool,
   pub inverted: bool, //whether is it clicked or not
-  alignment: ToggleButtonAlignment,
   click_return: T,
   unclick_return: T,
 }
@@ -73,7 +66,7 @@ impl<T: Clone> Component<T> for ToggleButton<T> {
 }
 
 impl<T> ToggleButton<T> {
-  pub fn new(name_: String, top_left: Point, size: Dimensions, text: String, click_return: T, unclick_return: T, draw_bg: bool, alignment: Option<ToggleButtonAlignment>) -> Self {
+  pub fn new(name_: String, top_left: Point, size: Dimensions, text: String, click_return: T, unclick_return: T, draw_bg: bool) -> Self {
     Self {
       name_,
       top_left,
@@ -83,7 +76,6 @@ impl<T> ToggleButton<T> {
       unclick_return,
       draw_bg,
       inverted: false,
-      alignment: alignment.unwrap_or(ToggleButtonAlignment::Centre),
     }
   }
 }

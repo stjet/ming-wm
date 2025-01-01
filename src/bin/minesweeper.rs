@@ -44,7 +44,7 @@ impl WindowLike for Minesweeper {
     match message {
       WindowMessage::Init(dimensions) => {
         self.dimensions = dimensions;
-        WindowMessageResponse::JustRerender
+        WindowMessageResponse::JustRedraw
       },
       WindowMessage::KeyPress(key_press) => {
         if self.state == State::Seed {
@@ -58,7 +58,7 @@ impl WindowLike for Minesweeper {
               self.random_chars.push(key_press.key);
             }
           }
-          WindowMessageResponse::JustRerender
+          WindowMessageResponse::JustRedraw
         } else if self.state == State::BeforePlaying || self.state == State::Playing {
           if key_press.key == '𐘁' { //backspace
             self.first_char = '\0';
@@ -125,7 +125,7 @@ impl WindowLike for Minesweeper {
                   self.state = State::Won;
                 }
               }
-              WindowMessageResponse::JustRerender
+              WindowMessageResponse::JustRedraw
             } else {
               WindowMessageResponse::DoNothing
             }

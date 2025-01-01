@@ -1,3 +1,4 @@
 target/
 Cargo.lock
 ming-wm
+password.txt

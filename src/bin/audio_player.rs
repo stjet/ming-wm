@@ -35,11 +35,11 @@ impl WindowLike for AudioPlayer {
     match message {
       WindowMessage::Init(dimensions) => {
         self.dimensions = dimensions;
-        WindowMessageResponse::JustRerender
+        WindowMessageResponse::JustRedraw
       },
       WindowMessage::ChangeDimensions(dimensions) => {
         self.dimensions = dimensions;
-        WindowMessageResponse::JustRerender
+        WindowMessageResponse::JustRedraw
       },
       WindowMessage::KeyPress(key_press) => {
         if key_press.key == '𐘂' { //the enter key
@@ -52,7 +52,7 @@ impl WindowLike for AudioPlayer {
         } else {
           self.command += &key_press.key.to_string();
         }
-        WindowMessageResponse::JustRerender
+        WindowMessageResponse::JustRedraw
       },
       _ => {
         WindowMessageResponse::DoNothing

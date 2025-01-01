@@ -43,7 +43,7 @@ impl fmt::Debug for WindowManagerRequest{
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub enum WindowMessageResponse {
   Request(WindowManagerRequest),
-  JustRerender,
+  JustRedraw,
   DoNothing,
 }
 

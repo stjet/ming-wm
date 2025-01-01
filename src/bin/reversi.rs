@@ -59,7 +59,7 @@ impl WindowLike for Reversi {
         self.dimensions = dimensions;
         self.new_tiles();
         self.valid_moves = self.get_valid_moves();
-        WindowMessageResponse::JustRerender
+        WindowMessageResponse::JustRedraw
       },
       WindowMessage::KeyPress(key_press) => {
         if let Ok(n) = key_press.key.to_string().parse::<u8>() {
@@ -82,7 +82,7 @@ impl WindowLike for Reversi {
         } else if key_press.key == '𐘁' { //backspace
           self.current_number = None;
         }
-        WindowMessageResponse::JustRerender
+        WindowMessageResponse::JustRedraw
       },
       _ => WindowMessageResponse::DoNothing,
     }

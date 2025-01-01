@@ -1,5 +1,3 @@
-#![allow(warnings)]
-
 use std::vec;
 use std::vec::Vec;
 use std::boxed::Box;
@@ -10,9 +8,6 @@ use crate::framebuffer::Dimensions;
 use crate::themes::ThemeInfo;
 use crate::components::Component;
 use crate::components::highlight_button::HighlightButton;
-use crate::ipc::listen;
-
-//todo: move to essential
 
 static CATEGORIES: [&'static str; 9] = ["About", "Utils", "Games", "Editing", "Files", "System", "Misc", "Help", "Logout"];
 
@@ -39,7 +34,7 @@ impl WindowLike for StartMenu {
         self.dimensions = dimensions;
         self.y_each = (self.dimensions[1] - 1) / CATEGORIES.len();
         self.add_category_components();
-        WindowMessageResponse::JustRerender
+        WindowMessageResponse::JustRedraw
       },
       WindowMessage::KeyPress(key_press) => {
         //up and down
@@ -62,7 +57,7 @@ impl WindowLike for StartMenu {
           self.old_focus = self.current_focus.to_string();
           self.current_focus = self.components[current_focus_index].name().to_string();
           self.components[current_focus_index].handle_message(WindowMessage::Focus);
-          WindowMessageResponse::JustRerender
+          WindowMessageResponse::JustRedraw
         } else if key_press.key == '𐘂' { //the enter key
           let focus_index = self.get_focus_index();
           if let Some(focus_index) = focus_index {
@@ -79,7 +74,7 @@ impl WindowLike for StartMenu {
             self.old_focus = self.current_focus.clone();
             self.current_focus = self.components[current_focus_index + n_index].name().to_string();
             self.components[current_focus_index + n_index].handle_message(WindowMessage::Focus);
-            WindowMessageResponse::JustRerender
+            WindowMessageResponse::JustRedraw
           } else {
             WindowMessageResponse::DoNothing
           }
@@ -135,11 +130,14 @@ impl StartMenu {
         StartMenuMessage::CategoryClick(name) => {
           if name == "Logout" {
             WindowMessageResponse::Request(WindowManagerRequest::Lock)
+          } else if name == "About" || name == "Help" {
+            //todo above: also do the same for Help
+            WindowMessageResponse::Request(WindowManagerRequest::OpenWindow(name.to_string()))
           } else {
             self.current_focus = "Back".to_string();
             self.components = vec![
               Box::new(HighlightButton::new(
-                "Back".to_string(), [42, 1], [self.dimensions[0] - 42 - 1, self.y_each], "Back", StartMenuMessage::Back, StartMenuMessage::ChangeAcknowledge, true
+                "Back".to_string(), [42, 1], [self.dimensions[0] - 42 - 1, self.y_each], "Back".to_string(), StartMenuMessage::Back, StartMenuMessage::ChangeAcknowledge, true
               ))
             ];
             //add window buttons
@@ -157,10 +155,10 @@ impl StartMenu {
             for a in 0..to_add.len() {
               let w_name = to_add[a];
               self.components.push(Box::new(HighlightButton::new(
-                w_name.to_string(), [42, (a + 1) * self.y_each], [self.dimensions[0] - 42 - 1, self.y_each], w_name, StartMenuMessage::WindowClick(w_name), StartMenuMessage::ChangeAcknowledge, false
+                w_name.to_string(), [42, (a + 1) * self.y_each], [self.dimensions[0] - 42 - 1, self.y_each], w_name.to_string(), StartMenuMessage::WindowClick(w_name), StartMenuMessage::ChangeAcknowledge, false
               )));
             }
-            WindowMessageResponse::JustRerender
+            WindowMessageResponse::JustRedraw
           }
         },
         StartMenuMessage::WindowClick(name) => {
@@ -169,15 +167,15 @@ impl StartMenu {
         },
         StartMenuMessage::Back => {
           self.add_category_components();
-          WindowMessageResponse::JustRerender
+          WindowMessageResponse::JustRedraw
         },
         StartMenuMessage::ChangeAcknowledge => {
           //
-          WindowMessageResponse::JustRerender
+          WindowMessageResponse::JustRedraw
         },
       }
     } else {
-      //maybe should be JustRerender?
+      //maybe should be JustRedraw?
       WindowMessageResponse::DoNothing
     }
   }
@@ -188,7 +186,7 @@ impl StartMenu {
     for c in 0..CATEGORIES.len() {
       let name = CATEGORIES[c];
       self.components.push(Box::new(HighlightButton::new(
-        name.to_string(), [42, self.y_each * c + 1], [self.dimensions[0] - 42 - 1, self.y_each], name, StartMenuMessage::CategoryClick(name), StartMenuMessage::ChangeAcknowledge, c == 0
+        name.to_string(), [42, self.y_each * c + 1], [self.dimensions[0] - 42 - 1, self.y_each], name.to_string(), StartMenuMessage::CategoryClick(name), StartMenuMessage::ChangeAcknowledge, c == 0
       )));
     }
   }
@@ -196,9 +194,5 @@ impl StartMenu {
   pub fn get_focus_index(&self) -> Option<usize> {
     self.components.iter().filter(|c| c.focusable()).position(|c| c.name() == &self.current_focus)
   }
-}
-
-pub fn main() {
-  listen(StartMenu::new());
 }
 

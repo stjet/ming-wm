@@ -11,7 +11,7 @@ pub struct HighlightButton<T> {
   name_: String,
   top_left: Point,
   size: Dimensions,
-  text: &'static str,
+  text: String,
   pub highlighted: bool,
   click_return: T,
   toggle_highlight_return: T, //also unhighlight return
@@ -38,12 +38,12 @@ impl<T: Clone> Component<T> for HighlightButton<T> {
       vec![
         //highlight background
         DrawInstructions::Rect(self.top_left, self.size, theme_info.top),
-        DrawInstructions::Text([self.top_left[0] + 4, self.top_left[1] + (self.size[1] - font_height) / 2], vec!["times-new-roman".to_string()], self.text.to_string(), theme_info.top_text, theme_info.top, None, None),
+        DrawInstructions::Text([self.top_left[0] + 4, self.top_left[1] + (self.size[1] - font_height) / 2], vec!["times-new-roman".to_string()], self.text.clone(), theme_info.top_text, theme_info.top, None, None),
       ]
     } else {
       vec![
         DrawInstructions::Rect(self.top_left, self.size, theme_info.background),
-        DrawInstructions::Text([self.top_left[0] + 4, self.top_left[1] + (self.size[1] - font_height) / 2], vec!["times-new-roman".to_string()], self.text.to_string(), theme_info.text, theme_info.background, None, None),
+        DrawInstructions::Text([self.top_left[0] + 4, self.top_left[1] + (self.size[1] - font_height) / 2], vec!["times-new-roman".to_string()], self.text.clone(), theme_info.text, theme_info.background, None, None),
       ]
     }
   }
@@ -63,7 +63,7 @@ impl<T: Clone> Component<T> for HighlightButton<T> {
 }
 
 impl<T> HighlightButton<T> {
-  pub fn new(name_: String, top_left: Point, size: Dimensions, text: &'static str, click_return: T, toggle_highlight_return: T, highlighted: bool) -> Self {
+  pub fn new(name_: String, top_left: Point, size: Dimensions, text: String, click_return: T, toggle_highlight_return: T, highlighted: bool) -> Self {
     Self {
       name_,
       top_left,

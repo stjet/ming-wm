@@ -87,7 +87,7 @@ impl WindowLike for Malvim {
     match message {
       WindowMessage::Init(dimensions) => {
         self.dimensions = dimensions;
-        WindowMessageResponse::JustRerender
+        WindowMessageResponse::JustRedraw
       },
       WindowMessage::KeyPress(key_press) => {
         let mut changed = true;
@@ -304,11 +304,11 @@ impl WindowLike for Malvim {
           }
         }
         self.calc_top_line_pos();
-        WindowMessageResponse::JustRerender
+        WindowMessageResponse::JustRedraw
       },
       WindowMessage::ChangeDimensions(dimensions) => {
         self.dimensions = dimensions;
-        WindowMessageResponse::JustRerender
+        WindowMessageResponse::JustRedraw
       },
       WindowMessage::Shortcut(shortcut) => {
         match shortcut {
@@ -329,7 +329,7 @@ impl WindowLike for Malvim {
               self.calc_top_line_pos();
               self.calc_current(); //too over zealous but whatever
               self.files[self.current_file_index].changed = true;
-              WindowMessageResponse::JustRerender
+              WindowMessageResponse::JustRedraw
             } else {
               WindowMessageResponse::DoNothing
             }
