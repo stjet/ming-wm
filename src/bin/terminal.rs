@@ -7,7 +7,7 @@ use ming_wm::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
 use ming_wm::messages::{ WindowMessage, WindowMessageResponse };
 use ming_wm::framebuffer::Dimensions;
 use ming_wm::themes::ThemeInfo;
-use ming_wm::utils::concat_paths;
+use ming_wm::utils::{ concat_paths, Substring };
 use ming_wm::ipc::listen;
 
 const MONO_WIDTH: u8 = 10;
@@ -54,7 +54,7 @@ impl WindowLike for Terminal {
         if self.state == State::Input {
           if key_press.key == '𐘁' { //backspace
             if self.current_input.len() > 0 {
-              self.current_input = self.current_input[..self.current_input.len() - 1].to_string();
+              self.current_input = self.current_input.remove_last();
             } else {
               return WindowMessageResponse::DoNothing;
             }

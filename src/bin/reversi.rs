@@ -43,6 +43,15 @@ impl Tile {
   }
 }
 
+#[derive(Default, PartialEq)]
+enum State {
+  #[default]
+  InProgress,
+  WhiteWin,
+  BlackWin,
+  Tie,
+}
+
 #[derive(Default)]
 struct Reversi {
   dimensions: Dimensions,
@@ -50,6 +59,7 @@ struct Reversi {
   current_number: Option<u8>, //the first number of the tile that user wants to place piece on
   valid_moves: Vec<ValidMove>,
   white_turn: bool, //if false, black turn
+  state: State,
 }
 
 impl WindowLike for Reversi {
@@ -62,7 +72,11 @@ impl WindowLike for Reversi {
         WindowMessageResponse::JustRedraw
       },
       WindowMessage::KeyPress(key_press) => {
-        if let Ok(n) = key_press.key.to_string().parse::<u8>() {
+        if self.state != State::InProgress {
+          self.state = State::InProgress;
+          self.new_tiles();
+          self.valid_moves = self.get_valid_moves();
+        } else if let Ok(n) = key_press.key.to_string().parse::<u8>() {
           if let Some(current_number) = self.current_number {
             let y = current_number as usize;
             let x = n as usize;
@@ -74,6 +88,27 @@ impl WindowLike for Reversi {
               }
               self.white_turn = !self.white_turn;
               self.valid_moves = self.get_valid_moves();
+              if self.valid_moves.len() == 0 {
+                //game has ended
+                let mut white_tiles = 0;
+                let mut black_tiles = 0;
+                for row in &self.tiles {
+                  for tile in row {
+                    if tile == &Tile::White {
+                      white_tiles += 1;
+                    } else if tile == &Tile::Black {
+                      black_tiles += 1;
+                    }
+                  }
+                }
+                if white_tiles == black_tiles {
+                  self.state = State::Tie;
+                } else if white_tiles > black_tiles {
+                  self.state = State::WhiteWin;
+                } else {
+                  self.state = State::BlackWin;
+                }
+              }
             }
             self.current_number = None;
           } else {
@@ -123,6 +158,16 @@ impl WindowLike for Reversi {
           instructions.push(DrawInstructions::Circle([x * square_width + square_width / 2 + 5, y * square_width + square_width / 2 + 5], square_width / 2 - 3, tile.to_color().unwrap()));
         }
       }
+    }
+    if self.state != State::InProgress {
+      instructions.push(DrawInstructions::Rect([0, 0], [self.dimensions[0], 25], theme_info.background));
+      instructions.push(DrawInstructions::Text([4, 4], vec!["times-new-roman".to_string()], if self.state == State::WhiteWin {
+        "White wins, press any key to restart"
+      } else if self.state == State::BlackWin {
+        "Black wins, press any key to restart"
+      } else {
+        "Tie, press any key to restart"
+      }.to_string(), theme_info.text, theme_info.background, None, None));
     }
     instructions
   }

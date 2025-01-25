@@ -3,6 +3,7 @@ use std::path::PathBuf;
 pub trait Substring {
   fn substring(&self, start: usize, end: usize) -> &str;
   fn remove(&self, index: usize, len: usize) -> String;
+  fn remove_last(&self) -> String;
 }
 
 impl Substring for String {
@@ -25,7 +26,11 @@ impl Substring for String {
   }
 
   fn remove(&self, index: usize, len: usize) -> String {
-    self.substring(0, index).to_string() + self.substring(index + len, self.len())
+    self.substring(0, index).to_string() + self.substring(index + len, self.chars().count())
+  }
+
+  fn remove_last(&self) -> String {
+    self.substring(0, self.chars().count() - 1).to_string()
   }
 }
 

@@ -12,7 +12,7 @@ use ming_wm::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
 use ming_wm::messages::{ WindowMessage, WindowMessageResponse };
 use ming_wm::framebuffer::Dimensions;
 use ming_wm::themes::ThemeInfo;
-use ming_wm::utils::{ concat_paths, format_seconds };
+use ming_wm::utils::{ concat_paths, format_seconds, Substring };
 use ming_wm::fs::get_all_files;
 use ming_wm::ipc::listen;
 
@@ -47,7 +47,7 @@ impl WindowLike for AudioPlayer {
           self.command = String::new();
         } else if key_press.key == '𐘁' { //backspace
           if self.command.len() > 0 {
-            self.command = self.command[..self.command.len() - 1].to_string();
+            self.command = self.command.remove_last();
           }
         } else {
           self.command += &key_press.key.to_string();
@@ -74,6 +74,9 @@ impl WindowLike for AudioPlayer {
         let time_string = format!("{}/{}", format_seconds(sink.get_pos().as_secs()), format_seconds(current.1));
         instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - time_string.len() * MONO_WIDTH as usize / 2, LINE_HEIGHT * 2 + 2], vec!["times-new-romono".to_string()], time_string, theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)));
       }
+    } else {
+      instructions.push(DrawInstructions::Text([2, 2], vec!["times-new-roman".to_string()], "type to write commands, enter to execute.".to_string(), theme_info.text, theme_info.background, None, None));
+      instructions.push(DrawInstructions::Text([2, 2 + LINE_HEIGHT], vec!["times-new-roman".to_string()], "See help in start menu for commands.".to_string(), theme_info.text, theme_info.background, None, None));
     }
     //
     instructions

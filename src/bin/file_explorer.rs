@@ -1,6 +1,6 @@
 use std::vec::Vec;
 use std::vec;
-use std::fs::read_dir;
+use std::fs::{ read_dir, metadata, Metadata };
 use std::path::PathBuf;
 
 use ming_wm::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
@@ -18,6 +18,13 @@ struct DirectoryChild {
   is_file: bool,
 }
 
+#[derive(Default, PartialEq)]
+enum State {
+  #[default]
+  List,
+  Info,
+}
+
 #[derive(Default)]
 pub struct FileExplorer {
   dimensions: Dimensions,
@@ -26,6 +33,8 @@ pub struct FileExplorer {
   //for scrolling and selecting dirs
   position: usize,
   top_position: usize,
+  state: State,
+  metadata: Option<Metadata>,
 }
 
 impl WindowLike for FileExplorer {
@@ -42,6 +51,7 @@ impl WindowLike for FileExplorer {
         WindowMessageResponse::JustRedraw
       },
       WindowMessage::KeyPress(key_press) => {
+        self.state = State::List;
         if key_press.key == '𐘂' { //the enter key
           if self.current_dir_contents.len() > 0 {
             let selected_entry = &self.current_dir_contents[self.position];
@@ -73,13 +83,19 @@ impl WindowLike for FileExplorer {
           //calculate position
           let max_height = self.dimensions[1] - HEIGHT;
           if self.position > self.top_position {
-            let current_height = (self.position - self.top_position) * HEIGHT;
+            let current_height = (self.position - self.top_position + 1) * HEIGHT;
             if current_height > self.dimensions[1] {
-              self.top_position += (current_height - max_height) / HEIGHT + 1;
+              //somehow this is slightly off sometimes
+              self.top_position += (current_height - max_height).div_ceil(HEIGHT);
             }
           } else {
             self.top_position = self.position;
           };
+          WindowMessageResponse::JustRedraw
+        } else if key_press.key == 'i' {
+          self.state = State::Info;
+          let selected_entry = &self.current_dir_contents[self.position];
+          self.metadata = Some(metadata(&selected_entry.path).unwrap());
           WindowMessageResponse::JustRedraw
         } else {
           WindowMessageResponse::DoNothing
@@ -91,29 +107,38 @@ impl WindowLike for FileExplorer {
 
   fn draw(&self, theme_info: &ThemeInfo) -> Vec<DrawInstructions> {
     let mut instructions = Vec::new();
-    //top bar with path name
-    instructions.push(DrawInstructions::Text([5, 0], vec!["times-new-roman".to_string(), "shippori-mincho".to_string()], "Current: ".to_string() + &self.current_path.to_string_lossy().to_string(), theme_info.text, theme_info.background, None, None));
-    //the actual files and directories
-    let mut start_y = HEIGHT;
-    let mut i = self.top_position;
-    for entry in self.current_dir_contents.iter().skip(self.top_position) {
-      if start_y > self.dimensions[1] {
-        break;
+    if self.state == State::List {
+      //top bar with path name
+      instructions.push(DrawInstructions::Text([5, 0], vec!["times-new-roman".to_string(), "shippori-mincho".to_string()], "Current: ".to_string() + &self.current_path.to_string_lossy().to_string(), theme_info.text, theme_info.background, None, None));
+      //the actual files and directories
+      let mut start_y = HEIGHT;
+      let mut i = self.top_position;
+      for entry in self.current_dir_contents.iter().skip(self.top_position) {
+        if start_y > self.dimensions[1] {
+          break;
+        }
+        let is_selected = i == self.position;
+        if is_selected {
+          instructions.push(DrawInstructions::Rect([0, start_y], [self.dimensions[0], HEIGHT], theme_info.top));
+        }
+        //unwrap_or not used because "Arguments passed to unwrap_or are eagerly evaluated", apparently
+        let name = entry.override_name.clone();
+        let name = if name.is_none() {
+          entry.path.file_name().unwrap().to_os_string().into_string().unwrap()
+        } else {
+          name.unwrap()
+        };
+        instructions.push(DrawInstructions::Text([5, start_y], vec!["times-new-roman".to_string(), "shippori-mincho".to_string()], name, if is_selected { theme_info.top_text } else { theme_info.text }, if is_selected { theme_info.top } else { theme_info.background }, None, None));
+        start_y += HEIGHT;
+        i += 1;
       }
-      let is_selected = i == self.position;
-      if is_selected {
-        instructions.push(DrawInstructions::Rect([0, start_y], [self.dimensions[0], HEIGHT], theme_info.top));
-      }
-      //unwrap_or not used because "Arguments passed to unwrap_or are eagerly evaluated", apparently
-      let name = entry.override_name.clone();
-      let name = if name.is_none() {
-        entry.path.file_name().unwrap().to_os_string().into_string().unwrap()
-      } else {
-        name.unwrap()
-      };
-      instructions.push(DrawInstructions::Text([5, start_y], vec!["times-new-roman".to_string(), "shippori-mincho".to_string()], name, if is_selected { theme_info.top_text } else { theme_info.text }, if is_selected { theme_info.top } else { theme_info.background }, None, None));
+    } else if self.state == State::Info {
+      let metadata = self.metadata.clone().unwrap();
+      let mut start_y = HEIGHT;
+      let bytes_len = metadata.len();
+      instructions.push(DrawInstructions::Text([5, start_y], vec!["times-new-roman".to_string()], format!("Size: {} mb ({} b)", bytes_len / (1024_u64).pow(2), bytes_len), theme_info.text, theme_info.background, None, None));
       start_y += HEIGHT;
-      i += 1;
+      //todo: other stuff
     }
     instructions
   }
@@ -165,4 +190,3 @@ impl FileExplorer {
 pub fn main() {
   listen(FileExplorer::new());
 }
-

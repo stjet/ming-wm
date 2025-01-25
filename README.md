@@ -1,7 +1,7 @@
 Ming-wm is a keyboard-based, retro-themed window manager for Linux. It is single-threaded, and is neither for Wayland or the X Window System - it writes directly to the framebuffer. Inspirations include i3, Haiku, SerenityOS, and Windows98, and it is a conceptual successor to the previous [mingde](https://github.com/stjet/mingde) and [ming-os](https://github.com/stjet/ming-os).
 
 ![example 1](/docs/images/ws1.png)
-![example 2](/docs/images/ws2.png)
+![example 2](/docs/images/ws3.png)
 
 ## Running
 

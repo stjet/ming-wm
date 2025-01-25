@@ -49,13 +49,13 @@ The event loop goes like this:
 1. Keyboard event received, sent to the window manager
 2. The window manager interprets it. It could be a shortcut to say, open the start meny. Or, if a window-like is currently focused, the window manager will probably forward the keyboard event to that window-like by calling the window-like's `handle_message` method
 3. (Only if sent to a window-like) The window-like receives and processes it. It returns a `WindowMessageResponse`:
->>> ```rust
-pub enum WindowMessageResponse {
-  Request(WindowManagerRequest),
-  JustRerender,
-  DoNothing,
-}
-```
+> ```rust
+> pub enum WindowMessageResponse {
+>   Request(WindowManagerRequest),
+>   JustRerender,
+>   DoNothing,
+> }
+> ```
 4. If the window manager decides the keyboard event means some or all of the screen needs to be redrawn (eg, it was a valid shortcut, or the window-like it sent the event to returned something that wasn't a `DoNothing`), it will go and get the drawing instructions from all the window-likes that need to be redrawn by looping through them and calling their `draw` method
 
 Nothing except key presses trigger redraws. That means no mouse and no animations. This is a positive. This is a positive. I truly believe that. This is a positive. Having a window manager and windows that don't require taking hands off the keyboard (or rather, entirely designed to be keyboard operated) makes using it very fast and efficient, with no pain of not having a mice and needing to use a shitty mousepad. Videos are nice, but animations and the like are annoying and have no place in a good window manager.
