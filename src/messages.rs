@@ -9,7 +9,7 @@ use crate::window_manager::{ WindowLike, KeyChar };
 
 pub enum WindowManagerMessage {
   KeyChar(KeyChar),
-  Click(u16, u16),
+  Touch(u16, u16),
   //
 }
 

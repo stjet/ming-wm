@@ -3,15 +3,19 @@ use std::vec;
 use std::collections::{ HashMap, VecDeque };
 use std::fmt;
 use std::boxed::Box;
-use std::io::{ stdin, stdout, Write };
+use std::io::{ stdin, stdout, BufReader, BufRead, Write };
 use std::process::exit;
 use std::cell::RefCell;
+use std::sync::mpsc;
+use std::thread;
+use std::time::Duration;
+use std::env;
+use std::process::{ Command, Stdio };
 
 use linux_framebuffer::Framebuffer;
-use termion::input::{ MouseTerminal, TermRead };
+use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 use termion::cursor;
-use termion::event::{ Event, MouseEvent };
 use serde::{ Deserialize, Serialize };
 
 use crate::framebuffer::{ FramebufferWriter, FramebufferInfo, Point, Dimensions, RGBColor };
@@ -33,6 +37,19 @@ pub const TASKBAR_HEIGHT: usize = 38;
 pub const INDICATOR_HEIGHT: usize = 20;
 const WINDOW_TOP_HEIGHT: usize = 26;
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum KeyChar {
+  Press(char),
+  Alt(char),
+  Ctrl(char),
+}
+
+enum ThreadMessage {
+  KeyChar(KeyChar),
+  Touch(u16, u16),
+  Exit,
+}
+
 pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
   let dimensions = [framebuffer_info.width, framebuffer_info.height];
   
@@ -46,44 +63,75 @@ pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
 
   wm.draw(None, false);
 
-  let stdin = stdin().lock();
-  let mut stdout = MouseTerminal::from(stdout().into_raw_mode().unwrap());
+  let mut stdout = stdout().into_raw_mode().unwrap();
 
   write!(stdout, "{}", cursor::Hide).unwrap();
   stdout.flush().unwrap();
 
-  for e in stdin.events() {
-    match e.unwrap() {
-      Event::Key(c) => {
-        if let Some(kc) = key_to_char(c) {
-          //do not allow exit when locked unless debugging
-          //if kc == KeyChar::Alt('E') {
-          if kc == KeyChar::Alt('E') && !wm.locked {
-            write!(stdout, "{}", cursor::Show).unwrap();
-            stdout.suspend_raw_mode().unwrap();
-            exit(0);
-          } else {
-            wm.handle_message(WindowManagerMessage::KeyChar(kc.clone()));
-          }
+  let (tx, rx) = mpsc::channel();
+
+  let tx1 = tx.clone();
+
+  //read key presses
+  thread::spawn(move || {
+    let stdin = stdin().lock();
+    for c in stdin.keys() {
+      if let Some(kc) = key_to_char(c.unwrap()) {
+        //do not allow exit when locked unless debugging
+        //if kc == KeyChar::Alt('E') {
+        if kc == KeyChar::Alt('E') {
+          tx.send(ThreadMessage::Exit).unwrap();
+        } else {
+          tx.send(ThreadMessage::KeyChar(kc)).unwrap();
+        }
+      }
+      thread::sleep(Duration::from_millis(1));
+    }
+  });
+
+  let args: Vec<_> = env::args().collect();
+
+  //read touchscreen presses (hopefully)
+  thread::spawn(move || {
+    if args.contains(&"touch".to_string()) {
+      //spawn evtest, parse it for touch coords
+      let evtest = Command::new("evtest").arg("/dev/input/by-path/first-touchscreen").stdout(Stdio::piped()).spawn().unwrap();
+      let mut grep = Command::new("grep").arg(r"'\(ABS_X\|ABS_Y\)), value '").stdin(Stdio::from(evtest.stdout.unwrap())).stdout(Stdio::piped()).spawn().unwrap();
+      let reader = BufReader::new(grep.stdout.as_mut().unwrap());
+      let mut x: Option<u16> = None;
+      let mut y: Option<u16> = None;
+      for line in reader.lines() {
+        let line = line.unwrap();
+        let value: Vec<_> = line.split("), value ").collect();
+        let value = value[value.len() - 1].parse::<u16>().unwrap();
+        if line.contains(&"ABS_X") {
+          x = Some(value);
+        } else {
+          y = Some(value);
+        }
+        if x.is_some() && y.is_some() {
+          tx1.send(ThreadMessage::Touch(x.unwrap(), y.unwrap())).unwrap();
+          x = None;
+          y = None;
+        }
+        thread::sleep(Duration::from_millis(1));
+      }
+    }
+  });
+  
+  for message in rx {
+    match message {
+      ThreadMessage::KeyChar(kc) => wm.handle_message(WindowManagerMessage::KeyChar(kc.clone())),
+      ThreadMessage::Touch(x, y) => wm.handle_message(WindowManagerMessage::Touch(x, y)),
+      ThreadMessage::Exit => {
+        if !wm.locked {
+          write!(stdout, "{}", cursor::Show).unwrap();
+          stdout.suspend_raw_mode().unwrap();
+          exit(0);
         }
       },
-      Event::Mouse(m) => {
-        if let MouseEvent::Press(_, x, y) = m {
-          //We don't care what button
-          //(should also support mobile?)
-          wm.handle_message(WindowManagerMessage::Click(x, y));
-        }
-      },
-      _ => {},
     };
   }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum KeyChar {
-  Press(char),
-  Alt(char),
-  Ctrl(char),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -534,8 +582,8 @@ impl WindowManager {
           },
         }
       },
-      WindowManagerMessage::Click(x, y) => {
-        //println!("{}, {}", x, y);
+      WindowManagerMessage::Touch(x, y) => {
+        println!("{}, {}", x, y);
         if x < 10000 && y < 10000 {
           //toggle onscreen keyboard if top left keyboard clicked
           let osk_index = self.window_infos.iter().position(|w| w.window_like.subtype() == WindowLikeType::OnscreenKeyboard);
