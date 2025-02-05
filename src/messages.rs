@@ -4,12 +4,12 @@ use std::vec::Vec;
 
 use serde::{ Deserialize, Serialize };
 
-use crate::keyboard::KeyChar;
 use crate::framebuffer::Dimensions;
-use crate::window_manager::WindowLike;
+use crate::window_manager::{ WindowLike, KeyChar };
 
 pub enum WindowManagerMessage {
   KeyChar(KeyChar),
+  Click(u16, u16),
   //
 }
 

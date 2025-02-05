@@ -1,4 +1,4 @@
-Audio player with playlist and folder support.
+Audio player with playlist and folder support. Requires the dev version of `alsa` lib.
 
 ## Commands
 

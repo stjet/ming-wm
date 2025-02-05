@@ -8,14 +8,15 @@ use std::process::exit;
 use std::cell::RefCell;
 
 use linux_framebuffer::Framebuffer;
-use termion::input::TermRead;
+use termion::input::{ MouseTerminal, TermRead };
 use termion::raw::IntoRawMode;
 use termion::cursor;
+use termion::event::{ Event, MouseEvent };
 use serde::{ Deserialize, Serialize };
 
 use crate::framebuffer::{ FramebufferWriter, FramebufferInfo, Point, Dimensions, RGBColor };
 use crate::themes::{ ThemeInfo, Themes, get_theme_info };
-use crate::keyboard::{ KeyChar, key_to_char };
+use crate::utils::{ min, key_to_char };
 use crate::messages::*;
 use crate::proxy_window_like::ProxyWindowLike;
 use crate::essential::desktop_background::DesktopBackground;
@@ -25,6 +26,7 @@ use crate::essential::workspace_indicator::WorkspaceIndicator;
 use crate::essential::start_menu::StartMenu;
 use crate::essential::about::About;
 use crate::essential::help::Help;
+use crate::essential::onscreen_keyboard::OnscreenKeyboard;
 //use crate::logging::log;
 
 pub const TASKBAR_HEIGHT: usize = 38;
@@ -45,31 +47,43 @@ pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
   wm.draw(None, false);
 
   let stdin = stdin().lock();
-  let mut stdout = stdout().into_raw_mode().unwrap();
+  let mut stdout = MouseTerminal::from(stdout().into_raw_mode().unwrap());
 
   write!(stdout, "{}", cursor::Hide).unwrap();
   stdout.flush().unwrap();
 
-
-  for c in stdin.keys() {
-    if let Some(kc) = key_to_char(c.unwrap()) {
-      //do not allow exit when locked unless debugging
-      //if kc == KeyChar::Alt('E') {
-      if kc == KeyChar::Alt('E') && !wm.locked {
-        write!(stdout, "{}", cursor::Show).unwrap();
-        stdout.suspend_raw_mode().unwrap();
-        exit(0);
-      } else {
-        wm.handle_message(WindowManagerMessage::KeyChar(kc.clone()));
-      }
-    }
+  for e in stdin.events() {
+    match e.unwrap() {
+      Event::Key(c) => {
+        if let Some(kc) = key_to_char(c) {
+          //do not allow exit when locked unless debugging
+          //if kc == KeyChar::Alt('E') {
+          if kc == KeyChar::Alt('E') && !wm.locked {
+            write!(stdout, "{}", cursor::Show).unwrap();
+            stdout.suspend_raw_mode().unwrap();
+            exit(0);
+          } else {
+            wm.handle_message(WindowManagerMessage::KeyChar(kc.clone()));
+          }
+        }
+      },
+      Event::Mouse(m) => {
+        if let MouseEvent::Press(_, x, y) = m {
+          //We don't care what button
+          //(should also support mobile?)
+          wm.handle_message(WindowManagerMessage::Click(x, y));
+        }
+      },
+      _ => {},
+    };
   }
-
-  //
 }
 
-pub fn min(one: usize, two: usize) -> usize {
-  if one > two { two } else { one } 
+#[derive(Clone, Debug, PartialEq)]
+pub enum KeyChar {
+  Press(char),
+  Alt(char),
+  Ctrl(char),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -89,6 +103,7 @@ pub enum WindowLikeType {
   Taskbar,
   StartMenu,
   WorkspaceIndicator,
+  OnscreenKeyboard,
 }
 
 pub trait WindowLike {
@@ -215,6 +230,7 @@ impl WindowManager {
   }
 
   //if off_only is true, also handle request
+  //written confusingly but it works I promise
   fn toggle_start_menu(&mut self, off_only: bool) -> WindowMessageResponse {
     let start_menu_exists = self.window_infos.iter().find(|w| w.window_like.subtype() == WindowLikeType::StartMenu).is_some();
     if (start_menu_exists && off_only) || !off_only {
@@ -518,7 +534,23 @@ impl WindowManager {
           },
         }
       },
-      //
+      WindowManagerMessage::Click(x, y) => {
+        //println!("{}, {}", x, y);
+        if x < 10000 && y < 10000 {
+          //toggle onscreen keyboard if top left keyboard clicked
+          let osk_index = self.window_infos.iter().position(|w| w.window_like.subtype() == WindowLikeType::OnscreenKeyboard);
+          if let Some(osk_index) = osk_index {
+            self.window_infos.remove(osk_index);
+          } else {
+            let osk = Box::new(OnscreenKeyboard::new());
+            let ideal_dimensions = osk.ideal_dimensions(self.dimensions);
+            self.add_window_like(osk, [175, self.dimensions[1] - TASKBAR_HEIGHT - 250], Some(ideal_dimensions));
+          }
+        }
+        //see if in onscreen keyboard, if so send to it after offsetting coords
+        //
+        WindowMessageResponse::JustRedraw
+      },
     };
     if response != WindowMessageResponse::DoNothing {
       match response {
