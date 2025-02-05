@@ -95,24 +95,25 @@ pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
   thread::spawn(move || {
     if args.contains(&"touch".to_string()) {
       //spawn evtest, parse it for touch coords
-      let evtest = Command::new("evtest").arg("/dev/input/by-path/first-touchscreen").stdout(Stdio::piped()).spawn().unwrap();
-      let mut grep = Command::new("grep").arg(r"'\(ABS_X\|ABS_Y\)), value '").stdin(Stdio::from(evtest.stdout.unwrap())).stdout(Stdio::piped()).spawn().unwrap();
-      let reader = BufReader::new(grep.stdout.as_mut().unwrap());
+      let mut evtest = Command::new("evtest").arg("/dev/input/by-path/first-touchscreen").stdout(Stdio::piped()).spawn().unwrap();
+      let reader = BufReader::new(evtest.stdout.as_mut().unwrap());
       let mut x: Option<u16> = None;
       let mut y: Option<u16> = None;
       for line in reader.lines() {
         let line = line.unwrap();
-        let value: Vec<_> = line.split("), value ").collect();
-        let value = value[value.len() - 1].parse::<u16>().unwrap();
-        if line.contains(&"ABS_X") {
-          x = Some(value);
-        } else {
-          y = Some(value);
-        }
-        if x.is_some() && y.is_some() {
-          tx1.send(ThreadMessage::Touch(x.unwrap(), y.unwrap())).unwrap();
-          x = None;
-          y = None;
+        if line.contains(&"ABS_X") || line.contains(&"ABS_Y") {
+          let value: Vec<_> = line.split("), value ").collect();
+          let value = value[value.len() - 1].parse::<u16>().unwrap();
+          if line.contains(&"ABS_X") {
+            x = Some(value);
+          } else {
+            y = Some(value);
+          }
+          if x.is_some() && y.is_some() {
+            tx1.send(ThreadMessage::Touch(x.unwrap(), y.unwrap())).unwrap();
+            x = None;
+            y = None;
+          }
         }
         thread::sleep(Duration::from_millis(1));
       }
