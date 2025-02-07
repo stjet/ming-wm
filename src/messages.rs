@@ -9,7 +9,7 @@ use crate::window_manager::{ WindowLike, KeyChar };
 
 pub enum WindowManagerMessage {
   KeyChar(KeyChar),
-  Touch(u16, u16),
+  Touch(usize, usize),
   //
 }
 
@@ -99,5 +99,6 @@ pub enum WindowMessage {
   Unfocus,
   FocusClick,
   ChangeDimensions(Dimensions),
+  Touch(usize, usize), //for onscreen keyboard only
   //
 }

@@ -20,7 +20,7 @@ use serde::{ Deserialize, Serialize };
 
 use crate::framebuffer::{ FramebufferWriter, FramebufferInfo, Point, Dimensions, RGBColor };
 use crate::themes::{ ThemeInfo, Themes, get_theme_info };
-use crate::utils::{ min, key_to_char };
+use crate::utils::{ min, key_to_char, point_inside };
 use crate::messages::*;
 use crate::proxy_window_like::ProxyWindowLike;
 use crate::essential::desktop_background::DesktopBackground;
@@ -32,6 +32,8 @@ use crate::essential::about::About;
 use crate::essential::help::Help;
 use crate::essential::onscreen_keyboard::OnscreenKeyboard;
 //use crate::logging::log;
+
+//todo: a lot of the usize should be changed to u16
 
 pub const TASKBAR_HEIGHT: usize = 38;
 pub const INDICATOR_HEIGHT: usize = 20;
@@ -46,7 +48,7 @@ pub enum KeyChar {
 
 enum ThreadMessage {
   KeyChar(KeyChar),
-  Touch(u16, u16),
+  Touch(usize, usize),
   Exit,
 }
 
@@ -90,20 +92,21 @@ pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
   });
 
   let args: Vec<_> = env::args().collect();
+  let touch = args.contains(&"touch".to_string());
 
   //read touchscreen presses (hopefully)
   thread::spawn(move || {
-    if args.contains(&"touch".to_string()) {
-      //spawn evtest, parse it for touch coords
+    //spawn evtest, parse it for touch coords
+    if touch {
       let mut evtest = Command::new("evtest").arg("/dev/input/by-path/first-touchscreen").stdout(Stdio::piped()).spawn().unwrap();
       let reader = BufReader::new(evtest.stdout.as_mut().unwrap());
-      let mut x: Option<u16> = None;
-      let mut y: Option<u16> = None;
+      let mut x: Option<usize> = None;
+      let mut y: Option<usize> = None;
       for line in reader.lines() {
         let line = line.unwrap();
-        if line.contains(&"ABS_X") || line.contains(&"ABS_Y") {
+        if line.contains(&"ABS_X), value ") || line.contains(&"ABS_Y), value ") {
           let value: Vec<_> = line.split("), value ").collect();
-          let value = value[value.len() - 1].parse::<u16>().unwrap();
+          let value = value[value.len() - 1].parse::<usize>().unwrap();
           if line.contains(&"ABS_X") {
             x = Some(value);
           } else {
@@ -119,6 +122,10 @@ pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
       }
     }
   });
+  if touch {
+    //opens osk
+    wm.handle_message(WindowManagerMessage::Touch(1, 1));
+  }
   
   for message in rx {
     match message {
@@ -199,6 +206,7 @@ pub struct WindowManager {
   writer: RefCell<FramebufferWriter>,
   id_count: usize,
   window_infos: Vec<WindowLikeInfo>,
+  osk: Option<WindowLikeInfo>,
   dimensions: Dimensions,
   theme: Themes,
   focused_id: usize,
@@ -216,6 +224,7 @@ impl WindowManager {
       writer: RefCell::new(writer),
       id_count: 0,
       window_infos: Vec::new(),
+      osk: None,
       dimensions,
       theme: Themes::Standard,
       focused_id: 0,
@@ -233,10 +242,9 @@ impl WindowManager {
     let dimensions = dimensions.unwrap_or(window_like.ideal_dimensions(self.dimensions));
     self.id_count = self.id_count + 1;
     let id = self.id_count;
-    self.focused_id = id;
     window_like.handle_message(WindowMessage::Init(dimensions));
     let dimensions = if window_like.subtype() == WindowLikeType::Window { [dimensions[0], dimensions[1] + WINDOW_TOP_HEIGHT] } else { dimensions };
-    self.window_infos.push(WindowLikeInfo {
+    let window_info = WindowLikeInfo {
       id,
       window_like,
       top_left,
@@ -247,7 +255,13 @@ impl WindowManager {
         Workspace::All
       },
       fullscreen: false,
-    });
+    };
+    if subtype == WindowLikeType::OnscreenKeyboard {
+      self.osk = Some(window_info);
+    } else {
+      self.focused_id = id;
+      self.window_infos.push(window_info);
+    }
   }
 
   fn get_focused_index(&self) -> Option<usize> {
@@ -585,21 +599,30 @@ impl WindowManager {
       },
       WindowManagerMessage::Touch(x, y) => {
         println!("{}, {}", x, y);
-        if x < 10000 && y < 10000 {
+        if x < 100 && y < 100 {
           //toggle onscreen keyboard if top left keyboard clicked
-          let osk_index = self.window_infos.iter().position(|w| w.window_like.subtype() == WindowLikeType::OnscreenKeyboard);
-          if let Some(osk_index) = osk_index {
-            self.window_infos.remove(osk_index);
+          if self.osk.is_some() {
+            self.osk = None;
           } else {
             let osk = Box::new(OnscreenKeyboard::new());
             let ideal_dimensions = osk.ideal_dimensions(self.dimensions);
             self.add_window_like(osk, [175, self.dimensions[1] - TASKBAR_HEIGHT - 250], Some(ideal_dimensions));
           }
+          WindowMessageResponse::JustRedraw
+        } else {
+          //see if in onscreen keyboard, if so send to it after offsetting coords
+          if self.osk.is_some() {
+            let mut osk = self.osk.as_mut().unwrap();
+            if point_inside([x, y], osk.top_left, osk.dimensions) {
+              osk.window_like.handle_message(WindowMessage::Touch(x - osk.top_left[0], y - osk.top_left[1]))
+            } else {
+              WindowMessageResponse::DoNothing
+            }
+          } else {
+            WindowMessageResponse::DoNothing
+          }
         }
-        //see if in onscreen keyboard, if so send to it after offsetting coords
-        //
-        WindowMessageResponse::JustRedraw
-      },
+      }
     };
     if response != WindowMessageResponse::DoNothing {
       match response {
@@ -686,12 +709,15 @@ impl WindowManager {
     }
     //get windows to redraw
     let redraw_ids = maybe_redraw_ids.unwrap_or(Vec::new());
-    let all_in_workspace = self.get_windows_in_workspace(true);
+    let mut all_in_workspace = self.get_windows_in_workspace(true);
+    if let Some(osk) = &self.osk {
+      all_in_workspace.push(osk);
+    }
     let maybe_length = all_in_workspace.len();
     let redraw_windows = all_in_workspace.iter().filter(|w| {
       //basically, maybe_redraw_ids was None
       if redraw_ids.len() > 0 {
-        redraw_ids.contains(&w.id)
+        redraw_ids.contains(&w.id) || w.window_like.subtype() == WindowLikeType::OnscreenKeyboard
       } else {
         true
       }
