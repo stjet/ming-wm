@@ -15,7 +15,7 @@ use std::process::{ Command, Stdio };
 use linux_framebuffer::Framebuffer;
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
-use termion::cursor;
+use termion::{ clear, cursor };
 use serde::{ Deserialize, Serialize };
 
 use crate::framebuffer::{ FramebufferWriter, FramebufferInfo, Point, Dimensions, RGBColor };
@@ -83,6 +83,8 @@ pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
   wm.draw(None, false);
 
   let mut stdout = stdout().into_raw_mode().unwrap();
+
+  write!(stdout, "{}", clear::All).unwrap();
 
   write!(stdout, "{}", cursor::Hide).unwrap();
   stdout.flush().unwrap();
