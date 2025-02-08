@@ -616,7 +616,6 @@ impl WindowManager {
         }
       },
       WindowManagerMessage::Touch(x, y) => {
-        println!("{}, {}", x, y);
         if x < 100 && y < 100 {
           //toggle onscreen keyboard if top left keyboard clicked
           if self.osk.is_some() {
