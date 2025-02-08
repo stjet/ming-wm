@@ -70,7 +70,7 @@ impl FramebufferWriter {
     for y in 0..self.info.height {
       for x in 0..self.info.width {
         for i in 0..self.info.bytes_per_pixel {
-          output_array[x * row_bytes_len_transposed + y * self.info.bytes_per_pixel + i] = self.buffer[y * row_bytes_len + x * self.info.bytes_per_pixel + i];
+          output_array[(self.info.width - x - 1) * row_bytes_len_transposed + y * self.info.bytes_per_pixel + i] = self.buffer[y * row_bytes_len + x * self.info.bytes_per_pixel + i];
         }
       }
     }
