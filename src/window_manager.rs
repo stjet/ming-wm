@@ -132,9 +132,9 @@ pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
           }
           if x.is_some() && y.is_some() {
             if rotate {
-              tx1.send(ThreadMessage::Touch(y.unwrap(), x.unwrap())).unwrap();
+              tx1.send(ThreadMessage::Touch(y.unwrap(), dimensions[1] - x.unwrap())).unwrap();
             } else {
-              tx1.send(ThreadMessage::Touch(dimensions[0] - x.unwrap(), y.unwrap())).unwrap();
+              tx1.send(ThreadMessage::Touch(x.unwrap(), y.unwrap())).unwrap();
             }
             x = None;
             y = None;
