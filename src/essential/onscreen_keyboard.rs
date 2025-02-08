@@ -3,25 +3,37 @@ use std::vec::Vec;
 use std::collections::HashMap;
 
 use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType, KeyChar };
-use crate::messages::{ WindowMessage, WindowMessageResponse };
+use crate::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest };
 use crate::framebuffer::Dimensions;
 use crate::themes::ThemeInfo;
 use crate::components::Component;
 use crate::components::press_button::PressButton;
+use crate::utils::point_inside;
 
-const padding_y: usize = 15;
-const padding_x: usize = 15;
+const PADDING_Y: usize = 15;
+const PADDING_X: usize = 15;
 //padding in between keys in the x direction
-const key_padding_x: usize = 5;
-const key_padding_y: usize = 5;
+const KEY_PADDING_X: usize = 5;
+const KEY_PADDING_Y: usize = 5;
 
-#[derive(Default, Eq, PartialEq, Hash)]
+#[derive(Clone, Default, Eq, PartialEq, Hash)]
 enum Board {
   #[default]
   Regular,
   Shift,
   Symbols,
   SymbolsShift,
+}
+
+impl Board {
+  fn inc(&mut self) -> Self {
+    match self {
+      Board::Regular => Board::Shift,
+      Board::Shift => Board::Symbols,
+      Board::Symbols => Board::SymbolsShift,
+      Board::SymbolsShift => Board::Regular,
+    }
+  }
 }
 
 #[derive(Clone)]
@@ -32,11 +44,15 @@ enum KeyResponse {
   SwitchBoard,
 }
 
+//if alt is true and ctrl is true, only alt will be sent.
+//because I don't care about ctrl+alt stuff, and won't use it.
+//(and probably not supported by this with a real keyboard anyways)
 #[derive(Default)]
 pub struct OnscreenKeyboard {
   dimensions: Dimensions,
   components: Vec<Box<PressButton<KeyResponse>>>,
   alt: bool,
+  ctrl: bool,
   board: Board,
 }
 
@@ -48,7 +64,39 @@ impl WindowLike for OnscreenKeyboard {
         self.set_key_components();
         WindowMessageResponse::JustRedraw
       },
-      //
+      WindowMessage::Touch(x, y) => {
+        for c in &mut self.components {
+          if point_inside([x, y], c.top_left, c.size) {
+            let returned = c.handle_message(WindowMessage::Touch(x, y));
+            if let Some(returned) = returned {
+              return match returned {
+                KeyResponse::Key(ch) => {
+                  WindowMessageResponse::Request(WindowManagerRequest::DoKeyChar(if self.alt {
+                    KeyChar::Alt(ch)
+                  } else if self.ctrl {
+                    KeyChar::Ctrl(ch)
+                  } else {
+                    KeyChar::Press(ch)
+                  }))
+                },
+                KeyResponse::Alt => {
+                  self.alt = !self.alt;
+                  WindowMessageResponse::DoNothing
+                },
+                KeyResponse::Ctrl => {
+                  self.ctrl = !self.ctrl;
+                  WindowMessageResponse::DoNothing
+                },
+                KeyResponse::SwitchBoard => {
+                  self.board = self.board.inc();
+                  WindowMessageResponse::DoNothing
+                },
+              };
+            }
+          }
+        }
+        WindowMessageResponse::DoNothing
+      },
       _ => WindowMessageResponse::DoNothing,
     }
   }
@@ -60,7 +108,7 @@ impl WindowLike for OnscreenKeyboard {
     }
     instructions
   }
-  //
+
   fn subtype(&self) -> WindowLikeType {
     WindowLikeType::OnscreenKeyboard
   }
@@ -93,7 +141,7 @@ impl OnscreenKeyboard {
       HashMap::from([
         (Board::Regular, vec!['𐘃', 'z', 'x', 'c', 'v', 'b', 'n', 'm', '𐘁']), //escape and backspace
         (Board::Shift, vec!['𐘃', 'z', 'x', 'c', 'v', 'b', 'n', 'm', '𐘁']), //escape and backspace
-        (Board::Symbols, vec!['~', '*', '"', '\'', ':', ';', '!', '?', '𐘁']), //basckspace
+        (Board::Symbols, vec!['~', '*', '"', '\'', ':', ';', '!', '?', '𐘁']), //backspace
         (Board::SymbolsShift, vec!['[', ']', '{', '}', '𐘁']), //backspace
       ]),
       HashMap::from([
@@ -101,16 +149,17 @@ impl OnscreenKeyboard {
         (Board::Shift, vec!['𐘧', '𐘎', ' ', '𐘂']), //switch board (special case, not a real key), alt (special case, not a real key), enter
         (Board::Symbols, vec!['𐘧', '𐘎', ',', '_', ' ', '/', '.', '𐘂']), //switch board (special case, not a real key), alt (special case, not a real key), enter
         (Board::SymbolsShift, vec!['𐘧', '𐘎', '\\', '<', ' ', '>', '𐘾', '𐘂']), //switch board (special case, not a real key), alt (special case, not a real key), ctrl (special case, not a real key), enter
+        //ctrl = shimazu
       ]),
     ];
     //hardcoded for now
-    let mut y = padding_y;
-    let key_height = (self.dimensions[1] - padding_y * 2 - key_padding_y * (rows.len() - 1)) / rows.len();
-    let reg_key_width = (self.dimensions[0] - padding_x * 2 - key_padding_x * (10 - 1)) / 10;
+    let mut y = PADDING_Y;
+    let key_height = (self.dimensions[1] - PADDING_Y * 2 - KEY_PADDING_Y * (rows.len() - 1)) / rows.len();
+    let reg_key_width = (self.dimensions[0] - PADDING_X * 2 - KEY_PADDING_X * (10 - 1)) / 10;
     for row in rows {
       let row_keys = &row[&self.board];
       //centre
-      let mut x = padding_x + (10 - row_keys.len()) * (reg_key_width + key_padding_x) / 2;
+      let mut x = PADDING_X + (10 - row_keys.len()) * (reg_key_width + KEY_PADDING_X) / 2;
       for key in row_keys {
         let press_return = if key == &'𐘧' {
           KeyResponse::SwitchBoard
@@ -121,10 +170,24 @@ impl OnscreenKeyboard {
         } else {
           KeyResponse::Key(*key)
         };
-        self.components.push(Box::new(PressButton::new([x, y], [reg_key_width, key_height], key.to_string(), press_return)));
-        x += reg_key_width + key_padding_x;
+        let mut text = key.to_string();
+        if text == "𐘧" {
+          text = "Switch".to_string();
+        } else if text == "𐘎" {
+          text = "Alt".to_string();
+        } else if text == "𐘂" {
+          text = "Enter".to_string();
+        } else if text == "𐘁" {
+          text = "Back".to_string();
+        } else if text == "𐘃" {
+          text = "Esc".to_string();
+        } else if text == "𐘾" {
+          text = "Ctrl".to_string();
+        }
+        self.components.push(Box::new(PressButton::new([x, y], [reg_key_width, key_height], text, press_return)));
+        x += reg_key_width + KEY_PADDING_X;
       }
-      y += key_height + key_padding_y;
+      y += key_height + KEY_PADDING_Y;
     }
   }
 }

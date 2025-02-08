@@ -39,7 +39,7 @@ pub const TASKBAR_HEIGHT: usize = 38;
 pub const INDICATOR_HEIGHT: usize = 20;
 const WINDOW_TOP_HEIGHT: usize = 26;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum KeyChar {
   Press(char),
   Alt(char),
@@ -53,6 +53,23 @@ enum ThreadMessage {
 }
 
 pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
+  let args: Vec<_> = env::args().collect();
+
+  let rotate = args.contains(&"rotate".to_string());
+
+  let framebuffer_info = if rotate {
+    FramebufferInfo {
+      byte_len: framebuffer_info.byte_len,
+      width: framebuffer_info.height,
+      height: framebuffer_info.width,
+      bytes_per_pixel: framebuffer_info.bytes_per_pixel,
+      stride: framebuffer_info.height,
+      old_stride: Some(framebuffer_info.stride),
+    }
+  } else {
+    framebuffer_info
+  };
+
   let dimensions = [framebuffer_info.width, framebuffer_info.height];
   
   println!("bg: {}x{}", dimensions[0], dimensions[1] - TASKBAR_HEIGHT - INDICATOR_HEIGHT);
@@ -61,7 +78,7 @@ pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
 
   writer.init(framebuffer_info.clone());
 
-  let mut wm: WindowManager = WindowManager::new(writer, framebuffer, dimensions);
+  let mut wm: WindowManager = WindowManager::new(writer, framebuffer, dimensions, rotate);
 
   wm.draw(None, false);
 
@@ -91,7 +108,6 @@ pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
     }
   });
 
-  let args: Vec<_> = env::args().collect();
   let touch = args.contains(&"touch".to_string());
 
   //read touchscreen presses (hopefully)
@@ -204,6 +220,7 @@ impl fmt::Debug for WindowLikeInfo {
 
 pub struct WindowManager {
   writer: RefCell<FramebufferWriter>,
+  rotate: bool,
   id_count: usize,
   window_infos: Vec<WindowLikeInfo>,
   osk: Option<WindowLikeInfo>,
@@ -219,9 +236,10 @@ pub struct WindowManager {
 //1 is up, 2 is down
 
 impl WindowManager {
-  pub fn new(writer: FramebufferWriter, framebuffer: Framebuffer, dimensions: Dimensions) -> Self {
+  pub fn new(writer: FramebufferWriter, framebuffer: Framebuffer, dimensions: Dimensions, rotate: bool) -> Self {
     let mut wm = WindowManager {
       writer: RefCell::new(writer),
+      rotate,
       id_count: 0,
       window_infos: Vec::new(),
       osk: None,
@@ -612,7 +630,7 @@ impl WindowManager {
         } else {
           //see if in onscreen keyboard, if so send to it after offsetting coords
           if self.osk.is_some() {
-            let mut osk = self.osk.as_mut().unwrap();
+            let osk = self.osk.as_mut().unwrap();
             if point_inside([x, y], osk.top_left, osk.dimensions) {
               osk.window_like.handle_message(WindowMessage::Touch(x - osk.top_left[0], y - osk.top_left[1]))
             } else {
@@ -691,6 +709,9 @@ impl WindowManager {
       },
       WindowManagerRequest::ClipboardCopy(content) => {
         self.clipboard = Some(content);
+      },
+      WindowManagerRequest::DoKeyChar(kc) => {
+        self.handle_message(WindowManagerMessage::KeyChar(kc));
       },
     };
   }
@@ -804,6 +825,9 @@ impl WindowManager {
       self.writer.borrow_mut().draw_buffer(window_info.top_left, window_dimensions[1], window_dimensions[0] * bytes_per_pixel, &window_writer.get_buffer());
       w_index += 1;
     }
-    self.framebuffer.write_frame(self.writer.borrow().get_buffer());
+    //could probably figure out a way to do borrow() when self.rotate is false but does it matter?
+    let mut writer_borrow = self.writer.borrow_mut();
+    let frame = if self.rotate { writer_borrow.get_transposed_buffer() } else { writer_borrow.get_buffer() };
+    self.framebuffer.write_frame(frame);
   }
 }

@@ -31,6 +31,7 @@ pub enum WindowManagerRequest {
   CloseStartMenu,
   Unlock,
   Lock,
+  DoKeyChar(KeyChar),
   //
 }
 

@@ -38,6 +38,7 @@ pub struct FramebufferInfo {
   pub height: usize,
   pub bytes_per_pixel: usize,
   pub stride: usize,
+  pub old_stride: Option<usize>, //used/set only when rotate is true
 }
 
 //currently doesn't check if writing onto next line accidentally
@@ -45,6 +46,7 @@ pub struct FramebufferWriter {
   info: FramebufferInfo,
   buffer: Vec<u8>,
   saved_buffer: Option<Vec<u8>>,
+  rotate_buffer: Option<Vec<u8>>,
 }
 
 impl FramebufferWriter {
@@ -57,8 +59,23 @@ impl FramebufferWriter {
     self.info.clone()
   }
   
-  pub fn get_buffer(&self) -> &[u8] {
+  pub fn get_buffer(&mut self) -> &[u8] {
     &self.buffer
+  }
+
+  pub fn get_transposed_buffer(&mut self) -> &[u8] {
+    let mut output_array = vec![255; self.info.byte_len];
+    let row_bytes_len = self.info.stride * self.info.bytes_per_pixel;
+    let row_bytes_len_transposed = self.info.old_stride.unwrap_or(self.info.height) * self.info.bytes_per_pixel;
+    for y in 0..self.info.height {
+      for x in 0..self.info.width {
+        for i in 0..self.info.bytes_per_pixel {
+          output_array[x * row_bytes_len_transposed + y * self.info.bytes_per_pixel + i] = self.buffer[y * row_bytes_len + x * self.info.bytes_per_pixel + i];
+        }
+      }
+    }
+    self.rotate_buffer = Some(output_array);
+    &self.rotate_buffer.as_ref().unwrap()
   }
 
   pub fn save_buffer(&mut self) {
@@ -237,6 +254,7 @@ impl Default for FramebufferWriter {
       info: Default::default(),
       buffer: Vec::new(),
       saved_buffer: None,
+      rotate_buffer: None,
     }
   }
 }

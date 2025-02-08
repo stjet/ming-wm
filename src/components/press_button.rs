@@ -10,8 +10,8 @@ use crate::window_manager::{ DrawInstructions };
 const MONO_WIDTH: u8 = 10;
 
 pub struct PressButton<T> {
-  top_left: Point,
-  size: Dimensions,
+  pub top_left: Point,
+  pub size: Dimensions,
   text: String,
   press_return: T,
 }
@@ -20,7 +20,9 @@ impl<T: Clone> Component<T> for PressButton<T> {
   //
   fn handle_message(&mut self, message: WindowMessage) -> Option<T> {
     match message {
-      WindowMessage::Touch(x, y) => {
+      WindowMessage::Touch(_, _) => {
+        //assume that the parent window-like passed it to us intentionally and checked already
+        //we can check again, but why?
         Some(self.press_return.clone())
       },
       _ => None,
