@@ -154,6 +154,6 @@ pub fn point_inside(point: Point, top_left: Point, size: Dimensions) -> bool {
   let y2 = top_left[1];
   let x3 = x2 + size[0];
   let y3 = y2 + size[1];
-  x >= x2 && y >= x2 && x <= x3 && y <= y3
+  x >= x2 && y >= y2 && x <= x3 && y <= y3
 }
 
