@@ -648,11 +648,14 @@ impl WindowManager {
       }
     };
     if response != WindowMessageResponse::DoNothing {
+      let is_key_char_request = response.is_key_char_request();
       match response {
         WindowMessageResponse::Request(request) => self.handle_request(request),
         _ => {},
       };
-      self.draw(redraw_ids, use_saved_buffer);
+      if !is_key_char_request {
+        self.draw(redraw_ids, use_saved_buffer);
+      }
     }
   }
   

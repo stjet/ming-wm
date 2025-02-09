@@ -42,6 +42,16 @@ pub enum WindowMessageResponse {
   DoNothing,
 }
 
+impl WindowMessageResponse {
+  pub fn is_key_char_request(&self) -> bool {
+    if let WindowMessageResponse::Request(WindowManagerRequest::DoKeyChar(_)) = self {
+      true
+    } else {
+      false
+    }
+  }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct KeyPress {
   pub key: char,
