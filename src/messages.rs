@@ -24,7 +24,7 @@ impl PartialEq for WindowBox {
 }
 */
 
-#[derive(PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum WindowManagerRequest {
   OpenWindow(String),
   ClipboardCopy(String),
@@ -33,12 +33,6 @@ pub enum WindowManagerRequest {
   Lock,
   DoKeyChar(KeyChar),
   //
-}
-
-impl fmt::Debug for WindowManagerRequest{
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "WindowManagerRequest lmao")
-  }
 }
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
