@@ -351,302 +351,298 @@ impl WindowManager {
   pub fn handle_message(&mut self, message: WindowManagerMessage) {
     let mut use_saved_buffer = false;
     let mut redraw_ids = None;
-    let response: WindowMessageResponse = match message {
-      WindowManagerMessage::KeyChar(key_char) => {
-        //check if is special key (key releases are guaranteed to be special keys)
-        //eg: ctrl, alt, command/windows, shift, or caps lock
-        match key_char {
-          KeyChar::Alt(c) => {
-            let mut press_response = WindowMessageResponse::DoNothing;
-            if !self.locked {
-              //keyboard shortcut
-              let shortcuts = HashMap::from([
-                //alt+e is terminate program (ctrl+c)
-                ('s', ShortcutType::StartMenu),
-                ('[', ShortcutType::FocusPrevWindow),
-                (']', ShortcutType::FocusNextWindow),
-                ('q', ShortcutType::QuitWindow),
-                ('c', ShortcutType::CenterWindow),
-                ('f', ShortcutType::FullscreenWindow),
-                ('w', ShortcutType::HalfWidthWindow),
-                ('C', ShortcutType::ClipboardCopy),
-                ('P', ShortcutType::ClipboardPaste(String::new())),
-                //move window a small amount
-                ('h', ShortcutType::MoveWindow(Direction::Left)),
-                ('j', ShortcutType::MoveWindow(Direction::Down)),
-                ('k', ShortcutType::MoveWindow(Direction::Up)),
-                ('l', ShortcutType::MoveWindow(Direction::Right)),
-                //move window to edges
-                ('H', ShortcutType::MoveWindowToEdge(Direction::Left)),
-                ('J', ShortcutType::MoveWindowToEdge(Direction::Down)),
-                ('K', ShortcutType::MoveWindowToEdge(Direction::Up)),
-                ('L', ShortcutType::MoveWindowToEdge(Direction::Right)),
-                //
-                //no 10th workspace
-                ('1', ShortcutType::SwitchWorkspace(0)),
-                ('2', ShortcutType::SwitchWorkspace(1)),
-                ('3', ShortcutType::SwitchWorkspace(2)),
-                ('4', ShortcutType::SwitchWorkspace(3)),
-                ('5', ShortcutType::SwitchWorkspace(4)),
-                ('6', ShortcutType::SwitchWorkspace(5)),
-                ('7', ShortcutType::SwitchWorkspace(6)),
-                ('8', ShortcutType::SwitchWorkspace(7)),
-                ('9', ShortcutType::SwitchWorkspace(8)),
-                //shfit + num key
-                ('!', ShortcutType::MoveWindowToWorkspace(0)),
-                ('@', ShortcutType::MoveWindowToWorkspace(1)),
-                ('#', ShortcutType::MoveWindowToWorkspace(2)),
-                ('$', ShortcutType::MoveWindowToWorkspace(3)),
-                ('%', ShortcutType::MoveWindowToWorkspace(4)),
-                ('^', ShortcutType::MoveWindowToWorkspace(5)),
-                ('&', ShortcutType::MoveWindowToWorkspace(6)),
-                ('*', ShortcutType::MoveWindowToWorkspace(7)),
-                ('(', ShortcutType::MoveWindowToWorkspace(8)),
-                //
-              ]);
-              if let Some(shortcut) = shortcuts.get(&c) {
-                match shortcut {
-                  &ShortcutType::StartMenu => {
-                    //send to taskbar
-                    press_response = self.toggle_start_menu(false);
-                    if press_response != WindowMessageResponse::Request(WindowManagerRequest::CloseStartMenu) {
-                      //only thing that needs to be redrawed is the start menu and taskbar
-                      let start_menu_id = self.id_count + 1;
-                      let taskbar_id = self.window_infos.iter().find(|w| w.window_like.subtype() == WindowLikeType::Taskbar).unwrap().id;
-                      redraw_ids = Some(vec![start_menu_id, taskbar_id]);
-                    }
-                  },
-                  &ShortcutType::MoveWindow(direction) | &ShortcutType::MoveWindowToEdge(direction) => {
-                    if let Some(focused_index) = self.get_focused_index() {
-                      let focused_info = &self.window_infos[focused_index];
-                      if focused_info.window_like.subtype() == WindowLikeType::Window && !focused_info.fullscreen {
-                        let delta = 15;
-                        let window_x = self.window_infos[focused_index].top_left[0];
-                        let window_y = self.window_infos[focused_index].top_left[1];
-                        let mut changed = true;
-                        if direction == Direction::Left {
-                          if window_x == 0 {
-                            changed = false;
-                          } else if window_x < delta || shortcut == &ShortcutType::MoveWindowToEdge(direction) {
-                            self.window_infos[focused_index].top_left[0] = 0;
-                          } else {
-                            self.window_infos[focused_index].top_left[0] -= delta;
-                          }
-                        } else if direction == Direction::Down {
-                          let max_y = self.dimensions[1] - TASKBAR_HEIGHT - focused_info.dimensions[1];
-                          if window_y == max_y {
-                            changed = false;
-                          } else if window_y > (max_y - delta) || shortcut == &ShortcutType::MoveWindowToEdge(direction) {
-                            self.window_infos[focused_index].top_left[1] = max_y;
-                          } else {
-                            self.window_infos[focused_index].top_left[1] += delta;
-                          }
-                        } else if direction == Direction::Up {
-                          let min_y = INDICATOR_HEIGHT;
-                          if window_y == min_y {
-                            changed = false;
-                          } else if window_y < (min_y + delta) || shortcut == &ShortcutType::MoveWindowToEdge(direction) {
-                            self.window_infos[focused_index].top_left[1] = min_y;
-                          } else {
-                            self.window_infos[focused_index].top_left[1] -= delta;
-                          }
-                        } else if direction == Direction::Right {
-                          let max_x = self.dimensions[0] - focused_info.dimensions[0];
-                          if window_x == max_x {
-                            changed = false;
-                          } else if window_x > (max_x - delta) || shortcut == &ShortcutType::MoveWindowToEdge(direction) {
-                            self.window_infos[focused_index].top_left[0] = max_x;
-                          } else {
-                            self.window_infos[focused_index].top_left[0] += delta;
-                          }
-                        }
-                        if changed {
-                          press_response = WindowMessageResponse::JustRedraw;
-                          //avoid drawing everything under the moving window, much more efficient
-                          use_saved_buffer = true;
-                          redraw_ids = Some(vec![self.focused_id]);
-                        }
-                      }
-                    }
-                  },
-                  &ShortcutType::SwitchWorkspace(workspace) => {
-                    if self.current_workspace != workspace {
-                      //close start menu if open
-                      self.toggle_start_menu(true);
-                      self.current_workspace = workspace;
-                      //send to desktop background
-                      let desktop_background_index = self.window_infos.iter().position(|w| w.window_like.subtype() == WindowLikeType::DesktopBackground).unwrap();
-                      self.window_infos[desktop_background_index].window_like.handle_message(WindowMessage::Shortcut(ShortcutType::SwitchWorkspace(self.current_workspace)));
-                      //send to workspace indicator
-                      let indicator_index = self.window_infos.iter().position(|w| w.window_like.subtype() == WindowLikeType::WorkspaceIndicator).unwrap();
-                      self.focused_id = self.window_infos[indicator_index].id;
-                      self.window_infos[indicator_index].window_like.handle_message(WindowMessage::Shortcut(ShortcutType::SwitchWorkspace(self.current_workspace)));
-                      self.taskbar_update_windows();
-                      press_response = WindowMessageResponse::JustRedraw;
-                    }
-                  },
-                  &ShortcutType::MoveWindowToWorkspace(workspace) => {
-                    if self.current_workspace != workspace {
-                      if let Some(focused_index) = self.get_focused_index() {
-                        if self.window_infos[focused_index].window_like.subtype() == WindowLikeType::Window {
-                          self.window_infos[focused_index].workspace = Workspace::Workspace(workspace);
-                          self.taskbar_update_windows();
-                          press_response = WindowMessageResponse::JustRedraw;
-                        }
-                      }
-                    }
-                  },
-                  &ShortcutType::FocusPrevWindow | &ShortcutType::FocusNextWindow => {
-                    let current_index = self.get_focused_index().unwrap_or(0);
-                    let mut new_focus_index = current_index;
-                    loop {
-                      if shortcut == &ShortcutType::FocusPrevWindow {
-                        if new_focus_index == 0 {
-                          new_focus_index = self.window_infos.len() - 1;
-                        } else {
-                          new_focus_index -= 1;
-                        }
-                      } else {
-                        new_focus_index += 1;
-                        if new_focus_index == self.window_infos.len() {
-                          new_focus_index = 0;
-                        }
-                      }
-                      if self.window_infos[new_focus_index].window_like.subtype() == WindowLikeType::Window && self.window_infos[new_focus_index].workspace == Workspace::Workspace(self.current_workspace) {
-                        //switch focus to this
-                        self.focused_id = self.window_infos[new_focus_index].id;
-                        //elevate it to the top
-                        self.move_index_to_top(new_focus_index);
-                        self.taskbar_update_windows();
-                        press_response = WindowMessageResponse::JustRedraw;
-                        break;
-                      } else if new_focus_index == current_index {
-                        break; //did a full loop, found no windows
-                      }
-                    }
-                  },
-                  &ShortcutType::QuitWindow => {
-                    if let Some(focused_index) = self.get_focused_index() {
-                      if self.window_infos[focused_index].window_like.subtype() == WindowLikeType::Window {
-                        self.window_infos.remove(focused_index);
-                        self.taskbar_update_windows();
-                        press_response = WindowMessageResponse::JustRedraw;
-                      }
-                    }
-                  },
-                  &ShortcutType::CenterWindow => {
-                    if let Some(focused_index) = self.get_focused_index() {
-                      let window_dimensions = &self.window_infos[focused_index].dimensions;
-                      self.window_infos[focused_index].top_left = [self.dimensions[0] / 2 - window_dimensions[0] / 2, self.dimensions[1] / 2 - window_dimensions[1] / 2];
-                      use_saved_buffer = true;
-                      press_response = WindowMessageResponse::JustRedraw;
-                    }
-                  },
-                  &ShortcutType::FullscreenWindow => {
-                    if let Some(focused_index) = self.get_focused_index() {
-                      let window_like = &self.window_infos[focused_index].window_like;
-                      if window_like.subtype() == WindowLikeType::Window && window_like.resizable() {
-                        //toggle fullscreen
-                        self.window_infos[focused_index].fullscreen ^= true;
-                        //todo: send message to window about resize
-                        let new_dimensions;
-                        if self.window_infos[focused_index].fullscreen {
-                          new_dimensions = [self.dimensions[0], self.dimensions[1] - TASKBAR_HEIGHT - INDICATOR_HEIGHT];
-                          self.window_infos[focused_index].top_left = [0, INDICATOR_HEIGHT];
-                          redraw_ids = Some(vec![self.window_infos[focused_index].id]);
-                        } else {
-                          new_dimensions = self.window_infos[focused_index].dimensions;
-                        }
-                        self.window_infos[focused_index].window_like.handle_message(WindowMessage::ChangeDimensions([new_dimensions[0], new_dimensions[1] - WINDOW_TOP_HEIGHT]));
-                        press_response = WindowMessageResponse::JustRedraw;
-                      }
-                    }
-                  },
-                  &ShortcutType::HalfWidthWindow => {
-                    if let Some(focused_index) = self.get_focused_index() {
-                      let window_like = &self.window_infos[focused_index].window_like;
-                      if window_like.subtype() == WindowLikeType::Window && window_like.resizable() {
-                        self.window_infos[focused_index].fullscreen = false;
-                        //full height, half width
-                        self.window_infos[focused_index].top_left = [0, INDICATOR_HEIGHT];
-                        let new_dimensions = [self.dimensions[0] / 2, self.dimensions[1] - INDICATOR_HEIGHT - TASKBAR_HEIGHT];
-                        self.window_infos[focused_index].dimensions = new_dimensions;
-                        self.window_infos[focused_index].window_like.handle_message(WindowMessage::ChangeDimensions([new_dimensions[0], new_dimensions[1] - WINDOW_TOP_HEIGHT]));
-                        press_response = WindowMessageResponse::JustRedraw;
-                      }
-                    }
-                  },
-                  &ShortcutType::ClipboardCopy => {
-                    if let Some(focused_index) = self.get_focused_index() {
-                      let window_like = &self.window_infos[focused_index].window_like;
-                      if window_like.subtype() == WindowLikeType::Window {
-                        press_response = self.window_infos[focused_index].window_like.handle_message(WindowMessage::Shortcut(ShortcutType::ClipboardCopy));
-                      }
-                    }
-                  },
-                  &ShortcutType::ClipboardPaste(_) => {
-                    if let Some(focused_index) = self.get_focused_index() {
-                      let window_like = &self.window_infos[focused_index].window_like;
-                      if window_like.subtype() == WindowLikeType::Window && self.clipboard.is_some() {
-                        press_response = self.window_infos[focused_index].window_like.handle_message(WindowMessage::Shortcut(ShortcutType::ClipboardPaste(self.clipboard.clone().unwrap())));
-                      }
-                    }
-                  },
-                };
-              }
-            }
-            press_response
-          },
-          KeyChar::Press(c) | KeyChar::Ctrl(c) => {
-            let mut press_response = WindowMessageResponse::DoNothing;
-            //send to focused window
-            if let Some(focused_index) = self.get_focused_index() {
-              press_response = self.window_infos[focused_index].window_like.handle_message(if key_char == KeyChar::Press(c) {
-                WindowMessage::KeyPress(KeyPress {
-                  key: c,
-                })
-              } else {
-                WindowMessage::CtrlKeyPress(KeyPress {
-                  key: c,
-                })
-              });
-              //at most, only the focused window needs to be redrawed
-              redraw_ids = Some(vec![self.window_infos[focused_index].id]);
-              //requests can result in window openings and closings, etc
-              if press_response != WindowMessageResponse::JustRedraw {
-                redraw_ids = None;
-              }
-            }
-            press_response
-          },
-        }
-      },
-      WindowManagerMessage::Touch(x, y) => {
-        if x < 100 && y < 100 {
-          //toggle onscreen keyboard if top left keyboard clicked
-          if self.osk.is_some() {
-            self.osk = None;
-          } else {
-            let osk = Box::new(OnscreenKeyboard::new());
-            let ideal_dimensions = osk.ideal_dimensions(self.dimensions);
-            self.add_window_like(osk, [175, self.dimensions[1] - TASKBAR_HEIGHT - 250], Some(ideal_dimensions));
-          }
-          WindowMessageResponse::JustRedraw
+    let mut response: WindowMessageResponse = WindowMessageResponse::DoNothing;
+    let mut message = message;
+    if let WindowManagerMessage::Touch(x, y) = message {
+      if x < 100 && y < 100 {
+        //toggle onscreen keyboard if top left keyboard clicked
+        if self.osk.is_some() {
+          self.osk = None;
         } else {
-          //see if in onscreen keyboard, if so send to it after offsetting coords
-          if self.osk.is_some() {
-            let osk = self.osk.as_mut().unwrap();
-            if point_inside([x, y], osk.top_left, osk.dimensions) {
-              osk.window_like.handle_message(WindowMessage::Touch(x - osk.top_left[0], y - osk.top_left[1]))
-            } else {
-              WindowMessageResponse::DoNothing
+          let osk = Box::new(OnscreenKeyboard::new());
+          let ideal_dimensions = osk.ideal_dimensions(self.dimensions);
+          self.add_window_like(osk, [175, self.dimensions[1] - TASKBAR_HEIGHT - 250], Some(ideal_dimensions));
+        }
+        response = WindowMessageResponse::JustRedraw
+      } else {
+        //see if in onscreen keyboard, if so send to it after offsetting coords
+        if self.osk.is_some() {
+          let osk = self.osk.as_mut().unwrap();
+          if point_inside([x, y], osk.top_left, osk.dimensions) {
+            let osk_resp = osk.window_like.handle_message(WindowMessage::Touch(x - osk.top_left[0], y - osk.top_left[1]));
+            //change to a WindowManagerMessage::KeyChar
+            if let WindowMessageResponse::Request(WindowManagerRequest::DoKeyChar(kc)) = osk_resp {
+              message = WindowManagerMessage::KeyChar(kc);
             }
-          } else {
-            WindowMessageResponse::DoNothing
           }
         }
       }
-    };
+    }
+    if let WindowManagerMessage::KeyChar(key_char) = message {
+      //check if is special key (key releases are guaranteed to be special keys)
+      //eg: ctrl, alt, command/windows, shift, or caps lock
+      match key_char {
+        KeyChar::Alt(c) => {
+          if !self.locked {
+            //keyboard shortcut
+            let shortcuts = HashMap::from([
+              //alt+e is terminate program (ctrl+c)
+              ('s', ShortcutType::StartMenu),
+              ('[', ShortcutType::FocusPrevWindow),
+              (']', ShortcutType::FocusNextWindow),
+              ('q', ShortcutType::QuitWindow),
+              ('c', ShortcutType::CenterWindow),
+              ('f', ShortcutType::FullscreenWindow),
+              ('w', ShortcutType::HalfWidthWindow),
+              ('C', ShortcutType::ClipboardCopy),
+              ('P', ShortcutType::ClipboardPaste(String::new())),
+              //move window a small amount
+              ('h', ShortcutType::MoveWindow(Direction::Left)),
+              ('j', ShortcutType::MoveWindow(Direction::Down)),
+              ('k', ShortcutType::MoveWindow(Direction::Up)),
+              ('l', ShortcutType::MoveWindow(Direction::Right)),
+              //move window to edges
+              ('H', ShortcutType::MoveWindowToEdge(Direction::Left)),
+              ('J', ShortcutType::MoveWindowToEdge(Direction::Down)),
+              ('K', ShortcutType::MoveWindowToEdge(Direction::Up)),
+              ('L', ShortcutType::MoveWindowToEdge(Direction::Right)),
+              //
+              //no 10th workspace
+              ('1', ShortcutType::SwitchWorkspace(0)),
+              ('2', ShortcutType::SwitchWorkspace(1)),
+              ('3', ShortcutType::SwitchWorkspace(2)),
+              ('4', ShortcutType::SwitchWorkspace(3)),
+              ('5', ShortcutType::SwitchWorkspace(4)),
+              ('6', ShortcutType::SwitchWorkspace(5)),
+              ('7', ShortcutType::SwitchWorkspace(6)),
+              ('8', ShortcutType::SwitchWorkspace(7)),
+              ('9', ShortcutType::SwitchWorkspace(8)),
+              //shfit + num key
+              ('!', ShortcutType::MoveWindowToWorkspace(0)),
+              ('@', ShortcutType::MoveWindowToWorkspace(1)),
+              ('#', ShortcutType::MoveWindowToWorkspace(2)),
+              ('$', ShortcutType::MoveWindowToWorkspace(3)),
+              ('%', ShortcutType::MoveWindowToWorkspace(4)),
+              ('^', ShortcutType::MoveWindowToWorkspace(5)),
+              ('&', ShortcutType::MoveWindowToWorkspace(6)),
+              ('*', ShortcutType::MoveWindowToWorkspace(7)),
+              ('(', ShortcutType::MoveWindowToWorkspace(8)),
+              //
+            ]);
+            if let Some(shortcut) = shortcuts.get(&c) {
+              match shortcut {
+                &ShortcutType::StartMenu => {
+                  //send to taskbar
+                  response = self.toggle_start_menu(false);
+                  if response != WindowMessageResponse::Request(WindowManagerRequest::CloseStartMenu) {
+                    //only thing that needs to be redrawed is the start menu and taskbar
+                    let start_menu_id = self.id_count + 1;
+                    let taskbar_id = self.window_infos.iter().find(|w| w.window_like.subtype() == WindowLikeType::Taskbar).unwrap().id;
+                    redraw_ids = Some(vec![start_menu_id, taskbar_id]);
+                  }
+                },
+                &ShortcutType::MoveWindow(direction) | &ShortcutType::MoveWindowToEdge(direction) => {
+                  if let Some(focused_index) = self.get_focused_index() {
+                    let focused_info = &self.window_infos[focused_index];
+                    if focused_info.window_like.subtype() == WindowLikeType::Window && !focused_info.fullscreen {
+                      let delta = 15;
+                      let window_x = self.window_infos[focused_index].top_left[0];
+                      let window_y = self.window_infos[focused_index].top_left[1];
+                      let mut changed = true;
+                      if direction == Direction::Left {
+                        if window_x == 0 {
+                          changed = false;
+                        } else if window_x < delta || shortcut == &ShortcutType::MoveWindowToEdge(direction) {
+                          self.window_infos[focused_index].top_left[0] = 0;
+                        } else {
+                          self.window_infos[focused_index].top_left[0] -= delta;
+                        }
+                      } else if direction == Direction::Down {
+                        let max_y = self.dimensions[1] - TASKBAR_HEIGHT - focused_info.dimensions[1];
+                        if window_y == max_y {
+                          changed = false;
+                        } else if window_y > (max_y - delta) || shortcut == &ShortcutType::MoveWindowToEdge(direction) {
+                          self.window_infos[focused_index].top_left[1] = max_y;
+                        } else {
+                          self.window_infos[focused_index].top_left[1] += delta;
+                        }
+                      } else if direction == Direction::Up {
+                        let min_y = INDICATOR_HEIGHT;
+                        if window_y == min_y {
+                          changed = false;
+                        } else if window_y < (min_y + delta) || shortcut == &ShortcutType::MoveWindowToEdge(direction) {
+                          self.window_infos[focused_index].top_left[1] = min_y;
+                        } else {
+                          self.window_infos[focused_index].top_left[1] -= delta;
+                        }
+                      } else if direction == Direction::Right {
+                        let max_x = self.dimensions[0] - focused_info.dimensions[0];
+                        if window_x == max_x {
+                          changed = false;
+                        } else if window_x > (max_x - delta) || shortcut == &ShortcutType::MoveWindowToEdge(direction) {
+                          self.window_infos[focused_index].top_left[0] = max_x;
+                        } else {
+                          self.window_infos[focused_index].top_left[0] += delta;
+                        }
+                      }
+                      if changed {
+                        response = WindowMessageResponse::JustRedraw;
+                        //avoid drawing everything under the moving window, much more efficient
+                        use_saved_buffer = true;
+                        redraw_ids = Some(vec![self.focused_id]);
+                      }
+                    }
+                  }
+                },
+                &ShortcutType::SwitchWorkspace(workspace) => {
+                  if self.current_workspace != workspace {
+                    //close start menu if open
+                    self.toggle_start_menu(true);
+                    self.current_workspace = workspace;
+                    //send to desktop background
+                    let desktop_background_index = self.window_infos.iter().position(|w| w.window_like.subtype() == WindowLikeType::DesktopBackground).unwrap();
+                    self.window_infos[desktop_background_index].window_like.handle_message(WindowMessage::Shortcut(ShortcutType::SwitchWorkspace(self.current_workspace)));
+                    //send to workspace indicator
+                    let indicator_index = self.window_infos.iter().position(|w| w.window_like.subtype() == WindowLikeType::WorkspaceIndicator).unwrap();
+                    self.focused_id = self.window_infos[indicator_index].id;
+                    self.window_infos[indicator_index].window_like.handle_message(WindowMessage::Shortcut(ShortcutType::SwitchWorkspace(self.current_workspace)));
+                    self.taskbar_update_windows();
+                    response = WindowMessageResponse::JustRedraw;
+                  }
+                },
+                &ShortcutType::MoveWindowToWorkspace(workspace) => {
+                  if self.current_workspace != workspace {
+                    if let Some(focused_index) = self.get_focused_index() {
+                      if self.window_infos[focused_index].window_like.subtype() == WindowLikeType::Window {
+                        self.window_infos[focused_index].workspace = Workspace::Workspace(workspace);
+                        self.taskbar_update_windows();
+                        response = WindowMessageResponse::JustRedraw;
+                      }
+                    }
+                  }
+                },
+                &ShortcutType::FocusPrevWindow | &ShortcutType::FocusNextWindow => {
+                  let current_index = self.get_focused_index().unwrap_or(0);
+                  let mut new_focus_index = current_index;
+                  loop {
+                    if shortcut == &ShortcutType::FocusPrevWindow {
+                      if new_focus_index == 0 {
+                        new_focus_index = self.window_infos.len() - 1;
+                      } else {
+                        new_focus_index -= 1;
+                      }
+                    } else {
+                      new_focus_index += 1;
+                      if new_focus_index == self.window_infos.len() {
+                        new_focus_index = 0;
+                      }
+                    }
+                    if self.window_infos[new_focus_index].window_like.subtype() == WindowLikeType::Window && self.window_infos[new_focus_index].workspace == Workspace::Workspace(self.current_workspace) {
+                      //switch focus to this
+                      self.focused_id = self.window_infos[new_focus_index].id;
+                      //elevate it to the top
+                      self.move_index_to_top(new_focus_index);
+                      self.taskbar_update_windows();
+                      response = WindowMessageResponse::JustRedraw;
+                      break;
+                    } else if new_focus_index == current_index {
+                      break; //did a full loop, found no windows
+                    }
+                  }
+                },
+                &ShortcutType::QuitWindow => {
+                  if let Some(focused_index) = self.get_focused_index() {
+                    if self.window_infos[focused_index].window_like.subtype() == WindowLikeType::Window {
+                      self.window_infos.remove(focused_index);
+                      self.taskbar_update_windows();
+                      response = WindowMessageResponse::JustRedraw;
+                    }
+                  }
+                },
+                &ShortcutType::CenterWindow => {
+                  if let Some(focused_index) = self.get_focused_index() {
+                    let window_dimensions = &self.window_infos[focused_index].dimensions;
+                    self.window_infos[focused_index].top_left = [self.dimensions[0] / 2 - window_dimensions[0] / 2, self.dimensions[1] / 2 - window_dimensions[1] / 2];
+                    use_saved_buffer = true;
+                    response = WindowMessageResponse::JustRedraw;
+                  }
+                },
+                &ShortcutType::FullscreenWindow => {
+                  if let Some(focused_index) = self.get_focused_index() {
+                    let window_like = &self.window_infos[focused_index].window_like;
+                    if window_like.subtype() == WindowLikeType::Window && window_like.resizable() {
+                      //toggle fullscreen
+                      self.window_infos[focused_index].fullscreen ^= true;
+                      //todo: send message to window about resize
+                      let new_dimensions;
+                      if self.window_infos[focused_index].fullscreen {
+                        new_dimensions = [self.dimensions[0], self.dimensions[1] - TASKBAR_HEIGHT - INDICATOR_HEIGHT];
+                        self.window_infos[focused_index].top_left = [0, INDICATOR_HEIGHT];
+                        redraw_ids = Some(vec![self.window_infos[focused_index].id]);
+                      } else {
+                        new_dimensions = self.window_infos[focused_index].dimensions;
+                      }
+                      self.window_infos[focused_index].window_like.handle_message(WindowMessage::ChangeDimensions([new_dimensions[0], new_dimensions[1] - WINDOW_TOP_HEIGHT]));
+                      response = WindowMessageResponse::JustRedraw;
+                    }
+                  }
+                },
+                &ShortcutType::HalfWidthWindow => {
+                  if let Some(focused_index) = self.get_focused_index() {
+                    let window_like = &self.window_infos[focused_index].window_like;
+                    if window_like.subtype() == WindowLikeType::Window && window_like.resizable() {
+                      self.window_infos[focused_index].fullscreen = false;
+                      //full height, half width
+                      self.window_infos[focused_index].top_left = [0, INDICATOR_HEIGHT];
+                      let new_dimensions = [self.dimensions[0] / 2, self.dimensions[1] - INDICATOR_HEIGHT - TASKBAR_HEIGHT];
+                      self.window_infos[focused_index].dimensions = new_dimensions;
+                      self.window_infos[focused_index].window_like.handle_message(WindowMessage::ChangeDimensions([new_dimensions[0], new_dimensions[1] - WINDOW_TOP_HEIGHT]));
+                      response = WindowMessageResponse::JustRedraw;
+                    }
+                  }
+                },
+                &ShortcutType::ClipboardCopy => {
+                  if let Some(focused_index) = self.get_focused_index() {
+                    let window_like = &self.window_infos[focused_index].window_like;
+                    if window_like.subtype() == WindowLikeType::Window {
+                      response = self.window_infos[focused_index].window_like.handle_message(WindowMessage::Shortcut(ShortcutType::ClipboardCopy));
+                    }
+                  }
+                },
+                &ShortcutType::ClipboardPaste(_) => {
+                  if let Some(focused_index) = self.get_focused_index() {
+                    let window_like = &self.window_infos[focused_index].window_like;
+                    if window_like.subtype() == WindowLikeType::Window && self.clipboard.is_some() {
+                      response = self.window_infos[focused_index].window_like.handle_message(WindowMessage::Shortcut(ShortcutType::ClipboardPaste(self.clipboard.clone().unwrap())));
+                    }
+                  }
+                },
+              };
+            }
+          }
+        },
+        KeyChar::Press(c) | KeyChar::Ctrl(c) => {
+          //send to focused window
+          if let Some(focused_index) = self.get_focused_index() {
+            response = self.window_infos[focused_index].window_like.handle_message(if key_char == KeyChar::Press(c) {
+              WindowMessage::KeyPress(KeyPress {
+                key: c,
+              })
+            } else {
+              WindowMessage::CtrlKeyPress(KeyPress {
+                key: c,
+              })
+            });
+            //at most, only the focused window needs to be redrawed
+            redraw_ids = Some(vec![self.window_infos[focused_index].id]);
+            //requests can result in window openings and closings, etc
+            if response != WindowMessageResponse::JustRedraw {
+              redraw_ids = None;
+            }
+          }
+        },
+      }
+    }
     if response != WindowMessageResponse::DoNothing {
       match response {
         WindowMessageResponse::Request(request) => self.handle_request(request),
@@ -715,9 +711,7 @@ impl WindowManager {
       WindowManagerRequest::ClipboardCopy(content) => {
         self.clipboard = Some(content);
       },
-      WindowManagerRequest::DoKeyChar(kc) => {
-        self.handle_message(WindowManagerMessage::KeyChar(kc));
-      },
+      WindowManagerRequest::DoKeyChar(_) => {},
     };
   }
 
