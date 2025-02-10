@@ -46,12 +46,6 @@ pub enum KeyChar {
   Ctrl(char),
 }
 
-enum ThreadMessage {
-  KeyChar(KeyChar),
-  Touch(usize, usize),
-  Exit,
-}
-
 pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
   let args: Vec<_> = env::args().collect();
 
@@ -132,11 +126,17 @@ pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
             y = Some(value);
           }
           if x.is_some() && y.is_some() {
-            if rotate {
-              tx1.send(ThreadMessage::Touch(y.unwrap(), dimensions[1] - x.unwrap())).unwrap();
+            let (x2, y2) = if rotate {
+              (y.unwrap(), dimensions[1] - x.unwrap())
             } else {
-              tx1.send(ThreadMessage::Touch(x.unwrap(), y.unwrap())).unwrap();
+              (x.unwrap(), y.unwrap())
+            };
+            //top right, clear
+            //useful sometimes, I think.
+            if x2 > dimensions[0] - 100 && y2 < 100 {
+              tx1.send(ThreadMessage::Clear);
             }
+            tx1.send(ThreadMessage::Touch(x2, y2)).unwrap();
             x = None;
             y = None;
           }
@@ -154,6 +154,10 @@ pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
     match message {
       ThreadMessage::KeyChar(kc) => wm.handle_message(WindowManagerMessage::KeyChar(kc.clone())),
       ThreadMessage::Touch(x, y) => wm.handle_message(WindowManagerMessage::Touch(x, y)),
+      ThreadMessage::Clear => {
+        write!(stdout, "{}", clear::All).unwrap();
+        stdout.flush().unwrap();
+      },
       ThreadMessage::Exit => {
         if !wm.locked {
           write!(stdout, "{}", cursor::Show).unwrap();

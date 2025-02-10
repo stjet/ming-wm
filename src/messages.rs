@@ -107,3 +107,11 @@ pub enum WindowMessage {
   Touch(usize, usize), //for onscreen keyboard only
   //
 }
+
+pub enum ThreadMessage {
+  KeyChar(KeyChar),
+  Touch(usize, usize),
+  Clear,
+  Exit,
+}
+
