@@ -56,7 +56,7 @@ pub struct OnscreenKeyboard {
   alt: bool,
   ctrl: bool,
   board: Board,
-  device: Device,
+  device: Option<Device>,
 }
 
 impl WindowLike for OnscreenKeyboard {
@@ -74,12 +74,14 @@ impl WindowLike for OnscreenKeyboard {
             if let Some(returned) = returned {
               return match returned {
                 KeyResponse::Key(ch) => {
-                  //for now just send a random keypress to see if it refreshes the framebuffer
-                  //(with just touch event fb doesn't seem to be written to screen, needs key... or stdin?)
-                  self.device.click(&keyboard::Key::Down).unwrap();
-                  //sync to indicate the events were at the same time
-                  //(so alt+key, ctrl+key is possible)
-                  self.device.synchronize().unwrap();
+                  if let Some(device) = &mut self.device {
+                    //for now just send a random keypress to see if it refreshes the framebuffer
+                    //(with just touch event fb doesn't seem to be written to screen, needs key... or stdin?)
+                    device.click(&keyboard::Key::Down).unwrap();
+                    //sync to indicate the events were at the same time
+                    //(so alt+key, ctrl+key is possible)
+                    device.synchronize().unwrap();
+                  }
                   WindowMessageResponse::Request(WindowManagerRequest::DoKeyChar(if self.alt {
                     KeyChar::Alt(ch)
                   } else if self.ctrl {
@@ -129,13 +131,19 @@ impl WindowLike for OnscreenKeyboard {
 
 impl OnscreenKeyboard {
   pub fn new() -> Self {
+    let device = if let Ok(builder) = uinput::default() {
+      Some(builder.name("uinput").unwrap().event(uinput::event::Keyboard::All).unwrap().create().unwrap())
+    } else {
+      println!("could not open uinput");
+      None
+    };
     Self {
       dimensions: [0, 0],
       components: Vec::new(),
       alt: false,
       ctrl: false,
       board: Board::default(),
-      device: uinput::default().unwrap().name("uinput").unwrap().event(uinput::event::Keyboard::All).unwrap().create().unwrap(),
+      device,
     }
   }
 
