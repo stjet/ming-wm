@@ -2,9 +2,6 @@ use std::vec;
 use std::vec::Vec;
 use std::collections::HashMap;
 
-use uinput::Device;
-use uinput::event::keyboard;
-
 use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType, KeyChar };
 use crate::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest };
 use crate::framebuffer::Dimensions;
@@ -12,6 +9,9 @@ use crate::themes::ThemeInfo;
 use crate::components::Component;
 use crate::components::press_button::PressButton;
 use crate::utils::point_inside;
+
+//seems like framebuffer only updates if (real) key is pressed...
+//on mobile, volume down button seems to work but is annoying
 
 const PADDING_Y: usize = 15;
 const PADDING_X: usize = 15;
@@ -50,13 +50,13 @@ enum KeyResponse {
 //if alt is true and ctrl is true, only alt will be sent.
 //because I don't care about ctrl+alt stuff, and won't use it.
 //(and probably not supported by this with a real keyboard anyways)
+#[derive(Default)]
 pub struct OnscreenKeyboard {
   dimensions: Dimensions,
   components: Vec<Box<PressButton<KeyResponse>>>,
   alt: bool,
   ctrl: bool,
   board: Board,
-  device: Option<Device>,
 }
 
 impl WindowLike for OnscreenKeyboard {
@@ -74,21 +74,16 @@ impl WindowLike for OnscreenKeyboard {
             if let Some(returned) = returned {
               return match returned {
                 KeyResponse::Key(ch) => {
-                  if let Some(device) = &mut self.device {
-                    //for now just send a random keypress to see if it refreshes the framebuffer
-                    //(with just touch event fb doesn't seem to be written to screen, needs key... or stdin?)
-                    device.click(&keyboard::Key::Down).unwrap();
-                    //sync to indicate the events were at the same time
-                    //(so alt+key, ctrl+key is possible)
-                    device.synchronize().unwrap();
-                  }
-                  WindowMessageResponse::Request(WindowManagerRequest::DoKeyChar(if self.alt {
+                  let kc = if self.alt {
+                    self.alt = false;
                     KeyChar::Alt(ch)
                   } else if self.ctrl {
+                    self.ctrl = false;
                     KeyChar::Ctrl(ch)
                   } else {
                     KeyChar::Press(ch)
-                  }))
+                  };
+                  WindowMessageResponse::Request(WindowManagerRequest::DoKeyChar(kc))
                 },
                 KeyResponse::Alt => {
                   self.alt = !self.alt;
@@ -131,20 +126,7 @@ impl WindowLike for OnscreenKeyboard {
 
 impl OnscreenKeyboard {
   pub fn new() -> Self {
-    let device = if let Ok(builder) = uinput::default() {
-      Some(builder.name("uinput").unwrap().event(uinput::event::Keyboard::All).unwrap().create().unwrap())
-    } else {
-      println!("could not open uinput");
-      None
-    };
-    Self {
-      dimensions: [0, 0],
-      components: Vec::new(),
-      alt: false,
-      ctrl: false,
-      board: Board::default(),
-      device,
-    }
+    Default::default()
   }
 
   fn set_key_components(&mut self) {

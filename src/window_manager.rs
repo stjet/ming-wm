@@ -80,14 +80,15 @@ pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
 
   let mut wm: WindowManager = WindowManager::new(writer, framebuffer, dimensions, rotate);
 
-  wm.draw(None, false);
-
   let mut stdout = stdout().into_raw_mode().unwrap();
 
   write!(stdout, "{}", clear::All).unwrap();
 
   write!(stdout, "{}", cursor::Hide).unwrap();
+
   stdout.flush().unwrap();
+
+  wm.draw(None, false);
 
   let (tx, rx) = mpsc::channel();
 
