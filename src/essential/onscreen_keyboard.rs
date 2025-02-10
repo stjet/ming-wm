@@ -2,6 +2,9 @@ use std::vec;
 use std::vec::Vec;
 use std::collections::HashMap;
 
+use uinput::Device;
+use uinput::event::keyboard;
+
 use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType, KeyChar };
 use crate::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest };
 use crate::framebuffer::Dimensions;
@@ -47,13 +50,13 @@ enum KeyResponse {
 //if alt is true and ctrl is true, only alt will be sent.
 //because I don't care about ctrl+alt stuff, and won't use it.
 //(and probably not supported by this with a real keyboard anyways)
-#[derive(Default)]
 pub struct OnscreenKeyboard {
   dimensions: Dimensions,
   components: Vec<Box<PressButton<KeyResponse>>>,
   alt: bool,
   ctrl: bool,
   board: Board,
+  device: Device,
 }
 
 impl WindowLike for OnscreenKeyboard {
@@ -71,6 +74,12 @@ impl WindowLike for OnscreenKeyboard {
             if let Some(returned) = returned {
               return match returned {
                 KeyResponse::Key(ch) => {
+                  //for now just send a random keypress to see if it refreshes the framebuffer
+                  //(with just touch event fb doesn't seem to be written to screen, needs key... or stdin?)
+                  self.device.click(&keyboard::Key::Down).unwrap();
+                  //sync to indicate the events were at the same time
+                  //(so alt+key, ctrl+key is possible)
+                  self.device.synchronize().unwrap();
                   WindowMessageResponse::Request(WindowManagerRequest::DoKeyChar(if self.alt {
                     KeyChar::Alt(ch)
                   } else if self.ctrl {
@@ -120,7 +129,14 @@ impl WindowLike for OnscreenKeyboard {
 
 impl OnscreenKeyboard {
   pub fn new() -> Self {
-    Self::default()
+    Self {
+      dimensions: [0, 0],
+      components: Vec::new(),
+      alt: false,
+      ctrl: false,
+      board: Board::default(),
+      device: uinput::default().unwrap().name("uinput").unwrap().event(uinput::event::Keyboard::All).unwrap().create().unwrap(),
+    }
   }
 
   fn set_key_components(&mut self) {

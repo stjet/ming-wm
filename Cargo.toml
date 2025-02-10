@@ -21,3 +21,4 @@ serde = { version = "1", features = ["derive"] }
 audiotags = "0.5.0"
 bmp-rust = "0.4.1"
 dirs = "5.0.1"
+uinput = "0.1.3"
