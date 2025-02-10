@@ -134,7 +134,7 @@ pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
             //top right, clear
             //useful sometimes, I think.
             if x2 > dimensions[0] - 100 && y2 < 100 {
-              tx1.send(ThreadMessage::Clear);
+              tx1.send(ThreadMessage::Clear).unwrap();
             }
             tx1.send(ThreadMessage::Touch(x2, y2)).unwrap();
             x = None;
@@ -665,10 +665,14 @@ impl WindowManager {
   }
   
   pub fn handle_request(&mut self, request: WindowManagerRequest) {
-    let focused_index = self.get_focused_index().unwrap();
-    let subtype = self.window_infos[focused_index].window_like.subtype();
+    let subtype = if let Some(focused_index) = self.get_focused_index() {
+      Some(self.window_infos[focused_index].window_like.subtype())
+    } else {
+      None
+    };
     match request {
       WindowManagerRequest::OpenWindow(w) => {
+        let subtype = subtype.unwrap();
         if subtype != WindowLikeType::Taskbar && subtype != WindowLikeType::StartMenu {
           return;
         }
@@ -700,6 +704,7 @@ impl WindowManager {
         self.taskbar_update_windows();
       },
       WindowManagerRequest::CloseStartMenu => {
+        let subtype = subtype.unwrap();
         if subtype != WindowLikeType::Taskbar && subtype != WindowLikeType::StartMenu {
           return;
         }
@@ -709,13 +714,13 @@ impl WindowManager {
         }
       },
       WindowManagerRequest::Unlock => {
-        if subtype != WindowLikeType::LockScreen {
+        if subtype.unwrap() != WindowLikeType::LockScreen {
           return;
         }
         self.unlock();
       },
       WindowManagerRequest::Lock => {
-        if subtype != WindowLikeType::StartMenu {
+        if subtype.unwrap() != WindowLikeType::StartMenu {
           return;
         }
         self.lock();
