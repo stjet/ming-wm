@@ -7,6 +7,7 @@ use crate::window_manager::DrawInstructions;
 pub mod toggle_button;
 pub mod highlight_button;
 pub mod paragraph;
+pub mod press_button;
 
 pub trait Component<T> {
   fn handle_message(&mut self, message: WindowMessage) -> Option<T>;
@@ -17,6 +18,7 @@ pub trait Component<T> {
   //focusing for components is purely to give a visual representation
   fn focusable(&self) -> bool;
   fn clickable(&self) -> bool;
+  //fn pressable(&self) -> bool; //touch
   fn name(&self) -> &String; //should be unique
 }
 

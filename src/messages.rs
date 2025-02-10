@@ -4,12 +4,12 @@ use std::vec::Vec;
 
 use serde::{ Deserialize, Serialize };
 
-use crate::keyboard::KeyChar;
 use crate::framebuffer::Dimensions;
-use crate::window_manager::WindowLike;
+use crate::window_manager::{ WindowLike, KeyChar };
 
 pub enum WindowManagerMessage {
   KeyChar(KeyChar),
+  Touch(usize, usize),
   //
 }
 
@@ -24,20 +24,15 @@ impl PartialEq for WindowBox {
 }
 */
 
-#[derive(PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum WindowManagerRequest {
   OpenWindow(String),
   ClipboardCopy(String),
   CloseStartMenu,
   Unlock,
   Lock,
+  DoKeyChar(KeyChar),
   //
-}
-
-impl fmt::Debug for WindowManagerRequest{
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "WindowManagerRequest lmao")
-  }
 }
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
@@ -45,6 +40,16 @@ pub enum WindowMessageResponse {
   Request(WindowManagerRequest),
   JustRedraw,
   DoNothing,
+}
+
+impl WindowMessageResponse {
+  pub fn is_key_char_request(&self) -> bool {
+    if let WindowMessageResponse::Request(WindowManagerRequest::DoKeyChar(_)) = self {
+      true
+    } else {
+      false
+    }
+  }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -99,5 +104,14 @@ pub enum WindowMessage {
   Unfocus,
   FocusClick,
   ChangeDimensions(Dimensions),
+  Touch(usize, usize), //for onscreen keyboard only
   //
 }
+
+pub enum ThreadMessage {
+  KeyChar(KeyChar),
+  Touch(usize, usize),
+  Clear,
+  Exit,
+}
+

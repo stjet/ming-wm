@@ -1,5 +1,28 @@
 use std::path::PathBuf;
 
+use termion::event::Key;
+
+use crate::window_manager::KeyChar;
+use crate::framebuffer::{ Dimensions, Point };
+
+//use Linear A for escape, backspace, enter
+//Linear A used only internally in onscreen keyboard: 𐘎 is alt, 𐘧 is switch board, 𐘾 is ctrl
+pub fn key_to_char(key: Key) -> Option<KeyChar> {
+  match key {
+    Key::Char('\n') => Some(KeyChar::Press('𐘂')),
+    Key::Char(c) => Some(KeyChar::Press(c)),
+    Key::Alt(c) => Some(KeyChar::Alt(c)),
+    Key::Ctrl(c) => Some(KeyChar::Ctrl(c)),
+    Key::Backspace => Some(KeyChar::Press('𐘁')),
+    Key::Esc => Some(KeyChar::Press('𐘃')),
+    _ => None,
+  }
+}
+
+pub fn min(one: usize, two: usize) -> usize {
+  if one > two { two } else { one } 
+}
+
 pub trait Substring {
   fn substring(&self, start: usize, end: usize) -> &str;
   fn remove(&self, index: usize, len: usize) -> String;
@@ -20,7 +43,6 @@ impl Substring for String {
         break;
       }
       byte_end += char_length;
-      
     }
     &self[byte_start..byte_end]
   }
@@ -123,5 +145,15 @@ pub fn hex_to_u8(c1: char, c2: char) -> u8 {
 
 pub fn is_hex(c: char) -> bool {
   HEX_CHARS.iter().position(|hc| hc == &c).is_some()
+}
+
+pub fn point_inside(point: Point, top_left: Point, size: Dimensions) -> bool {
+  let x = point[0];
+  let y = point[1];
+  let x2 = top_left[0];
+  let y2 = top_left[1];
+  let x3 = x2 + size[0];
+  let y3 = y2 + size[1];
+  x >= x2 && y >= y2 && x <= x3 && y <= y3
 }
 

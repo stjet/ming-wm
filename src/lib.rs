@@ -8,6 +8,5 @@ pub mod utils;
 pub mod logging;
 pub mod ipc;
 mod proxy_window_like;
-mod keyboard;
 mod essential;
 

@@ -12,6 +12,7 @@ fn main() {
     height: fb.var_screen_info.yres_virtual as usize,
     bytes_per_pixel,
     stride: fb.fix_screen_info.line_length as usize / bytes_per_pixel,
+    old_stride: None,
   };
 
   init(fb, fb_info);

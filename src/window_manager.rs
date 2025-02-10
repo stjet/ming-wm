@@ -3,19 +3,24 @@ use std::vec;
 use std::collections::{ HashMap, VecDeque };
 use std::fmt;
 use std::boxed::Box;
-use std::io::{ stdin, stdout, Write };
+use std::io::{ stdin, stdout, BufReader, BufRead, Write };
 use std::process::exit;
 use std::cell::RefCell;
+use std::sync::mpsc;
+use std::thread;
+use std::time::Duration;
+use std::env;
+use std::process::{ Command, Stdio };
 
 use linux_framebuffer::Framebuffer;
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
-use termion::cursor;
+use termion::{ clear, cursor };
 use serde::{ Deserialize, Serialize };
 
 use crate::framebuffer::{ FramebufferWriter, FramebufferInfo, Point, Dimensions, RGBColor };
 use crate::themes::{ ThemeInfo, Themes, get_theme_info };
-use crate::keyboard::{ KeyChar, key_to_char };
+use crate::utils::{ min, key_to_char, point_inside };
 use crate::messages::*;
 use crate::proxy_window_like::ProxyWindowLike;
 use crate::essential::desktop_background::DesktopBackground;
@@ -25,13 +30,40 @@ use crate::essential::workspace_indicator::WorkspaceIndicator;
 use crate::essential::start_menu::StartMenu;
 use crate::essential::about::About;
 use crate::essential::help::Help;
+use crate::essential::onscreen_keyboard::OnscreenKeyboard;
 //use crate::logging::log;
+
+//todo: a lot of the usize should be changed to u16
 
 pub const TASKBAR_HEIGHT: usize = 38;
 pub const INDICATOR_HEIGHT: usize = 20;
 const WINDOW_TOP_HEIGHT: usize = 26;
 
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub enum KeyChar {
+  Press(char),
+  Alt(char),
+  Ctrl(char),
+}
+
 pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
+  let args: Vec<_> = env::args().collect();
+
+  let rotate = args.contains(&"rotate".to_string());
+
+  let framebuffer_info = if rotate {
+    FramebufferInfo {
+      byte_len: framebuffer_info.byte_len,
+      width: framebuffer_info.height,
+      height: framebuffer_info.width,
+      bytes_per_pixel: framebuffer_info.bytes_per_pixel,
+      stride: framebuffer_info.height,
+      old_stride: Some(framebuffer_info.stride),
+    }
+  } else {
+    framebuffer_info
+  };
+
   let dimensions = [framebuffer_info.width, framebuffer_info.height];
   
   println!("bg: {}x{}", dimensions[0], dimensions[1] - TASKBAR_HEIGHT - INDICATOR_HEIGHT);
@@ -40,36 +72,101 @@ pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
 
   writer.init(framebuffer_info.clone());
 
-  let mut wm: WindowManager = WindowManager::new(writer, framebuffer, dimensions);
+  let mut wm: WindowManager = WindowManager::new(writer, framebuffer, dimensions, rotate);
+
+  let mut stdout = stdout().into_raw_mode().unwrap();
+
+  write!(stdout, "{}", clear::All).unwrap();
+
+  write!(stdout, "{}", cursor::Hide).unwrap();
+
+  stdout.flush().unwrap();
 
   wm.draw(None, false);
 
-  let stdin = stdin().lock();
-  let mut stdout = stdout().into_raw_mode().unwrap();
+  let (tx, rx) = mpsc::channel();
 
-  write!(stdout, "{}", cursor::Hide).unwrap();
-  stdout.flush().unwrap();
+  let tx1 = tx.clone();
 
+  //read key presses
+  thread::spawn(move || {
+    let stdin = stdin().lock();
+    for c in stdin.keys() {
+      if let Some(kc) = key_to_char(c.unwrap()) {
+        //do not allow exit when locked unless debugging
+        //if kc == KeyChar::Alt('E') {
+        if kc == KeyChar::Alt('E') {
+          tx.send(ThreadMessage::Exit).unwrap();
+        } else {
+          tx.send(ThreadMessage::KeyChar(kc)).unwrap();
+        }
+      }
+      thread::sleep(Duration::from_millis(1));
+    }
+  });
 
-  for c in stdin.keys() {
-    if let Some(kc) = key_to_char(c.unwrap()) {
-      //do not allow exit when locked unless debugging
-      //if kc == KeyChar::Alt('E') {
-      if kc == KeyChar::Alt('E') && !wm.locked {
-        write!(stdout, "{}", cursor::Show).unwrap();
-        stdout.suspend_raw_mode().unwrap();
-        exit(0);
-      } else {
-        wm.handle_message(WindowManagerMessage::KeyChar(kc.clone()));
+  let touch = args.contains(&"touch".to_string());
+
+  //read touchscreen presses (hopefully)
+  thread::spawn(move || {
+    //spawn evtest, parse it for touch coords
+    if touch {
+      let mut evtest = Command::new("evtest").arg("/dev/input/by-path/first-touchscreen").stdout(Stdio::piped()).spawn().unwrap();
+      let reader = BufReader::new(evtest.stdout.as_mut().unwrap());
+      let mut x: Option<usize> = None;
+      let mut y: Option<usize> = None;
+      for line in reader.lines() {
+        let line = line.unwrap();
+        if line.contains(&"ABS_X), value ") || line.contains(&"ABS_Y), value ") {
+          let value: Vec<_> = line.split("), value ").collect();
+          let value = value[value.len() - 1].parse::<usize>().unwrap();
+          if line.contains(&"ABS_X") {
+            x = Some(value);
+          } else {
+            y = Some(value);
+          }
+          if x.is_some() && y.is_some() {
+            let (x2, y2) = if rotate {
+              (y.unwrap(), dimensions[1] - x.unwrap())
+            } else {
+              (x.unwrap(), y.unwrap())
+            };
+            //top right, clear
+            //useful sometimes, I think.
+            if x2 > dimensions[0] - 100 && y2 < 100 {
+              tx1.send(ThreadMessage::Clear).unwrap();
+            }
+            tx1.send(ThreadMessage::Touch(x2, y2)).unwrap();
+            x = None;
+            y = None;
+          }
+        }
+        thread::sleep(Duration::from_millis(1));
       }
     }
+  });
+  if touch {
+    //opens osk
+    wm.handle_message(WindowManagerMessage::Touch(1, 1));
   }
-
-  //
-}
-
-pub fn min(one: usize, two: usize) -> usize {
-  if one > two { two } else { one } 
+  
+  for message in rx {
+    match message {
+      ThreadMessage::KeyChar(kc) => wm.handle_message(WindowManagerMessage::KeyChar(kc.clone())),
+      ThreadMessage::Touch(x, y) => wm.handle_message(WindowManagerMessage::Touch(x, y)),
+      ThreadMessage::Clear => {
+        write!(stdout, "{}", clear::All).unwrap();
+        stdout.flush().unwrap();
+      },
+      ThreadMessage::Exit => {
+        if !wm.locked {
+          write!(stdout, "{}", cursor::Show).unwrap();
+          stdout.suspend_raw_mode().unwrap();
+          exit(0);
+        }
+      },
+    };
+  }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -89,6 +186,7 @@ pub enum WindowLikeType {
   Taskbar,
   StartMenu,
   WorkspaceIndicator,
+  OnscreenKeyboard,
 }
 
 pub trait WindowLike {
@@ -133,8 +231,10 @@ impl fmt::Debug for WindowLikeInfo {
 
 pub struct WindowManager {
   writer: RefCell<FramebufferWriter>,
+  rotate: bool,
   id_count: usize,
   window_infos: Vec<WindowLikeInfo>,
+  osk: Option<WindowLikeInfo>,
   dimensions: Dimensions,
   theme: Themes,
   focused_id: usize,
@@ -147,11 +247,13 @@ pub struct WindowManager {
 //1 is up, 2 is down
 
 impl WindowManager {
-  pub fn new(writer: FramebufferWriter, framebuffer: Framebuffer, dimensions: Dimensions) -> Self {
+  pub fn new(writer: FramebufferWriter, framebuffer: Framebuffer, dimensions: Dimensions, rotate: bool) -> Self {
     let mut wm = WindowManager {
       writer: RefCell::new(writer),
+      rotate,
       id_count: 0,
       window_infos: Vec::new(),
+      osk: None,
       dimensions,
       theme: Themes::Standard,
       focused_id: 0,
@@ -169,10 +271,9 @@ impl WindowManager {
     let dimensions = dimensions.unwrap_or(window_like.ideal_dimensions(self.dimensions));
     self.id_count = self.id_count + 1;
     let id = self.id_count;
-    self.focused_id = id;
     window_like.handle_message(WindowMessage::Init(dimensions));
     let dimensions = if window_like.subtype() == WindowLikeType::Window { [dimensions[0], dimensions[1] + WINDOW_TOP_HEIGHT] } else { dimensions };
-    self.window_infos.push(WindowLikeInfo {
+    let window_info = WindowLikeInfo {
       id,
       window_like,
       top_left,
@@ -183,7 +284,13 @@ impl WindowManager {
         Workspace::All
       },
       fullscreen: false,
-    });
+    };
+    if subtype == WindowLikeType::OnscreenKeyboard {
+      self.osk = Some(window_info);
+    } else {
+      self.focused_id = id;
+      self.window_infos.push(window_info);
+    }
   }
 
   fn get_focused_index(&self) -> Option<usize> {
@@ -215,6 +322,7 @@ impl WindowManager {
   }
 
   //if off_only is true, also handle request
+  //written confusingly but it works I promise
   fn toggle_start_menu(&mut self, off_only: bool) -> WindowMessageResponse {
     let start_menu_exists = self.window_infos.iter().find(|w| w.window_like.subtype() == WindowLikeType::StartMenu).is_some();
     if (start_menu_exists && off_only) || !off_only {
@@ -518,22 +626,53 @@ impl WindowManager {
           },
         }
       },
-      //
+      WindowManagerMessage::Touch(x, y) => {
+        if x < 100 && y < 100 {
+          //toggle onscreen keyboard if top left keyboard clicked
+          if self.osk.is_some() {
+            self.osk = None;
+          } else {
+            let osk = Box::new(OnscreenKeyboard::new());
+            let ideal_dimensions = osk.ideal_dimensions(self.dimensions);
+            self.add_window_like(osk, [175, self.dimensions[1] - TASKBAR_HEIGHT - 250], Some(ideal_dimensions));
+          }
+          WindowMessageResponse::JustRedraw
+        } else {
+          //see if in onscreen keyboard, if so send to it after offsetting coords
+          if self.osk.is_some() {
+            let osk = self.osk.as_mut().unwrap();
+            if point_inside([x, y], osk.top_left, osk.dimensions) {
+              osk.window_like.handle_message(WindowMessage::Touch(x - osk.top_left[0], y - osk.top_left[1]))
+            } else {
+              WindowMessageResponse::DoNothing
+            }
+          } else {
+            WindowMessageResponse::DoNothing
+          }
+        }
+      }
     };
     if response != WindowMessageResponse::DoNothing {
+      let is_key_char_request = response.is_key_char_request();
       match response {
         WindowMessageResponse::Request(request) => self.handle_request(request),
         _ => {},
       };
-      self.draw(redraw_ids, use_saved_buffer);
+      if !is_key_char_request {
+        self.draw(redraw_ids, use_saved_buffer);
+      }
     }
   }
   
   pub fn handle_request(&mut self, request: WindowManagerRequest) {
-    let focused_index = self.get_focused_index().unwrap();
-    let subtype = self.window_infos[focused_index].window_like.subtype();
+    let subtype = if let Some(focused_index) = self.get_focused_index() {
+      Some(self.window_infos[focused_index].window_like.subtype())
+    } else {
+      None
+    };
     match request {
       WindowManagerRequest::OpenWindow(w) => {
+        let subtype = subtype.unwrap();
         if subtype != WindowLikeType::Taskbar && subtype != WindowLikeType::StartMenu {
           return;
         }
@@ -565,6 +704,7 @@ impl WindowManager {
         self.taskbar_update_windows();
       },
       WindowManagerRequest::CloseStartMenu => {
+        let subtype = subtype.unwrap();
         if subtype != WindowLikeType::Taskbar && subtype != WindowLikeType::StartMenu {
           return;
         }
@@ -574,19 +714,22 @@ impl WindowManager {
         }
       },
       WindowManagerRequest::Unlock => {
-        if subtype != WindowLikeType::LockScreen {
+        if subtype.unwrap() != WindowLikeType::LockScreen {
           return;
         }
         self.unlock();
       },
       WindowManagerRequest::Lock => {
-        if subtype != WindowLikeType::StartMenu {
+        if subtype.unwrap() != WindowLikeType::StartMenu {
           return;
         }
         self.lock();
       },
       WindowManagerRequest::ClipboardCopy(content) => {
         self.clipboard = Some(content);
+      },
+      WindowManagerRequest::DoKeyChar(kc) => {
+        self.handle_message(WindowManagerMessage::KeyChar(kc));
       },
     };
   }
@@ -605,12 +748,15 @@ impl WindowManager {
     }
     //get windows to redraw
     let redraw_ids = maybe_redraw_ids.unwrap_or(Vec::new());
-    let all_in_workspace = self.get_windows_in_workspace(true);
+    let mut all_in_workspace = self.get_windows_in_workspace(true);
+    if let Some(osk) = &self.osk {
+      all_in_workspace.push(osk);
+    }
     let maybe_length = all_in_workspace.len();
     let redraw_windows = all_in_workspace.iter().filter(|w| {
       //basically, maybe_redraw_ids was None
       if redraw_ids.len() > 0 {
-        redraw_ids.contains(&w.id)
+        redraw_ids.contains(&w.id) || w.window_like.subtype() == WindowLikeType::OnscreenKeyboard
       } else {
         true
       }
@@ -697,6 +843,9 @@ impl WindowManager {
       self.writer.borrow_mut().draw_buffer(window_info.top_left, window_dimensions[1], window_dimensions[0] * bytes_per_pixel, &window_writer.get_buffer());
       w_index += 1;
     }
-    self.framebuffer.write_frame(self.writer.borrow().get_buffer());
+    //could probably figure out a way to do borrow() when self.rotate is false but does it matter?
+    let mut writer_borrow = self.writer.borrow_mut();
+    let frame = if self.rotate { writer_borrow.get_transposed_buffer() } else { writer_borrow.get_buffer() };
+    self.framebuffer.write_frame(frame);
   }
 }
