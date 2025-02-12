@@ -1,8 +1,5 @@
 use std::boxed::Box;
-use std::fmt;
 use std::vec::Vec;
-
-use serde::{ Deserialize, Serialize };
 
 use crate::framebuffer::Dimensions;
 use crate::window_manager::{ WindowLike, KeyChar };
@@ -24,9 +21,10 @@ impl PartialEq for WindowBox {
 }
 */
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq)]
 pub enum WindowManagerRequest {
   OpenWindow(String),
+  //may not work in \x1E, \x1F or \x1D are in the paste string
   ClipboardCopy(String),
   CloseStartMenu,
   Unlock,
@@ -35,7 +33,7 @@ pub enum WindowManagerRequest {
   //
 }
 
-#[derive(PartialEq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Debug)]
 pub enum WindowMessageResponse {
   Request(WindowManagerRequest),
   JustRedraw,
@@ -52,12 +50,11 @@ impl WindowMessageResponse {
   }
 }
 
-#[derive(Serialize, Deserialize)]
 pub struct KeyPress {
   pub key: char,
 }
 
-#[derive(Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum Direction {
   Left,
   Down,
@@ -66,7 +63,7 @@ pub enum Direction {
 }
 
 //todo, rename to CommandType
-#[derive(PartialEq, Serialize, Deserialize)]
+#[derive(PartialEq)]
 pub enum ShortcutType {
   StartMenu,
   SwitchWorkspace(u8),
@@ -80,20 +77,19 @@ pub enum ShortcutType {
   FullscreenWindow,
   HalfWidthWindow, //half width, full height
   ClipboardCopy,
+  //may not work in \x1E, \x1F or \x1D are in the paste string
   ClipboardPaste(String),
   //
 }
 
 pub type WindowsVec = Vec<(usize, String)>;
 
-#[derive(Serialize, Deserialize)]
 pub enum InfoType {
   //let taskbar know what the current windows in the workspace are
-  WindowsInWorkspace(WindowsVec, usize), //Vec<title, name)>, focused id
+  WindowsInWorkspace(WindowsVec, usize), //Vec<(id, name)>, focused id
   //
 }
 
-#[derive(Serialize, Deserialize)]
 pub enum WindowMessage {
   Init(Dimensions),
   KeyPress(KeyPress),

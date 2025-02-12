@@ -16,7 +16,6 @@ use linux_framebuffer::Framebuffer;
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 use termion::{ clear, cursor };
-use serde::{ Deserialize, Serialize };
 
 use crate::framebuffer::{ FramebufferWriter, FramebufferInfo, Point, Dimensions, RGBColor };
 use crate::themes::{ ThemeInfo, Themes, get_theme_info };
@@ -39,7 +38,7 @@ pub const TASKBAR_HEIGHT: usize = 38;
 pub const INDICATOR_HEIGHT: usize = 20;
 const WINDOW_TOP_HEIGHT: usize = 26;
 
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum KeyChar {
   Press(char),
   Alt(char),
@@ -169,7 +168,7 @@ pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
   }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub enum DrawInstructions {
   Rect(Point, Dimensions, RGBColor),
   Text(Point, Vec<String>, String, RGBColor, RGBColor, Option<usize>, Option<u8>), //font and text
@@ -178,7 +177,7 @@ pub enum DrawInstructions {
   Circle(Point, usize, RGBColor),
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq)]
 pub enum WindowLikeType {
   LockScreen,
   Window,

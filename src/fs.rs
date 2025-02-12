@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::io::Read;
 
 fn get_font_char(dir: &str, c: char) -> Option<(char, Vec<Vec<u8>>, u8)> {
-  let c = if c == '/' { '𐘋' } else if c == '.' { '𐘅' } else { c };
+  let c = if c == '/' { '𐘋' } else if c == '\\' { '𐚆' } else if c == '.' { '𐘅' } else { c };
   if let Ok(mut file) = File::open(dir.to_string() + "/" + &c.to_string() + ".alpha") {
     let mut ch: Vec<Vec<u8>> = Vec::new();
     let mut contents = String::new();

@@ -5,34 +5,33 @@ use std::cell::RefCell;
 use std::path::Path;
 use std::io::Read;
 
-use ron;
-
 use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
 use crate::messages::{ WindowMessage, WindowMessageResponse };
 use crate::framebuffer::Dimensions;
 use crate::themes::ThemeInfo;
+use crate::serialize::{ Serializable, DrawInstructionsVec };
+
 
 pub struct ProxyWindowLike {
   process: RefCell<Child>,
 }
 
 //try to handle panics of child processes so the entire wm doesn't crash
-//we can "guarantee" that the ron::to_string(...).unwrap() calls will never panic
 impl WindowLike for ProxyWindowLike {
   fn handle_message(&mut self, message: WindowMessage) -> WindowMessageResponse {
     if let Some(stdin) = self.process.borrow_mut().stdin.as_mut() {
-      let _ = stdin.write_all(("handle_message ".to_string() + &ron::to_string(&message).unwrap() + "\n").as_bytes());
+      let _ = stdin.write_all(("handle_message ".to_string() + &message.serialize() + "\n").as_bytes());
     }
     let output = self.read_line();
-    ron::from_str(&output).unwrap_or(WindowMessageResponse::JustRedraw)
+    WindowMessageResponse::deserialize(&output).unwrap_or(WindowMessageResponse::JustRedraw)
   }
 
   fn draw(&self, theme_info: &ThemeInfo) -> Vec<DrawInstructions> {
     if let Some(stdin) = self.process.borrow_mut().stdin.as_mut() {
-      let _ = stdin.write_all(("draw ".to_string() + &ron::to_string(&theme_info).unwrap() + "\n").as_bytes());
+      let _ = stdin.write_all(("draw ".to_string() + &theme_info.serialize() + "\n").as_bytes());
     }
     let output = self.read_line();
-    ron::from_str(&output).unwrap_or(Vec::new())
+    DrawInstructionsVec::deserialize(&output).unwrap_or(Vec::new())
   }
 
   //properties
@@ -44,11 +43,12 @@ impl WindowLike for ProxyWindowLike {
   }
 
   fn resizable(&self) -> bool {
+    //serialize for bool is just true -> "true", false -> "false"
     if let Some(stdin) = self.process.borrow_mut().stdin.as_mut() {
       let _ = stdin.write_all("resizable\n".to_string().as_bytes());
     }
     let output = self.read_line();
-    ron::from_str(&output).unwrap_or(false)
+    output == "true\n"
   }
 
   fn subtype(&self) -> WindowLikeType {
@@ -56,15 +56,15 @@ impl WindowLike for ProxyWindowLike {
       let _ = stdin.write_all("subtype\n".to_string().as_bytes());
     }
     let output = self.read_line();
-    ron::from_str(&output).unwrap_or(WindowLikeType::Window)
+    WindowLikeType::deserialize(&output).unwrap_or(WindowLikeType::Window)
   }
 
   fn ideal_dimensions(&self, dimensions: Dimensions) -> Dimensions {
     if let Some(stdin) = self.process.borrow_mut().stdin.as_mut() {
-      let _ = stdin.write_all(("ideal_dimensions ".to_string() + &ron::to_string(&dimensions).unwrap() + "\n").as_bytes());
+      let _ = stdin.write_all(("ideal_dimensions ".to_string() + &dimensions.serialize() + "\n").as_bytes());
     }
     let output = self.read_line();
-    ron::from_str(&output).unwrap_or([420, 420])
+    Dimensions::deserialize(&output).unwrap_or([420, 420])
   }
 }
 

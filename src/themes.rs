@@ -1,5 +1,3 @@
-use serde::{ Deserialize, Serialize };
-
 use crate::framebuffer::RGBColor;
 
 #[derive(PartialEq, Default)]
@@ -9,7 +7,7 @@ pub enum Themes {
   //
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Default)]
 pub struct ThemeInfo {
   pub top: RGBColor,
   pub background: RGBColor,
@@ -20,7 +18,6 @@ pub struct ThemeInfo {
   pub alt_background: RGBColor,
   pub alt_text: RGBColor,
   pub alt_secondary: RGBColor,
-  //
 }
 
 const THEME_INFOS: [(Themes, ThemeInfo); 1] = [

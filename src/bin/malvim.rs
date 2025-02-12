@@ -100,7 +100,11 @@ impl WindowLike for Malvim {
           self.mode = Mode::Command;
           self.command = Some(String::new());
           changed = false;
-        } else if key_press.key == 'i' && self.mode == Mode::Normal && self.state == State::None && self.files.len() > 0 {
+        } else if (key_press.key == 'i' || key_press.key == 'A') && self.mode == Mode::Normal && self.state == State::None && self.files.len() > 0 {
+          if key_press.key == 'A' {
+            let current_file = &mut self.files[self.current_file_index];
+            current_file.cursor_pos = current_file.content[current_file.line_pos].len();
+          }
           self.mode = Mode::Insert;
           changed = false;
         } else if self.mode == Mode::Insert {

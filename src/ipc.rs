@@ -1,10 +1,11 @@
 use std::io::{ stdin, BufRead };
 use std::panic;
 
-//use serde::{ Deserialize, Serialize };
-use ron;
-
 use crate::window_manager::WindowLike;
+use crate::serialize::Serializable;
+use crate::themes::ThemeInfo;
+use crate::framebuffer::Dimensions;
+use crate::messages::WindowMessage;
 use crate::logging::log;
 
 /*
@@ -56,10 +57,11 @@ pub fn listen(mut window_like: impl WindowLike) {
     let arg = &parts.collect::<Vec<&str>>().join(" ");
     let output = match method {
       "handle_message" => {
-        format!("{}", ron::to_string(&window_like.handle_message(ron::from_str(arg).unwrap())).unwrap())
+        log(arg);
+        format!("{}", &window_like.handle_message(WindowMessage::deserialize(arg).unwrap()).serialize())
       },
       "draw" => {
-        format!("{}", ron::to_string(&window_like.draw(&ron::from_str(arg).unwrap())).unwrap())
+        format!("{}", &window_like.draw(&ThemeInfo::deserialize(arg).unwrap()).serialize())
       },
       "title" => {
         format!("{}", window_like.title())
@@ -68,10 +70,10 @@ pub fn listen(mut window_like: impl WindowLike) {
         format!("{}", window_like.resizable())
       },
       "subtype" => {
-        format!("{}", ron::to_string(&window_like.subtype()).unwrap())
+        format!("{}", &window_like.subtype().serialize())
       },
       "ideal_dimensions" => {
-        format!("{}", ron::to_string(&window_like.ideal_dimensions(ron::from_str(arg).unwrap())).unwrap())
+        format!("{}", &window_like.ideal_dimensions(Dimensions::deserialize(arg).unwrap()).serialize())
       },
       _ => String::new(),
     };

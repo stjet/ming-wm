@@ -15,3 +15,21 @@ cargo build --release
 
 Though just `cargo run --release` can be done.
 
+### Running on Mobile Linux
+
+Running with an onscreen keyboard. The framebuffer may not be redrawn to the screen without a (real) key press. The volume down button seems to work.
+
+```
+cargo build --release
+./target/release/main touch
+```
+
+Optionally, in landscape mode (todo: osk may be broken in landscape mode):
+
+```
+cargo build --release
+./target/release/main touch rotate
+```
+
+![mobile example](/docs/images/mobile.png)
+
