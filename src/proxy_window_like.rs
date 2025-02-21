@@ -3,14 +3,12 @@ use std::process::{ Command, Child, Stdio };
 use std::io::{ BufReader, BufRead, Write };
 use std::cell::RefCell;
 use std::path::Path;
-use std::io::Read;
 
 use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
 use crate::messages::{ WindowMessage, WindowMessageResponse };
 use crate::framebuffer::Dimensions;
 use crate::themes::ThemeInfo;
 use crate::serialize::{ Serializable, DrawInstructionsVec };
-
 
 pub struct ProxyWindowLike {
   process: RefCell<Child>,

@@ -104,10 +104,3 @@ pub enum WindowMessage {
   //
 }
 
-pub enum ThreadMessage {
-  KeyChar(KeyChar),
-  Touch(usize, usize),
-  Clear,
-  Exit,
-}
-

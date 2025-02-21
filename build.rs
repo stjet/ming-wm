@@ -11,6 +11,9 @@ fn font_chars_to_alphas(dir: &str) {
     let path = entry.unwrap().path();
     let file_name = path.file_name().unwrap().to_str().unwrap().to_string();
     let file_name: Vec<&str> = file_name.split(".").collect();
+    if file_name.len() < 2 {
+      continue;
+    }
     if file_name[1] == "bmp" {
       if !path.is_dir() {
         let mut ch: Vec<Vec<String>> = Vec::new();
@@ -22,8 +25,12 @@ fn font_chars_to_alphas(dir: &str) {
           let mut row = Vec::new();
           for x in 0..width {
             let pixel_color = b.get_color_of_px(x, y).unwrap();
-            //if black, true
-            row.push(pixel_color[3].to_string()); //push alpha channel
+            if pixel_color[3] == 0 {
+              //zeroes are just empty. eg 255,0,255 becomes 255,,255
+              row.push(String::new());
+            } else {
+              row.push(pixel_color[3].to_string()); //push alpha channel
+            }
           }
           ch.push(row);
         }

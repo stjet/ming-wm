@@ -61,22 +61,22 @@ impl WindowLike for AudioPlayer {
   }
 
   fn draw(&self, theme_info: &ThemeInfo) -> Vec<DrawInstructions> {
-    let mut instructions = vec![DrawInstructions::Text([2, self.dimensions[1] - LINE_HEIGHT], vec!["times-new-roman".to_string()], if self.command.len() > 0 { self.command.clone() } else { self.response.clone() }, theme_info.text, theme_info.background, None, None)];
+    let mut instructions = vec![DrawInstructions::Text([2, self.dimensions[1] - LINE_HEIGHT], vec!["nimbus-roman".to_string()], if self.command.len() > 0 { self.command.clone() } else { self.response.clone() }, theme_info.text, theme_info.background, None, None)];
     if let Some(sink) = &self.sink {
       if sink.len() > 0 {
         let current = &self.queue[self.queue.len() - sink.len()];
         let current_name = current.0.file_name().unwrap().to_string_lossy().into_owned();
-        instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - current_name.len() * MONO_WIDTH as usize / 2, 2], vec!["times-new-romono".to_string(), "shippori-mincho".to_string()], current_name.clone(), theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)));
+        instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - current_name.len() * MONO_WIDTH as usize / 2, 2], vec!["nimbus-romono".to_string(), "shippori-mincho".to_string()], current_name.clone(), theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)));
         if let Some(artist) = &current.2 {
           let artist_string = "by ".to_string() + &artist;
-          instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - artist_string.len() * MONO_WIDTH as usize / 2, LINE_HEIGHT + 2], vec!["times-new-romono".to_string()], artist_string, theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)));
+          instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - artist_string.len() * MONO_WIDTH as usize / 2, LINE_HEIGHT + 2], vec!["nimbus-romono".to_string()], artist_string, theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)));
         }
         let time_string = format!("{}/{}", format_seconds(sink.get_pos().as_secs()), format_seconds(current.1));
-        instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - time_string.len() * MONO_WIDTH as usize / 2, LINE_HEIGHT * 2 + 2], vec!["times-new-romono".to_string()], time_string, theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)));
+        instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - time_string.len() * MONO_WIDTH as usize / 2, LINE_HEIGHT * 2 + 2], vec!["nimbus-romono".to_string()], time_string, theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)));
       }
     } else {
-      instructions.push(DrawInstructions::Text([2, 2], vec!["times-new-roman".to_string()], "type to write commands, enter to execute.".to_string(), theme_info.text, theme_info.background, None, None));
-      instructions.push(DrawInstructions::Text([2, 2 + LINE_HEIGHT], vec!["times-new-roman".to_string()], "See help in start menu for commands.".to_string(), theme_info.text, theme_info.background, None, None));
+      instructions.push(DrawInstructions::Text([2, 2], vec!["nimbus-roman".to_string()], "type to write commands, enter to execute.".to_string(), theme_info.text, theme_info.background, None, None));
+      instructions.push(DrawInstructions::Text([2, 2 + LINE_HEIGHT], vec!["nimbus-roman".to_string()], "See help in start menu for commands.".to_string(), theme_info.text, theme_info.background, None, None));
     }
     //
     instructions
@@ -157,7 +157,7 @@ impl AudioPlayer {
                   if line.ends_with("/*") {
                     queue.extend(get_all_files(concat_paths(&self.base_directory, &line[..line.len() - 2]).unwrap()));
                   } else if line.len() > 0 {
-                    queue.push(concat_paths(&self.base_directory, &(line.to_owned() + ".mp3")).unwrap());
+                    queue.push(concat_paths(&self.base_directory, &(line.to_owned() + if line.ends_with(".mp3") { "" } else { ".mp3" })).unwrap());
                   }
                 }
                 queue
@@ -171,7 +171,8 @@ impl AudioPlayer {
               self.queue = Vec::new();
               for item in &queue {
                 let file = BufReader::new(File::open(item).unwrap());
-                let decoded = Decoder::new(file).unwrap();
+                //slightly faster for mp3s? since it doesn't need to check if it is .wav, etc. but maybe not
+                let decoded = if item.ends_with(".mp3") { Decoder::new_mp3(file) } else { Decoder::new(file) }.unwrap();
                 self.queue.push((item.clone(), decoded.total_duration().unwrap().as_secs(), Tag::new().read_from_path(item.clone()).unwrap().artist().map(|s| s.to_string())));
                 sink.append(decoded);
               }

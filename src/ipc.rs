@@ -57,7 +57,6 @@ pub fn listen(mut window_like: impl WindowLike) {
     let arg = &parts.collect::<Vec<&str>>().join(" ");
     let output = match method {
       "handle_message" => {
-        log(arg);
         format!("{}", &window_like.handle_message(WindowMessage::deserialize(arg).unwrap()).serialize())
       },
       "draw" => {

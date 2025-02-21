@@ -3,23 +3,16 @@ use std::vec;
 use std::collections::{ HashMap, VecDeque };
 use std::fmt;
 use std::boxed::Box;
-use std::io::{ stdin, stdout, BufReader, BufRead, Write };
-use std::process::exit;
 use std::cell::RefCell;
-use std::sync::mpsc;
-use std::thread;
-use std::time::Duration;
-use std::env;
-use std::process::{ Command, Stdio };
+use std::fs::File;
+use std::io::Read;
 
 use linux_framebuffer::Framebuffer;
-use termion::input::TermRead;
-use termion::raw::IntoRawMode;
-use termion::{ clear, cursor };
+use dirs::config_dir;
 
-use crate::framebuffer::{ FramebufferWriter, FramebufferInfo, Point, Dimensions, RGBColor };
+use crate::framebuffer::{ FramebufferWriter, Point, Dimensions, RGBColor };
 use crate::themes::{ ThemeInfo, Themes, get_theme_info };
-use crate::utils::{ min, key_to_char, point_inside };
+use crate::utils::{ min, point_inside };
 use crate::messages::*;
 use crate::proxy_window_like::ProxyWindowLike;
 use crate::essential::desktop_background::DesktopBackground;
@@ -43,129 +36,6 @@ pub enum KeyChar {
   Press(char),
   Alt(char),
   Ctrl(char),
-}
-
-pub fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
-  let args: Vec<_> = env::args().collect();
-
-  let rotate = args.contains(&"rotate".to_string());
-
-  let framebuffer_info = if rotate {
-    FramebufferInfo {
-      byte_len: framebuffer_info.byte_len,
-      width: framebuffer_info.height,
-      height: framebuffer_info.width,
-      bytes_per_pixel: framebuffer_info.bytes_per_pixel,
-      stride: framebuffer_info.height,
-      old_stride: Some(framebuffer_info.stride),
-    }
-  } else {
-    framebuffer_info
-  };
-
-  let dimensions = [framebuffer_info.width, framebuffer_info.height];
-  
-  println!("bg: {}x{}", dimensions[0], dimensions[1] - TASKBAR_HEIGHT - INDICATOR_HEIGHT);
-
-  let mut writer: FramebufferWriter = Default::default();
-
-  writer.init(framebuffer_info.clone());
-
-  let mut wm: WindowManager = WindowManager::new(writer, framebuffer, dimensions, rotate);
-
-  let mut stdout = stdout().into_raw_mode().unwrap();
-
-  write!(stdout, "{}", clear::All).unwrap();
-
-  write!(stdout, "{}", cursor::Hide).unwrap();
-
-  stdout.flush().unwrap();
-
-  wm.draw(None, false);
-
-  let (tx, rx) = mpsc::channel();
-
-  let tx1 = tx.clone();
-
-  //read key presses
-  thread::spawn(move || {
-    let stdin = stdin().lock();
-    for c in stdin.keys() {
-      if let Some(kc) = key_to_char(c.unwrap()) {
-        //do not allow exit when locked unless debugging
-        //if kc == KeyChar::Alt('E') {
-        if kc == KeyChar::Alt('E') {
-          tx.send(ThreadMessage::Exit).unwrap();
-        } else {
-          tx.send(ThreadMessage::KeyChar(kc)).unwrap();
-        }
-      }
-      thread::sleep(Duration::from_millis(1));
-    }
-  });
-
-  let touch = args.contains(&"touch".to_string());
-
-  //read touchscreen presses (hopefully)
-  thread::spawn(move || {
-    //spawn evtest, parse it for touch coords
-    if touch {
-      let mut evtest = Command::new("evtest").arg("/dev/input/by-path/first-touchscreen").stdout(Stdio::piped()).spawn().unwrap();
-      let reader = BufReader::new(evtest.stdout.as_mut().unwrap());
-      let mut x: Option<usize> = None;
-      let mut y: Option<usize> = None;
-      for line in reader.lines() {
-        let line = line.unwrap();
-        if line.contains(&"ABS_X), value ") || line.contains(&"ABS_Y), value ") {
-          let value: Vec<_> = line.split("), value ").collect();
-          let value = value[value.len() - 1].parse::<usize>().unwrap();
-          if line.contains(&"ABS_X") {
-            x = Some(value);
-          } else {
-            y = Some(value);
-          }
-          if x.is_some() && y.is_some() {
-            let (x2, y2) = if rotate {
-              (y.unwrap(), dimensions[1] - x.unwrap())
-            } else {
-              (x.unwrap(), y.unwrap())
-            };
-            //top right, clear
-            //useful sometimes, I think.
-            if x2 > dimensions[0] - 100 && y2 < 100 {
-              tx1.send(ThreadMessage::Clear).unwrap();
-            }
-            tx1.send(ThreadMessage::Touch(x2, y2)).unwrap();
-            x = None;
-            y = None;
-          }
-        }
-        thread::sleep(Duration::from_millis(1));
-      }
-    }
-  });
-  if touch {
-    //opens osk
-    wm.handle_message(WindowManagerMessage::Touch(1, 1));
-  }
-  
-  for message in rx {
-    match message {
-      ThreadMessage::KeyChar(kc) => wm.handle_message(WindowManagerMessage::KeyChar(kc.clone())),
-      ThreadMessage::Touch(x, y) => wm.handle_message(WindowManagerMessage::Touch(x, y)),
-      ThreadMessage::Clear => {
-        write!(stdout, "{}", clear::All).unwrap();
-        stdout.flush().unwrap();
-      },
-      ThreadMessage::Exit => {
-        if !wm.locked {
-          write!(stdout, "{}", cursor::Show).unwrap();
-          stdout.suspend_raw_mode().unwrap();
-          exit(0);
-        }
-      },
-    };
-  }
 }
 
 #[derive(Debug)]
@@ -231,6 +101,7 @@ impl fmt::Debug for WindowLikeInfo {
 pub struct WindowManager {
   writer: RefCell<FramebufferWriter>,
   rotate: bool,
+  grayscale: bool,
   id_count: usize,
   window_infos: Vec<WindowLikeInfo>,
   osk: Option<WindowLikeInfo>,
@@ -246,15 +117,17 @@ pub struct WindowManager {
 //1 is up, 2 is down
 
 impl WindowManager {
-  pub fn new(writer: FramebufferWriter, framebuffer: Framebuffer, dimensions: Dimensions, rotate: bool) -> Self {
+  pub fn new(writer: FramebufferWriter, framebuffer: Framebuffer, dimensions: Dimensions, rotate: bool, grayscale: bool) -> Self {
+    //println!("bg: {}x{}", dimensions[0], dimensions[1] - TASKBAR_HEIGHT - INDICATOR_HEIGHT);
     let mut wm = WindowManager {
       writer: RefCell::new(writer),
       rotate,
+      grayscale,
       id_count: 0,
       window_infos: Vec::new(),
       osk: None,
       dimensions,
-      theme: Themes::Standard,
+      theme: Default::default(),
       focused_id: 0,
       locked: false,
       current_workspace: 0,
@@ -262,6 +135,7 @@ impl WindowManager {
       clipboard: None,
     };
     wm.lock();
+    wm.change_theme();
     wm
   }
 
@@ -318,6 +192,18 @@ impl WindowManager {
     self.add_window_like(Box::new(DesktopBackground::new()), [0, INDICATOR_HEIGHT], None);
     self.add_window_like(Box::new(Taskbar::new()), [0, self.dimensions[1] - TASKBAR_HEIGHT], None);
     self.add_window_like(Box::new(WorkspaceIndicator::new()), [0, 0], None);
+  }
+
+  fn change_theme(&mut self) {
+    self.theme = Default::default();
+    if let Ok(mut file) = File::open(format!("{}/ming-wm/themes", config_dir().unwrap().into_os_string().into_string().unwrap())) {
+      let mut contents = String::new();
+      file.read_to_string(&mut contents).unwrap();
+      let lines: Vec<&str> = contents.split("\n").collect();
+      if lines.len() > self.current_workspace.into() {
+        self.theme = Themes::from_str(lines[self.current_workspace as usize]).unwrap_or(Default::default());
+      }
+    }
   }
 
   //if off_only is true, also handle request
@@ -478,6 +364,8 @@ impl WindowManager {
                       //close start menu if open
                       self.toggle_start_menu(true);
                       self.current_workspace = workspace;
+                      //change theme
+                      self.change_theme();
                       //send to desktop background
                       let desktop_background_index = self.window_infos.iter().position(|w| w.window_like.subtype() == WindowLikeType::DesktopBackground).unwrap();
                       self.window_infos[desktop_background_index].window_like.handle_message(WindowMessage::Shortcut(ShortcutType::SwitchWorkspace(self.current_workspace)));
@@ -795,7 +683,7 @@ impl WindowManager {
           DrawInstructions::Rect([0, 0], [1, window_dimensions[1]], theme_info.border_left_top),
           //top
           DrawInstructions::Rect([1, 1], [window_dimensions[0] - 2, WINDOW_TOP_HEIGHT - 3], theme_info.top),
-          DrawInstructions::Text([4, 4], vec!["times-new-roman".to_string()], window_info.window_like.title().to_string(), theme_info.top_text, theme_info.top, None, None),
+          DrawInstructions::Text([4, 4], vec!["nimbus-roman".to_string()], window_info.window_like.title().to_string(), theme_info.top_text, theme_info.top, None, None),
           //top bottom border
           DrawInstructions::Rect([1, WINDOW_TOP_HEIGHT - 2], [window_dimensions[0] - 2, 2], theme_info.border_left_top),
           //right bottom border
@@ -812,7 +700,7 @@ impl WindowManager {
       framebuffer_info.stride = window_width;
       framebuffer_info.byte_len = window_width * window_height * bytes_per_pixel;
       //make a writer just for the window
-      let mut window_writer: FramebufferWriter = Default::default();
+      let mut window_writer: FramebufferWriter = FramebufferWriter::new(self.grayscale);
       window_writer.init(framebuffer_info);
       for instruction in instructions {
         //unsafe { SERIAL1.lock().write_text(&format!("{:?}\n", instruction)); }

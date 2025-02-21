@@ -53,7 +53,7 @@ impl WindowLike for Help {
   }
 
   fn draw(&self, theme_info: &ThemeInfo) -> Vec<DrawInstructions> {
-    let mut instructions = vec![DrawInstructions::Text([2, 2], vec!["times-new-romono".to_string()], self.files[self.file_index].clone().file_name().unwrap().to_string_lossy().to_string(), theme_info.text, theme_info.background, Some(0), None)];
+    let mut instructions = vec![DrawInstructions::Text([2, 2], vec!["nimbus-romono".to_string()], self.files[self.file_index].clone().file_name().unwrap().to_string_lossy().to_string(), theme_info.text, theme_info.background, Some(0), None)];
     instructions.extend(self.paragraph.as_ref().unwrap().draw(theme_info));
     instructions
   }

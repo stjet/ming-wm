@@ -144,7 +144,7 @@ impl WindowLike for Reversi {
       for x in 0..8 {
         let tile = &self.tiles[y][x];
         if tile == &Tile::Empty {
-          instructions.push(DrawInstructions::Text([x * square_width + square_width / 2, y * square_width + square_width / 2], vec!["times-new-roman".to_string()], format!("{}{}", y, x), theme_info.text, REVERSI_GREEN, None, None));
+          instructions.push(DrawInstructions::Text([x * square_width + square_width / 2, y * square_width + square_width / 2], vec!["nimbus-roman".to_string()], format!("{}{}", y, x), theme_info.text, REVERSI_GREEN, None, None));
           if valid_moves_contains(&self.valid_moves, &[x, y]).is_some() {
             //yellow border
             instructions.extend([
@@ -161,7 +161,7 @@ impl WindowLike for Reversi {
     }
     if self.state != State::InProgress {
       instructions.push(DrawInstructions::Rect([0, 0], [self.dimensions[0], 25], theme_info.background));
-      instructions.push(DrawInstructions::Text([4, 4], vec!["times-new-roman".to_string()], if self.state == State::WhiteWin {
+      instructions.push(DrawInstructions::Text([4, 4], vec!["nimbus-roman".to_string()], if self.state == State::WhiteWin {
         "White wins, press any key to restart"
       } else if self.state == State::BlackWin {
         "Black wins, press any key to restart"

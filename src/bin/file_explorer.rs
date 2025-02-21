@@ -109,7 +109,7 @@ impl WindowLike for FileExplorer {
     let mut instructions = Vec::new();
     if self.state == State::List {
       //top bar with path name
-      instructions.push(DrawInstructions::Text([5, 0], vec!["times-new-roman".to_string(), "shippori-mincho".to_string()], "Current: ".to_string() + &self.current_path.to_string_lossy().to_string(), theme_info.text, theme_info.background, None, None));
+      instructions.push(DrawInstructions::Text([5, 0], vec!["nimbus-roman".to_string(), "shippori-mincho".to_string()], "Current: ".to_string() + &self.current_path.to_string_lossy().to_string(), theme_info.text, theme_info.background, None, None));
       //the actual files and directories
       let mut start_y = HEIGHT;
       let mut i = self.top_position;
@@ -128,7 +128,7 @@ impl WindowLike for FileExplorer {
         } else {
           name.unwrap()
         };
-        instructions.push(DrawInstructions::Text([5, start_y], vec!["times-new-roman".to_string(), "shippori-mincho".to_string()], name, if is_selected { theme_info.top_text } else { theme_info.text }, if is_selected { theme_info.top } else { theme_info.background }, None, None));
+        instructions.push(DrawInstructions::Text([5, start_y], vec!["nimbus-roman".to_string(), "shippori-mincho".to_string()], name, if is_selected { theme_info.top_text } else { theme_info.text }, if is_selected { theme_info.top } else { theme_info.background }, None, None));
         start_y += HEIGHT;
         i += 1;
       }
@@ -136,7 +136,7 @@ impl WindowLike for FileExplorer {
       let metadata = self.metadata.clone().unwrap();
       let mut start_y = HEIGHT;
       let bytes_len = metadata.len();
-      instructions.push(DrawInstructions::Text([5, start_y], vec!["times-new-roman".to_string()], format!("Size: {} mb ({} b)", bytes_len / (1024_u64).pow(2), bytes_len), theme_info.text, theme_info.background, None, None));
+      instructions.push(DrawInstructions::Text([5, start_y], vec!["nimbus-roman".to_string()], format!("Size: {} mb ({} b)", bytes_len / (1024_u64).pow(2), bytes_len), theme_info.text, theme_info.background, None, None));
       start_y += HEIGHT;
       //todo: other stuff
     }

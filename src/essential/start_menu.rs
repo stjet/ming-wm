@@ -19,11 +19,11 @@ enum StartMenuMessage {
   ChangeAcknowledge,
 }
 
+#[derive(Default)]
 pub struct StartMenu {
   dimensions: Dimensions,
   components: Vec<Box<dyn Component<StartMenuMessage> + Send>>,
   current_focus: String,
-  old_focus: String,
   y_each: usize,
 }
 
@@ -54,7 +54,6 @@ impl WindowLike for StartMenu {
               old_focus_index - 1
             }
           };
-          self.old_focus = self.current_focus.to_string();
           self.current_focus = self.components[current_focus_index].name().to_string();
           self.components[current_focus_index].handle_message(WindowMessage::Focus);
           WindowMessageResponse::JustRedraw
@@ -68,15 +67,28 @@ impl WindowLike for StartMenu {
           }
         } else {
           let current_focus_index = self.get_focus_index().unwrap();
-          if let Some(n_index) = self.components[current_focus_index..].iter().position(|c| c.name().chars().next().unwrap_or('𐘂').to_lowercase().next().unwrap() == key_press.key) {
-            //now old focus, not current focus
-            self.components[current_focus_index].handle_message(WindowMessage::Unfocus);
-            self.old_focus = self.current_focus.clone();
-            self.current_focus = self.components[current_focus_index + n_index].name().to_string();
-            self.components[current_focus_index + n_index].handle_message(WindowMessage::Focus);
-            WindowMessageResponse::JustRedraw
+          if key_press.key.is_lowercase() {
+            //look forwards to see category/window that starts with that char
+            if let Some(n_index) = self.components[current_focus_index..].iter().position(|c| c.name().chars().next().unwrap_or('𐘂').to_lowercase().next().unwrap() == key_press.key) {
+              //now old focus, not current focus
+              self.components[current_focus_index].handle_message(WindowMessage::Unfocus);
+              self.current_focus = self.components[current_focus_index + n_index].name().to_string();
+              self.components[current_focus_index + n_index].handle_message(WindowMessage::Focus);
+              WindowMessageResponse::JustRedraw
+            } else {
+              WindowMessageResponse::DoNothing
+            }
           } else {
-            WindowMessageResponse::DoNothing
+            //look backwards to see category/window that starts with that char
+            if let Some(n_index) = self.components[..current_focus_index].iter().rev().position(|c| c.name().chars().next().unwrap_or('𐘂').to_uppercase().next().unwrap() == key_press.key) {
+              //now old focus, not current focus
+              self.components[current_focus_index].handle_message(WindowMessage::Unfocus);
+              self.current_focus = self.components[current_focus_index - n_index - 1].name().to_string();
+              self.components[current_focus_index - n_index - 1].handle_message(WindowMessage::Focus);
+              WindowMessageResponse::JustRedraw
+            } else {
+              WindowMessageResponse::DoNothing
+            }
           }
         }
       },
@@ -115,13 +127,7 @@ impl WindowLike for StartMenu {
 
 impl StartMenu {
   pub fn new() -> Self {
-    Self {
-      dimensions: [0, 0],
-      components: Vec::new(),
-      current_focus: String::new(), //placeholder, will be set in init
-      old_focus: String::new(),
-      y_each: 0, //will be set in add_category_components
-    }
+    Default::default()
   }
 
   fn handle_start_menu_message(&mut self, message: Option<StartMenuMessage>) -> WindowMessageResponse {

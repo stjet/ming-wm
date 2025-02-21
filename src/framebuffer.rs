@@ -31,7 +31,13 @@ fn color_with_alpha(color: RGBColor, bg_color: RGBColor, alpha: u8) -> RGBColor 
   }
 }
 
-#[derive(Clone, Default, Debug)]
+fn color_to_grayscale(color: RGBColor) -> RGBColor {
+  //0.3, 0.6, 0.1 weighting
+  let gray = color[0] / 10 * 3 + color[1] / 10 * 6 + color[2] / 10;
+  [gray; 3]
+}
+
+#[derive(Clone, Default)]
 pub struct FramebufferInfo {
   pub byte_len: usize,
   pub width: usize,
@@ -47,9 +53,20 @@ pub struct FramebufferWriter {
   buffer: Vec<u8>,
   saved_buffer: Option<Vec<u8>>,
   rotate_buffer: Option<Vec<u8>>,
+  grayscale: bool,
 }
 
 impl FramebufferWriter {
+  pub fn new(grayscale: bool) -> Self {
+    Self {
+      info: Default::default(),
+      buffer: Vec::new(),
+      saved_buffer: None,
+      rotate_buffer: None,
+      grayscale,
+    }
+  }
+
   pub fn init(&mut self, info: FramebufferInfo) {
     self.info = info;
     self.buffer = vec![0; self.info.byte_len];
@@ -89,6 +106,7 @@ impl FramebufferWriter {
 
   fn _draw_pixel(&mut self, start_pos: usize, color: RGBColor) {
     let color = [color[2], color[1], color[0]];
+    let color = if self.grayscale { color_to_grayscale(color) } else { color };
     self.buffer[start_pos..(start_pos + 3)]
       .copy_from_slice(&color[..]);
   }
@@ -138,6 +156,7 @@ impl FramebufferWriter {
   //shapes
 
   pub fn draw_rect(&mut self, top_left: Point, dimensions: Dimensions, color: RGBColor) {
+    let color = if self.grayscale { color_to_grayscale(color) } else { color };
     let line_bytes = if self.info.bytes_per_pixel > 3 {
       [color[2], color[1], color[0], 255].repeat(dimensions[0])
     } else {
@@ -184,6 +203,7 @@ impl FramebufferWriter {
         } else {
           color = [(start_color[0] as f32 + (delta_r * s as f32)) as u8, (start_color[1] as f32 + (delta_g * s as f32)) as u8, (start_color[2] as f32 + (delta_b * s as f32)) as u8];
         };
+        let color = if self.grayscale { color_to_grayscale(color) } else { color };
         let line_bytes = if self.info.bytes_per_pixel > 3 {
           [color[2], color[1], color[0], 255].repeat(dimensions[0])
         } else {
@@ -244,17 +264,6 @@ impl FramebufferWriter {
         self._draw_pixel(start_pos, if reverse { [color[2], color[1], color[0]] } else { [color[0], color[1], color[2]] });
         start_pos += self.info.bytes_per_pixel;
       }
-    }
-  }
-}
-
-impl Default for FramebufferWriter {
-  fn default() -> Self {
-    Self {
-      info: Default::default(),
-      buffer: Vec::new(),
-      saved_buffer: None,
-      rotate_buffer: None,
     }
   }
 }

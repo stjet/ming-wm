@@ -69,7 +69,7 @@ impl WindowLike for Terminal {
           self.calc_actual_lines();
           self.actual_line_num = self.actual_lines.len().checked_sub(self.get_max_lines()).unwrap_or(0);
           WindowMessageResponse::JustRedraw
-        } else if key_press.key.len_utf8() == 1 {
+        } else {
           //update
           let running_process = self.running_process.as_mut().unwrap();
           if let Some(status) = running_process.try_wait().unwrap() {
@@ -90,10 +90,6 @@ impl WindowLike for Terminal {
             //still running
             WindowMessageResponse::DoNothing
           }
-        } else {
-          //esc key (crash happens if esc key is entered and deleted, so prevent it from being entered)
-          //but if we want to support eg Chinese we need to properly handle multi-byte chars (todo)
-          WindowMessageResponse::DoNothing
         }
       },
       WindowMessage::CtrlKeyPress(key_press) => {
@@ -133,7 +129,7 @@ impl WindowLike for Terminal {
         break;
       }
       let line = self.actual_lines[line_num].clone();
-      instructions.push(DrawInstructions::Text([PADDING, text_y], vec!["times-new-romono".to_string()], line, theme_info.alt_text, theme_info.alt_background, Some(0), Some(MONO_WIDTH)));
+      instructions.push(DrawInstructions::Text([PADDING, text_y], vec!["nimbus-romono".to_string()], line, theme_info.alt_text, theme_info.alt_background, Some(0), Some(MONO_WIDTH)));
       text_y += LINE_HEIGHT;
     }
     instructions

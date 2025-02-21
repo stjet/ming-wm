@@ -37,7 +37,7 @@ impl<T: Clone> Component<T> for PressButton<T> {
       DrawInstructions::Rect([self.top_left[0], self.top_left[1] + self.size[1]], [self.size[0], 1], theme_info.border_right_bottom),
       DrawInstructions::Rect([self.top_left[0] + self.size[0], self.top_left[1]], [1, self.size[1]], theme_info.border_right_bottom),
       //assume normal background colour
-      DrawInstructions::Text([self.top_left[0] + half, self.top_left[1] + 8], vec!["times-new-romono".to_string()], self.text.clone(), theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)),
+      DrawInstructions::Text([self.top_left[0] + half, self.top_left[1] + 8], vec!["nimbus-romono".to_string()], self.text.clone(), theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)),
     ]
   }
 

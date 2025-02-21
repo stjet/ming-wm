@@ -95,7 +95,8 @@ impl WindowLike for OnscreenKeyboard {
                 },
                 KeyResponse::SwitchBoard => {
                   self.board = self.board.inc();
-                  WindowMessageResponse::DoNothing
+                  self.set_key_components();
+                  WindowMessageResponse::JustRedraw
                 },
               };
             }

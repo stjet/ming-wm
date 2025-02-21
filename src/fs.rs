@@ -10,7 +10,8 @@ fn get_font_char(dir: &str, c: char) -> Option<(char, Vec<Vec<u8>>, u8)> {
     file.read_to_string(&mut contents).unwrap();
     let lines: Vec<&str> = contents.split("\n").collect();
     for l in 1..lines.len() {
-      ch.push(lines[l].split(",").map(|n| n.parse().unwrap()).collect());
+      //.unwrap_or(0) is important because zeroes are just empty
+      ch.push(lines[l].split(",").map(|n| n.parse().unwrap_or(0)).collect());
     }
     return Some((c, ch, lines[0].parse().unwrap()));
   }

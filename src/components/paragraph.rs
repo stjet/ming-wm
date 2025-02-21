@@ -48,7 +48,7 @@ impl<T: Copy> Component<T> for Paragraph<T> {
     let max_lines = self.size[1] / LINE_HEIGHT;
     let mut start_y = self.top_left[1];
     for line in self.actual_lines.iter().skip(self.line_pos).take(max_lines) {
-      instructions.push(DrawInstructions::Text([self.top_left[0], start_y], vec!["times-new-romono".to_string()], line.2.clone(), theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)));
+      instructions.push(DrawInstructions::Text([self.top_left[0], start_y], vec!["nimbus-romono".to_string()], line.2.clone(), theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)));
       start_y += LINE_HEIGHT;
     }
     instructions

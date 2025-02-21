@@ -48,9 +48,9 @@ impl WindowLike for WorkspaceIndicator {
     for w in 0..9 {
       if w == self.current_workspace as usize {
         instructions.push(DrawInstructions::Rect([w * WIDTH, 0], [WIDTH, self.dimensions[1]], theme_info.top));
-        instructions.push(DrawInstructions::Text([w * WIDTH + 5, 4], vec!["times-new-roman".to_string()], (w + 1).to_string(), theme_info.top_text, theme_info.top, None, None));
+        instructions.push(DrawInstructions::Text([w * WIDTH + 5, 4], vec!["nimbus-roman".to_string()], (w + 1).to_string(), theme_info.top_text, theme_info.top, None, None));
       } else {
-        instructions.push(DrawInstructions::Text([w * WIDTH + 5, 4], vec!["times-new-roman".to_string()], (w + 1).to_string(), theme_info.text, theme_info.background, None, None));
+        instructions.push(DrawInstructions::Text([w * WIDTH + 5, 4], vec!["nimbus-roman".to_string()], (w + 1).to_string(), theme_info.text, theme_info.background, None, None));
       }
     }
     //also add the utc time in the right edge
@@ -58,7 +58,7 @@ impl WindowLike for WorkspaceIndicator {
     let hours = (today_secs / ONE_HOUR).to_string();
     let minutes = ((today_secs % ONE_HOUR) / ONE_MINUTE).to_string();
     let time_string = format!("{}:{}~ UTC", if hours.len() == 1 { "0".to_string() + &hours } else { hours }, if minutes.len() == 1 { "0".to_string() + &minutes } else { minutes });
-    instructions.push(DrawInstructions::Text([self.dimensions[0] - 90, 4], vec!["times-new-roman".to_string()], time_string, theme_info.text, theme_info.background, None, None));
+    instructions.push(DrawInstructions::Text([self.dimensions[0] - 90, 4], vec!["nimbus-roman".to_string()], time_string, theme_info.text, theme_info.background, None, None));
     instructions
   }
 

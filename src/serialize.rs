@@ -449,9 +449,9 @@ fn draw_instructions_serialize_deserialize() {
   use std::vec;
   let instructions = vec![
     DrawInstructions::Rect([15, 24], [100, 320], [255, 0, 128]),
-    DrawInstructions::Text([0, 158], vec!["times-new-roman".to_string(), "shippori-mincho".to_string()], "Test test 1234 testing\nmictest / mictest is this thing\non?".to_string(), [12, 36, 108], [128, 128, 128], Some(1), None),
+    DrawInstructions::Text([0, 158], vec!["nimbus-roman".to_string(), "shippori-mincho".to_string()], "Test test 1234 testing\nmictest / mictest is this thing\non?".to_string(), [12, 36, 108], [128, 128, 128], Some(1), None),
     DrawInstructions::Gradient([0, 500], [750, 125], [255, 255, 255], [0, 0, 0], 12),
-    DrawInstructions::Text([123, 999], vec!["times-new-romono".to_string()], "print!(\"{}\", variable_name);".to_string(), [12, 36, 108], [128, 128, 128], Some(44), Some(200)),
+    DrawInstructions::Text([123, 999], vec!["nimbus-romono".to_string()], "print!(\"{}\", variable_name);".to_string(), [12, 36, 108], [128, 128, 128], Some(44), Some(200)),
     DrawInstructions::Bmp([55, 98], "mingde".to_string(), true),
     DrawInstructions::Bmp([55, 98], "wooooo".to_string(), false),
     DrawInstructions::Circle([0, 1], 19, [128, 128, 128]),
@@ -460,8 +460,8 @@ fn draw_instructions_serialize_deserialize() {
   assert!(serialized == DrawInstructionsVec::deserialize(&serialized).unwrap().serialize());
   let instructions = vec![
     DrawInstructions::Rect([0, 0], [410, 410], [0, 0, 0]),
-    DrawInstructions::Text([4, 4], vec!["times-new-romono".to_string()], "Mingde Terminal".to_string(), [255, 255, 255], [0, 0, 0], Some(0), Some(10)),
-    DrawInstructions::Text([4, 34], vec!["times-new-romono".to_string()], "$ a".to_string(), [255, 255, 255], [0, 0, 0], Some(0), Some(10)),
+    DrawInstructions::Text([4, 4], vec!["nimbus-romono".to_string()], "Mingde Terminal".to_string(), [255, 255, 255], [0, 0, 0], Some(0), Some(10)),
+    DrawInstructions::Text([4, 34], vec!["nimbus-romono".to_string()], "$ a".to_string(), [255, 255, 255], [0, 0, 0], Some(0), Some(10)),
   ];
   let serialized = instructions.serialize() + "\n";
   assert!(serialized[..serialized.len() - 1] == DrawInstructionsVec::deserialize(&serialized).unwrap().serialize());

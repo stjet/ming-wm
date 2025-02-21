@@ -33,7 +33,7 @@ impl WindowLike for Taskbar {
       WindowMessage::Init(dimensions) => {
         self.dimensions = dimensions;
         self.components = vec![
-          Box::new(ToggleButton::new("start-button".to_string(), [PADDING, PADDING], [44, self.dimensions[1] - (PADDING * 2)], "Start".to_string(), TaskbarMessage::ShowStartMenu, TaskbarMessage::HideStartMenu, false)),
+          Box::new(ToggleButton::new("start-button".to_string(), [PADDING, PADDING], [44, self.dimensions[1] - (PADDING * 2)], "Start".to_string(), TaskbarMessage::ShowStartMenu, TaskbarMessage::HideStartMenu)),
         ];
         WindowMessageResponse::JustRedraw
       },
@@ -80,7 +80,7 @@ impl WindowLike for Taskbar {
       }
       let info = &self.windows_in_workspace[wi];
       let name = &info.1;
-      let mut b = ToggleButton::new(name.to_string() + "-window", [PADDING * 2 + 44 + (META_WIDTH + PADDING) * wi, PADDING], [META_WIDTH, self.dimensions[1] - (PADDING * 2)], name.to_string(), TaskbarMessage::Nothing, TaskbarMessage::Nothing, false);
+      let mut b = ToggleButton::new(name.to_string() + "-window", [PADDING * 2 + 44 + (META_WIDTH + PADDING) * wi, PADDING], [META_WIDTH, self.dimensions[1] - (PADDING * 2)], name.to_string(), TaskbarMessage::Nothing, TaskbarMessage::Nothing);
       b.inverted = info.0 == self.focused_id;
       instructions.extend(b.draw(theme_info));
     }
