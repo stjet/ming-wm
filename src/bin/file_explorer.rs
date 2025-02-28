@@ -139,6 +139,7 @@ impl WindowLike for FileExplorer {
       instructions.push(DrawInstructions::Text([5, start_y], vec!["nimbus-roman".to_string()], format!("Size: {} mb ({} b)", bytes_len / (1024_u64).pow(2), bytes_len), theme_info.text, theme_info.background, None, None));
       start_y += HEIGHT;
       //todo: other stuff
+      //
     }
     instructions
   }

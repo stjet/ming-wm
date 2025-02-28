@@ -9,7 +9,7 @@ use crate::themes::ThemeInfo;
 use crate::components::Component;
 use crate::components::highlight_button::HighlightButton;
 
-static CATEGORIES: [&'static str; 9] = ["About", "Utils", "Games", "Editing", "Files", "System", "Misc", "Help", "Logout"];
+static CATEGORIES: [&'static str; 9] = ["About", "Utils", "Games", "Editing", "Files", "Internet", "Misc", "Help", "Logout"];
 
 #[derive(Clone)]
 enum StartMenuMessage {

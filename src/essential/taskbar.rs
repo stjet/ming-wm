@@ -48,13 +48,12 @@ impl WindowLike for Taskbar {
         }
       },
       WindowMessage::Info(info) => {
-        match info {
-          InfoType::WindowsInWorkspace(windows, focused_id) => {
-            self.windows_in_workspace = windows;
-            self.focused_id = focused_id;
-            WindowMessageResponse::JustRedraw
-          }
-          _ => WindowMessageResponse::DoNothing,
+        if let InfoType::WindowsInWorkspace(windows, focused_id) = info {
+          self.windows_in_workspace = windows;
+          self.focused_id = focused_id;
+          WindowMessageResponse::JustRedraw
+        } else {
+          WindowMessageResponse::DoNothing
         }
       },
       _ => WindowMessageResponse::DoNothing,

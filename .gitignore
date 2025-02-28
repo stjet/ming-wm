@@ -3,3 +3,4 @@ Cargo.lock
 ming-wm
 password.txt
 bmps/ignore-*.bmp
+*.alpha

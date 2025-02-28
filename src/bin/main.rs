@@ -104,7 +104,7 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
           }
           if x.is_some() && y.is_some() {
             let (x2, y2) = if rotate {
-              (y.unwrap(), dimensions[0] - x.unwrap())
+              (dimensions[0] - y.unwrap(), x.unwrap())
             } else {
               (x.unwrap(), y.unwrap())
             };

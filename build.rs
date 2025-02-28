@@ -48,7 +48,7 @@ fn font_chars_to_alphas(dir: &str) {
 
 fn main() {
   //hash + "salt" password and add to build
-  let password = read_to_string("password.txt").unwrap_or("password".to_string()).replace("\n", "") + "salt?sorrycryptographers";
+  let password = read_to_string("password.txt").unwrap_or("incorrect mule lightbulb niche".to_string()).replace("\n", "") + "salt?sorrycryptographers";
   let mut hasher = Blake2b512::new();
   hasher.update(password.as_bytes());
   let out_dir = env::var_os("OUT_DIR").unwrap();

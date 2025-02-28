@@ -56,7 +56,7 @@ impl WindowLike for LockScreen {
       DrawInstructions::Text([4, 4 + 16], vec!["nimbus-roman".to_string()], "\"Yellow,\" he thought, and stomped off back to his bedroom to get dressed.".to_string(), [255, 255, 255], [0, 0, 0], None, None),
       DrawInstructions::Text([4, 4 + 16 * 2], vec!["nimbus-roman".to_string()], "He stared at it.".to_string(), [255, 255, 255], [0, 0, 0], None, None),
       DrawInstructions::Text([4, 4 + 16 * 3], vec!["nimbus-roman".to_string()], "Password: ".to_string(), [255, 255, 255], [0, 0, 0], None, None),
-      DrawInstructions::Text([85, 4 + 16 * 3], vec!["nimbus-roman".to_string()], "*".repeat(self.input_password.len()), [255, 255, 255], [0, 0, 0], None, None),
+      DrawInstructions::Text([80, 4 + 16 * 3], vec!["nimbus-roman".to_string()], "*".repeat(self.input_password.len()), [255, 255, 255], [0, 0, 0], None, None),
     ]
   }
   

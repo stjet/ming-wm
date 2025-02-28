@@ -8,12 +8,12 @@ use std::fs::File;
 use std::io::Read;
 
 use linux_framebuffer::Framebuffer;
-use dirs::config_dir;
 
 use crate::framebuffer::{ FramebufferWriter, Point, Dimensions, RGBColor };
 use crate::themes::{ ThemeInfo, Themes, get_theme_info };
 use crate::utils::{ min, point_inside };
 use crate::messages::*;
+use crate::dirs::config_dir;
 use crate::proxy_window_like::ProxyWindowLike;
 use crate::essential::desktop_background::DesktopBackground;
 use crate::essential::taskbar::Taskbar;
@@ -251,7 +251,7 @@ impl WindowManager {
             if !self.locked {
               //keyboard shortcut
               let shortcuts = HashMap::from([
-                //alt+e is terminate program (ctrl+c)
+                //alt+E kills ming-wm when it is unlocked, but that is handled at a higher level
                 ('s', ShortcutType::StartMenu),
                 ('[', ShortcutType::FocusPrevWindow),
                 (']', ShortcutType::FocusNextWindow),
@@ -271,7 +271,12 @@ impl WindowManager {
                 ('J', ShortcutType::MoveWindowToEdge(Direction::Down)),
                 ('K', ShortcutType::MoveWindowToEdge(Direction::Up)),
                 ('L', ShortcutType::MoveWindowToEdge(Direction::Right)),
-                //
+                //expand window size
+                ('n', ShortcutType::ChangeWindowSize(Direction::Right)),
+                ('m', ShortcutType::ChangeWindowSize(Direction::Down)),
+                //shrink window size
+                ('N', ShortcutType::ChangeWindowSize(Direction::Left)),
+                ('M', ShortcutType::ChangeWindowSize(Direction::Up)),
                 //no 10th workspace
                 ('1', ShortcutType::SwitchWorkspace(0)),
                 ('2', ShortcutType::SwitchWorkspace(1)),
@@ -353,6 +358,64 @@ impl WindowManager {
                         if changed {
                           press_response = WindowMessageResponse::JustRedraw;
                           //avoid drawing everything under the moving window, much more efficient
+                          use_saved_buffer = true;
+                          redraw_ids = Some(vec![self.focused_id]);
+                        }
+                      }
+                    }
+                  },
+                  &ShortcutType::ChangeWindowSize(direction) => {
+                    if let Some(focused_index) = self.get_focused_index() {
+                      let focused_info = &self.window_infos[focused_index];
+                      if focused_info.window_like.subtype() == WindowLikeType::Window && focused_info.window_like.resizable() && !focused_info.fullscreen {
+                        //mostly arbitrary
+                        let min_window_size = [100, WINDOW_TOP_HEIGHT + 5];
+                        let mut changed = false;
+                        let delta = 15;
+                        let window = &mut self.window_infos[focused_index];
+                        if direction == Direction::Right {
+                          //expand x
+                          if window.dimensions[0] + delta != self.dimensions[0] {
+                            window.dimensions[0] += delta;
+                            let max_width = self.dimensions[0] - window.top_left[0];
+                            if window.dimensions[0] > max_width {
+                              window.dimensions[0] = max_width;
+                            }
+                            changed = true;
+                          }
+                        } else if direction == Direction::Down {
+                          //expand y
+                          let max_height = self.dimensions[1] - window.top_left[1] - INDICATOR_HEIGHT - TASKBAR_HEIGHT;
+                          if window.dimensions[1] + delta != max_height {
+                            window.dimensions[1] += delta;
+                            if window.dimensions[1] > max_height {
+                              window.dimensions[1] = max_height;
+                            }
+                            changed = true;
+                          }
+                        } else if direction == Direction::Left {
+                          //shrink x
+                          if window.dimensions[0] - delta != min_window_size[0] {
+                            window.dimensions[0] -= delta;
+                            if window.dimensions[0] < min_window_size[0] {
+                              window.dimensions[0] = min_window_size[0];
+                            }
+                            changed = true;
+                          }
+                        } else if direction == Direction::Up {
+                          //shrink y
+                          if window.dimensions[1] - delta != min_window_size[1] {
+                            window.dimensions[1] -= delta;
+                            if window.dimensions[1] < min_window_size[1] {
+                              window.dimensions[1] = min_window_size[1];
+                            }
+                            changed = true;
+                          }
+                        }
+                        if changed {
+                          let new_dimensions = [window.dimensions[0], window.dimensions[1] - WINDOW_TOP_HEIGHT];
+                          self.window_infos[focused_index].window_like.handle_message(WindowMessage::ChangeDimensions(new_dimensions));
+                          press_response = WindowMessageResponse::JustRedraw;
                           use_saved_buffer = true;
                           redraw_ids = Some(vec![self.focused_id]);
                         }
@@ -459,8 +522,14 @@ impl WindowManager {
                       let window_like = &self.window_infos[focused_index].window_like;
                       if window_like.subtype() == WindowLikeType::Window && window_like.resizable() {
                         self.window_infos[focused_index].fullscreen = false;
+                        let top_left = &mut self.window_infos[focused_index].top_left;
+                        if top_left[0] > self.dimensions[0] / 2 {
+                          top_left[0] = self.dimensions[0] / 2;
+                        } else {
+                          top_left[0] = 0;
+                        }
+                        top_left[1] = INDICATOR_HEIGHT;
                         //full height, half width
-                        self.window_infos[focused_index].top_left = [0, INDICATOR_HEIGHT];
                         let new_dimensions = [self.dimensions[0] / 2, self.dimensions[1] - INDICATOR_HEIGHT - TASKBAR_HEIGHT];
                         self.window_infos[focused_index].dimensions = new_dimensions;
                         self.window_infos[focused_index].window_like.handle_message(WindowMessage::ChangeDimensions([new_dimensions[0], new_dimensions[1] - WINDOW_TOP_HEIGHT]));

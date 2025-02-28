@@ -9,6 +9,7 @@ use ming_wm::themes::ThemeInfo;
 use ming_wm::framebuffer::Dimensions;
 use ming_wm::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
 use ming_wm::utils::{ calc_actual_lines, calc_new_cursor_pos, Substring };
+use ming_wm::dirs::home;
 use ming_wm::ipc::listen;
 
 const MONO_WIDTH: u8 = 10;
@@ -496,8 +497,10 @@ impl Malvim {
       let mut failed = false;
       let mut new_path = if self.files.len() > 0 && !arg.starts_with("/") {
         PathBuf::from(self.files[self.current_file_index].path.clone()).parent().unwrap().to_path_buf()
-      } else {
+      } else if arg.starts_with("/") {
         PathBuf::from("/")
+      } else {
+        home().unwrap_or(PathBuf::from("/"))
       };
       for part in arg.split("/") {
         if part == ".." {

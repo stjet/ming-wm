@@ -19,3 +19,26 @@ r./bmps/castle1440x842.bmp
 r./bmps/ming1440x842.bmp
 r./bmps/blur1440x842.bmp
 ```
+
+## Unrelated: Themes Config
+
+Not handled by the desktop background, but here anyways. To configure, create `$XDG_CONFIG_DIR/ming-wm/desktop-background`.
+
+Example:
+
+```
+Standard
+Standard
+Standard
+Standard
+Standard
+Forest
+Royal
+Industrial
+Night
+```
+
+This would set the first 5 workspaces to the Standard theme, with the 6th being Forest theme, 7th being Royal theme, 8th being Industrial theme, and the 9th being Night theme. Those are currently all the themes available. The Forest and Royal themes only differ from the Standard theme in their window decoration (the window top) colour.
+
+Editing `/src/themes.rs` and re-compiling is the only way to make new themes. Feel free to open a PR if an especially pleasant theme is made.
+

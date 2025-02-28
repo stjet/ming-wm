@@ -538,6 +538,12 @@ impl Serializable for WindowMessage {
           Direction::Up => "Up",
           Direction::Right => "Right",
         }),
+        ShortcutType::ChangeWindowSize(d) => format!("ChangeWindowSize/{}", match d {
+          Direction::Left => "Left",
+          Direction::Down => "Down",
+          Direction::Up => "Up",
+          Direction::Right => "Right",
+        }),
         ShortcutType::CenterWindow => "CenterWindow".to_string(),
         ShortcutType::FullscreenWindow => "FullscreenWindow".to_string(),
         ShortcutType::HalfWidthWindow => "HalfWidthWindow".to_string(),
@@ -617,7 +623,7 @@ impl Serializable for WindowMessage {
           "FocusPrevWindow" => Some(ShortcutType::FocusPrevWindow),
           "FocusNextWindow" => Some(ShortcutType::FocusNextWindow),
           "QuitWindow" => Some(ShortcutType::QuitWindow),
-          "MoveWindow" | "MoveWindowToEdge" => {
+          "MoveWindow" | "MoveWindowToEdge" | "ChangeWindowSize" => {
             let darg = parts.next();
             if let Some(darg) = darg {
               let direction = match darg {
@@ -630,8 +636,10 @@ impl Serializable for WindowMessage {
               if let Some(direction) = direction {
                 if arg == "MoveWindow" {
                   Some(ShortcutType::MoveWindow(direction))
-                } else {
+                } else if arg == "MoveWindowToEdge" {
                   Some(ShortcutType::MoveWindowToEdge(direction))
+                } else {
+                  Some(ShortcutType::ChangeWindowSize(direction))
                 }
               } else {
                 None

@@ -3,10 +3,15 @@ use std::vec;
 use std::io::BufReader;
 use std::path::PathBuf;
 use std::fs::{ read_to_string, File };
+use std::time::{ Duration, SystemTime, UNIX_EPOCH };
+use std::thread;
+use std::sync::{ Arc, Mutex };
 
 use rodio::{ Decoder, OutputStream, Sink, Source };
-use rand::prelude::*;
-use audiotags::Tag;
+use rand::{ SeedableRng, prelude::SliceRandom, rngs::SmallRng };
+use id3::TagLike;
+use mp4ameta;
+use metaflac;
 
 use ming_wm::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
 use ming_wm::messages::{ WindowMessage, WindowMessageResponse };
@@ -14,24 +19,67 @@ use ming_wm::framebuffer::Dimensions;
 use ming_wm::themes::ThemeInfo;
 use ming_wm::utils::{ concat_paths, format_seconds, Substring };
 use ming_wm::fs::get_all_files;
+use ming_wm::dirs::home;
 use ming_wm::ipc::listen;
+
+fn get_artist(path: &PathBuf) -> Option<String> {
+  let ext = path.extension().unwrap();
+  if ext == "mp4" {
+    let tag = mp4ameta::Tag::read_from_path(path).unwrap();
+    tag.artist().map(|s| s.to_string())
+  } else if ext == "flac" {
+    let tag = metaflac::Tag::read_from_path(path).unwrap();
+    if let Some(mut artists) = tag.get_vorbis("Artist") {
+      Some(artists.next().unwrap().to_string()) //get the first one
+    } else {
+      None
+    }
+  } else if ext == "mp3" {
+    let tag = id3::Tag::read_from_path(path).unwrap();
+    tag.artist().map(|s| s.to_string())
+  } else {
+    None
+  }
+}
 
 const MONO_WIDTH: u8 = 10;
 const LINE_HEIGHT: usize = 18;
 
-#[derive(Default)]
-struct AudioPlayer {
+type QueueItem = (PathBuf, u64, Option<String>);
+
+struct InternalPlayer {
+  pub queue: Vec<QueueItem>,
+  pub sink: Sink,
+}
+
+impl InternalPlayer {
+  fn add(internal: Arc<Mutex<InternalPlayer>>, queue: Vec<PathBuf>) {
+    thread::spawn(move || {
+      for item in queue {
+        let file = BufReader::new(File::open(&item).unwrap());
+        //slightly faster for mp3s? since it doesn't need to check if it is .wav, etc. but maybe not
+        let decoded = if item.ends_with(".mp3") { Decoder::new_mp3(file) } else { Decoder::new(file) }.unwrap();
+        let mut internal_locked = internal.lock().unwrap();
+        (*internal_locked).queue.push((item.clone(), decoded.total_duration().unwrap().as_secs(), get_artist(&item)));
+        (*internal_locked).sink.append(decoded);
+        (*internal_locked).sink.play();
+      }
+    });
+  }
+}
+
+pub struct AudioPlayer {
   dimensions: Dimensions,
   base_directory: String,
-  queue: Vec<(PathBuf, u64, Option<String>)>,
-  stream: Option<Box<OutputStream>>,
-  sink: Option<Sink>,
+  _stream: Box<OutputStream>,
+  internal: Arc<Mutex<InternalPlayer>>,
   command: String,
   response: String,
 }
 
 impl WindowLike for AudioPlayer {
   fn handle_message(&mut self, message: WindowMessage) -> WindowMessageResponse {
+    //
     match message {
       WindowMessage::Init(dimensions) => {
         self.dimensions = dimensions;
@@ -62,18 +110,19 @@ impl WindowLike for AudioPlayer {
 
   fn draw(&self, theme_info: &ThemeInfo) -> Vec<DrawInstructions> {
     let mut instructions = vec![DrawInstructions::Text([2, self.dimensions[1] - LINE_HEIGHT], vec!["nimbus-roman".to_string()], if self.command.len() > 0 { self.command.clone() } else { self.response.clone() }, theme_info.text, theme_info.background, None, None)];
-    if let Some(sink) = &self.sink {
-      if sink.len() > 0 {
-        let current = &self.queue[self.queue.len() - sink.len()];
-        let current_name = current.0.file_name().unwrap().to_string_lossy().into_owned();
-        instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - current_name.len() * MONO_WIDTH as usize / 2, 2], vec!["nimbus-romono".to_string(), "shippori-mincho".to_string()], current_name.clone(), theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)));
-        if let Some(artist) = &current.2 {
-          let artist_string = "by ".to_string() + &artist;
-          instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - artist_string.len() * MONO_WIDTH as usize / 2, LINE_HEIGHT + 2], vec!["nimbus-romono".to_string()], artist_string, theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)));
-        }
-        let time_string = format!("{}/{}", format_seconds(sink.get_pos().as_secs()), format_seconds(current.1));
-        instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - time_string.len() * MONO_WIDTH as usize / 2, LINE_HEIGHT * 2 + 2], vec!["nimbus-romono".to_string()], time_string, theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)));
+    let internal_locked = self.internal.lock().unwrap();
+    let sink_len = internal_locked.sink.len();
+    if sink_len > 0 {
+      let queue = &internal_locked.queue;
+      let current = &queue[queue.len() - sink_len];
+      let current_name = current.0.file_name().unwrap().to_string_lossy().into_owned();
+      instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - current_name.len() * MONO_WIDTH as usize / 2, 2], vec!["nimbus-romono".to_string(), "shippori-mincho".to_string()], current_name.clone(), theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)));
+      if let Some(artist) = &current.2 {
+        let artist_string = "by ".to_string() + &artist;
+        instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - artist_string.len() * MONO_WIDTH as usize / 2, LINE_HEIGHT + 2], vec!["nimbus-romono".to_string()], artist_string, theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)));
       }
+      let time_string = format!("{}/{}", format_seconds(internal_locked.sink.get_pos().as_secs()), format_seconds(current.1));
+      instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - time_string.len() * MONO_WIDTH as usize / 2, LINE_HEIGHT * 2 + 2], vec!["nimbus-romono".to_string()], time_string, theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)));
     } else {
       instructions.push(DrawInstructions::Text([2, 2], vec!["nimbus-roman".to_string()], "type to write commands, enter to execute.".to_string(), theme_info.text, theme_info.background, None, None));
       instructions.push(DrawInstructions::Text([2, 2 + LINE_HEIGHT], vec!["nimbus-roman".to_string()], "See help in start menu for commands.".to_string(), theme_info.text, theme_info.background, None, None));
@@ -103,9 +152,18 @@ impl WindowLike for AudioPlayer {
 
 impl AudioPlayer {
   pub fn new() -> Self {
-    let mut ap: Self = Default::default();
-    ap.base_directory = "/".to_string();
-    ap
+    let (stream, stream_handle) = OutputStream::try_default().unwrap();
+    Self {
+      dimensions: Default::default(),
+      base_directory: home().unwrap_or(PathBuf::from("/")).to_string_lossy().to_string(),
+      _stream: Box::new(stream),
+      internal: Arc::new(Mutex::new(InternalPlayer {
+        queue: Vec::new(),
+        sink: Sink::try_new(&stream_handle).unwrap(),
+      })),
+      command: Default::default(),
+      response: Default::default(),
+    }
   }
 
   //t: toggle pause/play
@@ -114,41 +172,35 @@ impl AudioPlayer {
   //k: volume up
   //b <dir>: set base directory
   //p <dir>/<playlist file>: play directory or playlist in random order
-  //todo: h for help?
+  //a <dir>/<playlist file>: same as p but appends to queue instead of clearing
   //just hit enter or any key to refresh
   fn process_command(&mut self) -> String {
     if self.command.len() == 1 {
-      if let Some(sink) = &mut self.sink {
-        if self.command == "t" {
-          if sink.is_paused() {
-            sink.play();
-            return "Resumed".to_string();
-          } else {
-            sink.pause();
-            return "Paused".to_string();
-          }
-        } else if self.command == "h" {
-          //
-        } else if self.command == "l" {
-          sink.skip_one();
-          return "Skipped".to_string();
-        } else if self.command == "j" {
-          sink.set_volume(sink.volume() - 0.1);
-          return "Volume decreased".to_string();
-        } else if self.command == "k" {
-          sink.set_volume(sink.volume() + 0.1);
-          return "Volume increased".to_string();
+      let sink = &(*self.internal.lock().unwrap()).sink;
+      if self.command == "t" {
+        if sink.is_paused() {
+          sink.play();
+          return "Resumed".to_string();
+        } else {
+          sink.pause();
+          return "Paused".to_string();
         }
+      } else if self.command == "l" {
+        sink.skip_one();
+        return "Skipped".to_string();
+      } else if self.command == "j" {
+        sink.set_volume(sink.volume() - 0.1);
+        return "Volume decreased".to_string();
+      } else if self.command == "k" {
+        sink.set_volume(sink.volume() + 0.1);
+        return "Volume increased".to_string();
       }
     } else {
       let parts: Vec<&str> = self.command.split(" ").collect();
-      if self.command.starts_with("p ") {
+      if self.command.starts_with("p ") || self.command.starts_with("a ") {
         if parts.len() == 2 {
           if let Ok(new_path) = concat_paths(&self.base_directory, parts[1]) {
             if new_path.exists() {
-              if let Some(sink) = &mut self.sink {
-                sink.clear();
-              }
               let mut queue = if parts[1].ends_with(".playlist") {
                 let mut queue = Vec::new();
                 let contents = read_to_string(new_path).unwrap();
@@ -157,34 +209,36 @@ impl AudioPlayer {
                   if line.ends_with("/*") {
                     queue.extend(get_all_files(concat_paths(&self.base_directory, &line[..line.len() - 2]).unwrap()));
                   } else if line.len() > 0 {
-                    queue.push(concat_paths(&self.base_directory, &(line.to_owned() + if line.ends_with(".mp3") { "" } else { ".mp3" })).unwrap());
+                    //if no file ext, assumes mp3
+                    queue.push(concat_paths(&self.base_directory, &(line.to_owned() + if line.contains(".") { "" } else { ".mp3" })).unwrap());
                   }
                 }
                 queue
               } else {
                 get_all_files(PathBuf::from(new_path))
               };
-              let mut rng = rand::thread_rng();
+              let mut rng = SmallRng::seed_from_u64(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs());
               queue.shuffle(&mut rng);
-              let (stream, stream_handle) = OutputStream::try_default().unwrap();
-              let sink = Sink::try_new(&stream_handle).unwrap();
-              self.queue = Vec::new();
-              for item in &queue {
-                let file = BufReader::new(File::open(item).unwrap());
-                //slightly faster for mp3s? since it doesn't need to check if it is .wav, etc. but maybe not
-                let decoded = if item.ends_with(".mp3") { Decoder::new_mp3(file) } else { Decoder::new(file) }.unwrap();
-                self.queue.push((item.clone(), decoded.total_duration().unwrap().as_secs(), Tag::new().read_from_path(item.clone()).unwrap().artist().map(|s| s.to_string())));
-                sink.append(decoded);
+              if self.command.starts_with("p ") {
+                let mut locked_internal = self.internal.lock().unwrap();
+                (*locked_internal).sink.clear();
+                (*locked_internal).queue = Vec::new();
               }
-              self.stream = Some(Box::new(stream));
-              self.sink = Some(sink);
-              return "Playing".to_string();
+              InternalPlayer::add(Arc::clone(&self.internal), queue);
+              //to hopefully allow the first file to be loaded so info displays
+              thread::sleep(Duration::from_millis(10));
+              return if self.command.starts_with("p ") {
+                "Playing".to_string()
+              } else {
+                "Appended".to_string()
+              };
             }
           }
         }
       } else if self.command.starts_with("b ") {
         if parts.len() == 2 {
-          if let Ok(new_path) = concat_paths(&self.base_directory, parts[1]) {
+          let new_path = if parts[1].starts_with("/") { Ok(PathBuf::from(parts[1])) } else { concat_paths(&self.base_directory, parts[1]) };
+          if let Ok(new_path) = new_path {
             if new_path.exists() {
               self.base_directory = new_path.to_str().unwrap().to_string();
               return "Set new base directory".to_string();

@@ -3,13 +3,12 @@ use std::vec::Vec;
 use std::fs::File;
 use std::io::Read;
 
-use dirs::config_dir;
-
 use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType, TASKBAR_HEIGHT, INDICATOR_HEIGHT };
 use crate::messages::{ WindowMessage, WindowMessageResponse, ShortcutType };
 use crate::framebuffer::Dimensions;
 use crate::themes::ThemeInfo;
 use crate::utils::{ hex_to_u8, is_hex };
+use crate::dirs::config_dir;
 
 pub struct DesktopBackground {
   dimensions: Dimensions,

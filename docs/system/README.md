@@ -2,7 +2,7 @@
 > If reading this in the "About" app inside ming-wm, use the 'j' and 'k' keys to scroll.
 > Recommended reading music: Hegira by such
 
-Ming-wm, as the name implies, is great at liberating the nation of Mongol hordes, and great at collapsing when invaded by Jurchens.
+Ming-wm, as the name implies, is great at liberating the nation of Mongol hordes, and great at collapsing when invaded by Jurchens. It is licensed under the GPLv3.
 
 Also, it is a window manager. The window manager manages "window-likes":
 

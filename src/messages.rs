@@ -73,6 +73,7 @@ pub enum ShortcutType {
   QuitWindow,
   MoveWindow(Direction),
   MoveWindowToEdge(Direction),
+  ChangeWindowSize(Direction),
   CenterWindow,
   FullscreenWindow,
   HalfWidthWindow, //half width, full height

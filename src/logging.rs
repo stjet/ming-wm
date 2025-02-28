@@ -1,7 +1,7 @@
 use std::fs::{ OpenOptions, create_dir };
 use std::io::Write;
 
-use dirs::data_dir;
+use crate::dirs::data_dir;
 
 pub fn log(message: &str) {
   let data = data_dir().unwrap().into_os_string().into_string().unwrap();
