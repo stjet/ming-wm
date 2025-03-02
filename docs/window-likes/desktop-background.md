@@ -8,16 +8,16 @@ In `$XDG_CONFIG_DIR/ming-wm/desktop-background`, you can configure what the desk
 
 If a line starts with "#", and is followed by 6 lowercase hex characters, then it will interpreted as a RGB colour.
 
-If a line starts with "r", then what follows with be interpreted as a path to a BMP image file in BGRA order, and if it starts with any other character, what follows will be interpreted as a path to a BMP image file in RGBA order.
+If a line starts with "r", then what follows with be interpreted as a path to a BMP image file in BGRA order, and if it starts with any other character, what follows will be interpreted as a path to a BMP image file in RGBA order. The path should be absolute.
 
 Example:
 
 ```
 #008080
 #003153
-r./bmps/castle1440x842.bmp
-r./bmps/ming1440x842.bmp
-r./bmps/blur1440x842.bmp
+r/home/username/Pictures/castle1440x842.bmp
+r/home/username/Pictures/ming1440x842.bmp
+r/home/username/Pictures/blur1440x842.bmp
 ```
 
 ## Unrelated: Themes Config

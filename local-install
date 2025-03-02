@@ -1,0 +1,9 @@
+#!/bin/bash
+cp -r ./target/release/bmps ~/.local/bin/bmps
+cp ./target/release/ming ~/.local/bin/ming
+cp ./target/release/mingUtils_Terminal ~/.local/bin/mingUtils_Terminal
+cp ./target/release/mingGames_Reversi ~/.local/bin/mingGames_Reversi
+cp ./target/release/mingGames_Minesweeper ~/.local/bin/mingGames_Minesweeper
+cp ./target/release/mingFiles_File_Explorer ~/.local/bin/mingFiles_File_Explorer
+cp ./target/release/mingFiles_Audio_Player ~/.local/bin/mingFiles_Audio_Player
+cp ./target/release/mingEditing_Malvim ~/.local/bin/mingEditing_Malvim

@@ -4,6 +4,7 @@ use crate::themes::ThemeInfo;
 use crate::messages::{ WindowMessageResponse, WindowManagerRequest, KeyPress, WindowMessage, Direction, ShortcutType, InfoType };
 use crate::window_manager::{ KeyChar, DrawInstructions, WindowLikeType };
 use crate::framebuffer::Dimensions;
+use crate::utils::get_rest_of_split;
 
 //serde + ron but worse! yay
 //not same as ron - simplified
@@ -31,21 +32,6 @@ fn option_to_string<T: Display>(option: &Option<T>) -> String {
   } else {
     "N".to_string()
   }
-}
-
-fn get_rest_of_split(split: &mut dyn Iterator<Item = &str>, sep: Option<&str>) -> String {
-  let mut rest = String::new();
-  let mut n = split.next();
-  loop {
-    rest += &n.unwrap();
-    n = split.next();
-    if n.is_some() {
-      rest += sep.unwrap_or("");
-    } else {
-      break;
-    }
-  }
-  rest
 }
 
 fn get_color(serialized: &str) -> Result<[u8; 3], ()> {

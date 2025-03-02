@@ -6,15 +6,17 @@ use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
 use crate::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest };
 use crate::framebuffer::Dimensions;
 use crate::themes::ThemeInfo;
+use crate::fs::{ ExeWindowInfos, get_all_executable_windows };
 use crate::components::Component;
 use crate::components::highlight_button::HighlightButton;
+use crate::dirs::exe_dir;
 
 static CATEGORIES: [&'static str; 9] = ["About", "Utils", "Games", "Editing", "Files", "Internet", "Misc", "Help", "Logout"];
 
 #[derive(Clone)]
 enum StartMenuMessage {
   CategoryClick(&'static str),
-  WindowClick(&'static str),
+  WindowClick(String),
   Back,
   ChangeAcknowledge,
 }
@@ -22,7 +24,8 @@ enum StartMenuMessage {
 #[derive(Default)]
 pub struct StartMenu {
   dimensions: Dimensions,
-  components: Vec<Box<dyn Component<StartMenuMessage> + Send>>,
+  executable_windows: ExeWindowInfos,
+  components: Vec<Box<HighlightButton<StartMenuMessage>>>,
   current_focus: String,
   y_each: usize,
 }
@@ -34,6 +37,7 @@ impl WindowLike for StartMenu {
         self.dimensions = dimensions;
         self.y_each = (self.dimensions[1] - 1) / CATEGORIES.len();
         self.add_category_components();
+        self.executable_windows = get_all_executable_windows();
         WindowMessageResponse::JustRedraw
       },
       WindowMessage::KeyPress(key_press) => {
@@ -69,7 +73,7 @@ impl WindowLike for StartMenu {
           let current_focus_index = self.get_focus_index().unwrap();
           if key_press.key.is_lowercase() {
             //look forwards to see category/window that starts with that char
-            if let Some(n_index) = self.components[current_focus_index..].iter().position(|c| c.name().chars().next().unwrap_or('𐘂').to_lowercase().next().unwrap() == key_press.key) {
+            if let Some(n_index) = self.components[current_focus_index..].iter().position(|c| c.text.chars().next().unwrap_or('𐘂').to_lowercase().next().unwrap() == key_press.key) {
               //now old focus, not current focus
               self.components[current_focus_index].handle_message(WindowMessage::Unfocus);
               self.current_focus = self.components[current_focus_index + n_index].name().to_string();
@@ -80,7 +84,7 @@ impl WindowLike for StartMenu {
             }
           } else {
             //look backwards to see category/window that starts with that char
-            if let Some(n_index) = self.components[..current_focus_index].iter().rev().position(|c| c.name().chars().next().unwrap_or('𐘂').to_uppercase().next().unwrap() == key_press.key) {
+            if let Some(n_index) = self.components[..current_focus_index].iter().rev().position(|c| c.text.chars().next().unwrap_or('𐘂').to_uppercase().next().unwrap() == key_press.key) {
               //now old focus, not current focus
               self.components[current_focus_index].handle_message(WindowMessage::Unfocus);
               self.current_focus = self.components[current_focus_index - n_index - 1].name().to_string();
@@ -105,7 +109,7 @@ impl WindowLike for StartMenu {
       //background
       DrawInstructions::Rect([0, 1], [self.dimensions[0] - 1, self.dimensions[1] - 1], theme_info.background),
       //mingde logo
-      DrawInstructions::Bmp([2, 2], "./bmps/mingde.bmp".to_string(), false),
+      DrawInstructions::Bmp([2, 2], exe_dir(Some("bmps/mingde.bmp")).to_string_lossy().to_string(), false),
       //I truly don't know why, it should be - 44 but - 30 seems to work better :shrug:
       DrawInstructions::Gradient([2, 42], [40, self.dimensions[1] - 30], [255, 201, 14], [225, 219, 77], 15),
     ];
@@ -147,22 +151,12 @@ impl StartMenu {
               ))
             ];
             //add window buttons
-            let mut to_add: Vec<&str> = Vec::new();
-            if name == "Games" {
-              to_add.extend(["Minesweeper", "Reversi"]);
-            } else if name == "Editing" {
-              to_add.push("Malvim");
-            } else if name == "Utils" {
-              to_add.push("Terminal");
-            } else if name == "Files" {
-              to_add.extend(["File Explorer", "Audio Player"]);
-            }
-            //
-            for a in 0..to_add.len() {
-              let w_name = to_add[a];
-              self.components.push(Box::new(HighlightButton::new(
-                w_name.to_string(), [42, (a + 1) * self.y_each], [self.dimensions[0] - 42 - 1, self.y_each], w_name.to_string(), StartMenuMessage::WindowClick(w_name), StartMenuMessage::ChangeAcknowledge, false
-              )));
+            if let Some(to_add) = self.executable_windows.get(&("ming".to_string() + name)) {
+              for a in 0..to_add.len() {
+               self.components.push(Box::new(HighlightButton::new(
+                  to_add[a].1.to_string(), [42, (a + 1) * self.y_each], [self.dimensions[0] - 42 - 1, self.y_each], to_add[a].0.to_string(), StartMenuMessage::WindowClick(to_add[a].1.clone()), StartMenuMessage::ChangeAcknowledge, false
+                )));
+              }
             }
             WindowMessageResponse::JustRedraw
           }

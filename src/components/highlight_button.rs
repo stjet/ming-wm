@@ -11,7 +11,7 @@ pub struct HighlightButton<T> {
   name_: String,
   top_left: Point,
   size: Dimensions,
-  text: String,
+  pub text: String,
   pub highlighted: bool,
   click_return: T,
   toggle_highlight_return: T, //also unhighlight return

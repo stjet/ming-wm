@@ -2,12 +2,12 @@ use std::vec::Vec;
 use std::process::{ Command, Child, Stdio };
 use std::io::{ BufReader, BufRead, Write };
 use std::cell::RefCell;
-use std::path::Path;
 
 use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
 use crate::messages::{ WindowMessage, WindowMessageResponse };
 use crate::framebuffer::Dimensions;
 use crate::themes::ThemeInfo;
+use crate::dirs;
 use crate::serialize::{ Serializable, DrawInstructionsVec };
 
 pub struct ProxyWindowLike {
@@ -74,18 +74,10 @@ impl Drop for ProxyWindowLike {
 }
 
 impl ProxyWindowLike {
-  pub fn new(command: &mut Command) -> Self {
+  pub fn new(name: &str) -> Self {
+    let loc = dirs::exe_dir(Some(name)).to_string_lossy().to_string();
     ProxyWindowLike {
-      process: RefCell::new(command.stdout(Stdio::piped()).stdin(Stdio::piped()).stderr(Stdio::null()).spawn().unwrap()),
-    }
-  }
-
-  pub fn new_rust(file: &str) -> Self {
-    let loc = format!("./target/release/{}", file);
-    if Path::new(&loc).exists() {
-      ProxyWindowLike::new(Command::new(loc).stdout(Stdio::piped()).stdin(Stdio::piped()).stderr(Stdio::null()))
-    } else {
-      ProxyWindowLike::new(Command::new("cargo").arg("run").arg("--quiet").arg("--release").arg("--bin").arg(file).stdout(Stdio::piped()).stdin(Stdio::piped()).stderr(Stdio::null()))
+      process: RefCell::new(Command::new(loc).stdout(Stdio::piped()).stdin(Stdio::piped()).stderr(Stdio::null()).spawn().unwrap()),
     }
   }
 

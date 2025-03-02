@@ -633,16 +633,10 @@ impl WindowManager {
           return;
         }
         let w: Option<WindowBox> = match w.as_str() {
-          "Minesweeper" => Some(Box::new(ProxyWindowLike::new_rust("minesweeper"))),
-          "Reversi" => Some(Box::new(ProxyWindowLike::new_rust("reversi"))),
-          "Malvim" => Some(Box::new(ProxyWindowLike::new_rust("malvim"))),
-          "Terminal" => Some(Box::new(ProxyWindowLike::new_rust("terminal"))),
-          "Audio Player" => Some(Box::new(ProxyWindowLike::new_rust("audio_player"))),
-          "File Explorer" => Some(Box::new(ProxyWindowLike::new_rust("file_explorer"))),
           "StartMenu" => Some(Box::new(StartMenu::new())),
           "About" => Some(Box::new(About::new())),
           "Help" => Some(Box::new(Help::new())),
-          _ => None,
+          _ => Some(Box::new(ProxyWindowLike::new(&w))),
         };
         if w.is_none() {
           return;

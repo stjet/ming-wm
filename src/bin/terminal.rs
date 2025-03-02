@@ -11,7 +11,7 @@ use std::fmt;
 use pty_process::blocking;
 
 use ming_wm::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
-use ming_wm::messages::{ WindowMessage, WindowMessageResponse };
+use ming_wm::messages::{ WindowMessage, WindowMessageResponse, ShortcutType };
 use ming_wm::framebuffer::Dimensions;
 use ming_wm::themes::ThemeInfo;
 use ming_wm::utils::{ concat_paths, Substring };
@@ -202,9 +202,9 @@ impl WindowLike for Terminal {
           ShortcutType::ClipboardPaste(copy_string) => {
             if self.mode == Mode::Input || self.mode == Mode::Stdin {
               if self.mode == Mode::Input {
-                self.current_input += copy_string;
+                self.current_input += &copy_string;
               } else {
-                self.current_stdin_input += copy_string;
+                self.current_stdin_input += &copy_string;
               }
               self.calc_actual_lines();
               WindowMessageResponse::JustRedraw
@@ -224,7 +224,7 @@ impl WindowLike for Terminal {
       DrawInstructions::Rect([0, 0], self.dimensions, theme_info.alt_background),
     ];
     //add the visible lines of text
-    let end_line = self.actual_line_num + self.get_max_lines() - 1;
+    let end_line = self.actual_line_num + self.get_max_lines();
     let mut text_y = PADDING;
     for line_num in self.actual_line_num..end_line {
       if line_num == self.actual_lines.len() {
@@ -261,7 +261,7 @@ impl Terminal {
   }
 
   fn get_max_lines(&self) -> usize {
-    (self.dimensions[1] - PADDING * 2) / LINE_HEIGHT
+    (self.dimensions[1] - PADDING * 2 - LINE_HEIGHT) / LINE_HEIGHT
   }
 
   fn process_command(&mut self) -> Mode {

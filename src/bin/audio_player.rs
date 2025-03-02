@@ -242,6 +242,8 @@ impl AudioPlayer {
             if new_path.exists() {
               self.base_directory = new_path.to_str().unwrap().to_string();
               return "Set new base directory".to_string();
+            } else {
+              return "Failed to set new base directory".to_string();
             }
           }
         }

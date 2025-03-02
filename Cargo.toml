@@ -2,7 +2,7 @@
 name = "ming-wm"
 version = "0.1.0"
 edition = "2024"
-default-run = "main"
+default-run = "ming"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -32,13 +32,32 @@ audio_player = [ "id3", "mp4ameta", "metaflac", "rand", "rodio" ]
 lto = true
 
 [[bin]]
-name = "main"
+name = "ming"
+path = "src/bin/main.rs"
 required-features = [ "main" ]
 
 [[bin]]
-name = "audio_player"
+name = "mingFiles_Audio_Player"
+path = "src/bin/audio_player.rs"
 required-features = [ "audio_player" ]
 
 [[bin]]
-name = "terminal"
+name = "mingGames_Minesweeper"
+path = "src/bin/minesweeper.rs"
+
+[[bin]]
+name = "mingUtils_Terminal"
+path = "src/bin/terminal.rs"
 required-features = [ "terminal" ]
+
+[[bin]]
+name = "mingFiles_File_Explorer"
+path = "src/bin/file_explorer.rs"
+
+[[bin]]
+name = "mingEditing_Malvim"
+path = "src/bin/malvim.rs"
+
+[[bin]]
+name = "mingGames_Reversi"
+path = "src/bin/reversi.rs"

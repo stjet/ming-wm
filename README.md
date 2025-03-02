@@ -3,22 +3,37 @@ Ming-wm is a keyboard-based, retro-themed window manager for Linux. It is single
 ![example 1](/docs/images/ws1.png)
 ![example 2](/docs/images/ws3.png)
 
-## Running
+## Building
 
-Create a `password.txt` file in the same directory as `build.rs`, otherwise the default password will be "incorrect mule lightbulb niche".
+Create a `password.env` file in the same directory as `build.rs`, otherwise the default password will be "incorrect mule lightbulb niche".
 
 For best performance:
+
 ```
 cargo build --release --all-features
-# Either,
-./target/release/main
-# or
-cargo run --release
 ```
+
+The user may need to be added to the `video` group.
 
 Exclude `--all-features` if the audio player window is not needed. To compile and use the audio player window, ALSA dev packages need to be installed (`alsa-lib-dev` on Alpine, `libasound2-dev` on Debian, `alsa-lib-devl` on Fedora, already included with `alsa-lib` on Arch).
 
-### Running on Mobile Linux
+## Installing
+
+After building, to properly install ming-wm, run the following to put the necessary binaries, font data, and bmp files into `/usr/local/bin`:
+
+```bash
+chmod +x ./install
+sudo ./install
+```
+
+Alternatively, to move the binaries to `~/.local/bin` (which probably needs to be added to `PATH`, run the following:
+
+```bash
+chmod +x local-install
+sudo ./local-install
+```
+
+## Running on Mobile Linux
 
 Running with an onscreen keyboard. The framebuffer may not be redrawn to the screen without a (real) key press. The volume down button seems to work.
 
@@ -26,21 +41,29 @@ Running with an onscreen keyboard. The framebuffer may not be redrawn to the scr
 
 ```
 cargo build --release
-./target/release/main touch
+./target/release/ming touch
 ```
 
 Optionally, in landscape mode (todo: osk may be broken in landscape mode):
 
 ```
 cargo build --release
-./target/release/main touch rotate
+./target/release/ming touch rotate
 ```
+
+After testing, the install scripts in the previous section can be used.
 
 ![mobile example](/docs/images/mobile.png)
 
 ## Philosophy
 
 See [/docs/philosophy.md](/docs/philosophy.md) for some hopefully interesting ramblings.
+
+## Security
+
+Make sure the permissions of `password.env` are so other users cannot read or write to it. If there is no plan to recompile, just delete it.
+
+Obviously, don't run the executable with `sudo` or `doas`, or as the root user!
 
 ## License
 

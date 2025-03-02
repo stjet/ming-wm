@@ -38,3 +38,12 @@ pub fn config_dir() -> Option<PathBuf> {
   }
 }
 
+pub fn exe_dir(add: Option<&str>) -> PathBuf {
+  let mut exe_dir = env::current_exe().unwrap();
+  exe_dir.pop();
+  if let Some(add) = add {
+    exe_dir.push(add);
+  }
+  exe_dir
+}
+

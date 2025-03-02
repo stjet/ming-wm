@@ -157,3 +157,19 @@ pub fn point_inside(point: Point, top_left: Point, size: Dimensions) -> bool {
   x >= x2 && y >= y2 && x <= x3 && y <= y3
 }
 
+pub fn get_rest_of_split(split: &mut dyn Iterator<Item = &str>, sep: Option<&str>) -> String {
+  let mut rest = String::new();
+  let mut n = split.next();
+  loop {
+    if n.is_none() {
+      break;
+    }
+    rest += &n.unwrap();
+    n = split.next();
+    if n.is_some() && sep.is_some() {
+      rest += sep.unwrap();
+    }
+  }
+  rest
+}
+

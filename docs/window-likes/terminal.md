@@ -15,6 +15,10 @@ Once a command is entered, hit 'enter' to execute it. The terminal will change i
 
 In STDIN mode, any keys typed followed by the 'enter' key will send those keys to the command's STDIN, if it is still running. To escape STDIN mode, use the `esc` key.
 
+### Sudo
+
+To get sudo to read from stdin, the `-S` option will need to be used (eg, `sudo -S ls`). Also, the password prompt will not show since the terminal is line-buffered. Just switch to STDIN mode, type in the password and hit enter.
+
 ## Copy / Paste
 
 This window-like supports the paste [shortcut](../system/shortcuts.md) (`Alt+P`) if in INPUT or STDIN mode.

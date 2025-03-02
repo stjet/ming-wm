@@ -2,5 +2,6 @@ target/
 Cargo.lock
 ming-wm
 password.txt
+password.env
 bmps/ignore-*.bmp
 *.alpha
