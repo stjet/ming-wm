@@ -3,10 +3,10 @@ use std::boxed::Box;
 use std::fs::{ read_to_string, read_dir };
 use std::path::PathBuf;
 
-use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
-use crate::messages::{ WindowMessage, WindowMessageResponse };
-use crate::framebuffer::Dimensions;
-use crate::themes::ThemeInfo;
+use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType };
+use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse };
+use ming_wm_lib::framebuffer_types::Dimensions;
+use ming_wm_lib::themes::ThemeInfo;
 use crate::components::paragraph::Paragraph;
 use crate::components::Component;
 

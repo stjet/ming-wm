@@ -44,7 +44,7 @@ cargo build --release
 ./target/release/ming touch
 ```
 
-Optionally, in landscape mode (todo: osk may be broken in landscape mode):
+Optionally, in landscape mode:
 
 ```
 cargo build --release
@@ -53,7 +53,7 @@ cargo build --release
 
 After testing, the install scripts in the previous section can be used.
 
-![mobile example](/docs/images/mobile.png)
+<image alt="mobile example" src="/docs/images/mobile.png" width="50%">
 
 ## Philosophy
 

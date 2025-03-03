@@ -13,14 +13,14 @@ use id3::TagLike;
 use mp4ameta;
 use metaflac;
 
-use ming_wm::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
-use ming_wm::messages::{ WindowMessage, WindowMessageResponse };
-use ming_wm::framebuffer::Dimensions;
-use ming_wm::themes::ThemeInfo;
-use ming_wm::utils::{ concat_paths, format_seconds, Substring };
+use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType };
+use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse };
+use ming_wm_lib::framebuffer_types::Dimensions;
+use ming_wm_lib::themes::ThemeInfo;
+use ming_wm_lib::utils::{ concat_paths, format_seconds, Substring };
+use ming_wm_lib::dirs::home;
+use ming_wm_lib::ipc::listen;
 use ming_wm::fs::get_all_files;
-use ming_wm::dirs::home;
-use ming_wm::ipc::listen;
 
 fn get_artist(path: &PathBuf) -> Option<String> {
   let ext = path.extension().unwrap();
@@ -29,11 +29,12 @@ fn get_artist(path: &PathBuf) -> Option<String> {
     tag.artist().map(|s| s.to_string())
   } else if ext == "flac" {
     let tag = metaflac::Tag::read_from_path(path).unwrap();
-    if let Some(mut artists) = tag.get_vorbis("Artist") {
+    let x = if let Some(mut artists) = tag.get_vorbis("Artist") {
       Some(artists.next().unwrap().to_string()) //get the first one
     } else {
       None
-    }
+    };
+    x
   } else if ext == "mp3" {
     let tag = id3::Tag::read_from_path(path).unwrap();
     tag.artist().map(|s| s.to_string())

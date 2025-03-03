@@ -1,23 +1,6 @@
 use std::path::PathBuf;
 
-use termion::event::Key;
-
-use crate::window_manager::KeyChar;
-use crate::framebuffer::{ Dimensions, Point };
-
-//use Linear A for escape, backspace, enter
-//Linear A used only internally in onscreen keyboard: 𐘎 is alt, 𐘧 is switch board, 𐘾 is ctrl
-pub fn key_to_char(key: Key) -> Option<KeyChar> {
-  match key {
-    Key::Char('\n') => Some(KeyChar::Press('𐘂')),
-    Key::Char(c) => Some(KeyChar::Press(c)),
-    Key::Alt(c) => Some(KeyChar::Alt(c)),
-    Key::Ctrl(c) => Some(KeyChar::Ctrl(c)),
-    Key::Backspace => Some(KeyChar::Press('𐘁')),
-    Key::Esc => Some(KeyChar::Press('𐘃')),
-    _ => None,
-  }
-}
+use crate::framebuffer_types::{ Dimensions, Point };
 
 pub fn min(one: usize, two: usize) -> usize {
   if one > two { two } else { one } 

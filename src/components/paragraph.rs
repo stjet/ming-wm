@@ -1,12 +1,13 @@
 use std::vec;
 use std::vec::Vec;
 
+
+use ming_wm_lib::framebuffer_types::{ Dimensions, Point };
+use ming_wm_lib::themes::ThemeInfo;
+use ming_wm_lib::messages::WindowMessage;
+use ming_wm_lib::window_manager_types::DrawInstructions;
+use ming_wm_lib::utils::calc_actual_lines;
 use crate::components::Component;
-use crate::framebuffer::{ Dimensions, Point };
-use crate::themes::ThemeInfo;
-use crate::messages::WindowMessage;
-use crate::window_manager::DrawInstructions;
-use crate::utils::calc_actual_lines;
 
 const MONO_WIDTH: u8 = 10;
 const LINE_HEIGHT: usize = 18;

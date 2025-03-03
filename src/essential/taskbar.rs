@@ -2,10 +2,10 @@ use std::vec;
 use std::vec::Vec;
 use std::boxed::Box;
 
-use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType, TASKBAR_HEIGHT };
-use crate::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest, ShortcutType, InfoType, WindowsVec };
-use crate::framebuffer::Dimensions;
-use crate::themes::ThemeInfo;
+use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType, TASKBAR_HEIGHT };
+use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest, ShortcutType, InfoType, WindowsVec };
+use ming_wm_lib::framebuffer_types::Dimensions;
+use ming_wm_lib::themes::ThemeInfo;
 use crate::components::Component;
 use crate::components::toggle_button::ToggleButton;
 

@@ -2,14 +2,14 @@ use std::vec;
 use std::vec::Vec;
 use std::boxed::Box;
 
-use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
-use crate::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest };
-use crate::framebuffer::Dimensions;
-use crate::themes::ThemeInfo;
+use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType };
+use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest };
+use ming_wm_lib::framebuffer_types::Dimensions;
+use ming_wm_lib::themes::ThemeInfo;
+use ming_wm_lib::dirs::exe_dir;
 use crate::fs::{ ExeWindowInfos, get_all_executable_windows };
 use crate::components::Component;
 use crate::components::highlight_button::HighlightButton;
-use crate::dirs::exe_dir;
 
 static CATEGORIES: [&'static str; 9] = ["About", "Utils", "Games", "Editing", "Files", "Internet", "Misc", "Help", "Logout"];
 

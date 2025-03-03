@@ -3,12 +3,12 @@ use std::process::{ Command, Child, Stdio };
 use std::io::{ BufReader, BufRead, Write };
 use std::cell::RefCell;
 
-use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
-use crate::messages::{ WindowMessage, WindowMessageResponse };
-use crate::framebuffer::Dimensions;
-use crate::themes::ThemeInfo;
-use crate::dirs;
-use crate::serialize::{ Serializable, DrawInstructionsVec };
+use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType };
+use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse };
+use ming_wm_lib::framebuffer_types::Dimensions;
+use ming_wm_lib::themes::ThemeInfo;
+use ming_wm_lib::dirs;
+use ming_wm_lib::serialize::{ Serializable, DrawInstructionsVec };
 
 pub struct ProxyWindowLike {
   process: RefCell<Child>,

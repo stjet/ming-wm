@@ -3,11 +3,11 @@ use std::vec;
 use std::fs::{ read_dir, metadata, Metadata };
 use std::path::PathBuf;
 
-use ming_wm::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
-use ming_wm::messages::{ WindowMessage, WindowMessageResponse };
-use ming_wm::framebuffer::Dimensions;
-use ming_wm::themes::ThemeInfo;
-use ming_wm::ipc::listen;
+use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType };
+use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse };
+use ming_wm_lib::framebuffer_types::Dimensions;
+use ming_wm_lib::themes::ThemeInfo;
+use ming_wm_lib::ipc::listen;
 
 const HEIGHT: usize = 20;
 

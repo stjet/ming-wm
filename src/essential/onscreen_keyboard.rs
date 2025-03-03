@@ -2,13 +2,13 @@ use std::vec;
 use std::vec::Vec;
 use std::collections::HashMap;
 
-use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType, KeyChar };
-use crate::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest };
-use crate::framebuffer::Dimensions;
-use crate::themes::ThemeInfo;
+use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType, KeyChar };
+use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest };
+use ming_wm_lib::framebuffer_types::Dimensions;
+use ming_wm_lib::themes::ThemeInfo;
+use ming_wm_lib::utils::point_inside;
 use crate::components::Component;
 use crate::components::press_button::PressButton;
-use crate::utils::point_inside;
 
 //seems like framebuffer only updates if (real) key is pressed...
 //on mobile, volume down button seems to work but is annoying

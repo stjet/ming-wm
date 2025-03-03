@@ -9,11 +9,13 @@ use std::io::Read;
 
 use linux_framebuffer::Framebuffer;
 
-use crate::framebuffer::{ FramebufferWriter, Point, Dimensions, RGBColor };
-use crate::themes::{ ThemeInfo, Themes, get_theme_info };
-use crate::utils::{ min, point_inside };
-use crate::messages::*;
-use crate::dirs::config_dir;
+use ming_wm_lib::framebuffer_types::{ Point, Dimensions };
+use ming_wm_lib::themes::{ Themes, get_theme_info };
+use ming_wm_lib::utils::{ min, point_inside };
+use ming_wm_lib::messages::*;
+use ming_wm_lib::dirs::config_dir;
+use ming_wm_lib::window_manager_types::*;
+use crate::framebuffer::FramebufferWriter;
 use crate::proxy_window_like::ProxyWindowLike;
 use crate::essential::desktop_background::DesktopBackground;
 use crate::essential::taskbar::Taskbar;
@@ -27,63 +29,15 @@ use crate::essential::onscreen_keyboard::OnscreenKeyboard;
 
 //todo: a lot of the usize should be changed to u16
 
-pub const TASKBAR_HEIGHT: usize = 38;
-pub const INDICATOR_HEIGHT: usize = 20;
 const WINDOW_TOP_HEIGHT: usize = 26;
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum KeyChar {
-  Press(char),
-  Alt(char),
-  Ctrl(char),
-}
-
-#[derive(Debug)]
-pub enum DrawInstructions {
-  Rect(Point, Dimensions, RGBColor),
-  Text(Point, Vec<String>, String, RGBColor, RGBColor, Option<usize>, Option<u8>), //font and text
-  Gradient(Point, Dimensions, RGBColor, RGBColor, usize),
-  Bmp(Point, String, bool),
-  Circle(Point, usize, RGBColor),
-}
-
-#[derive(Debug, PartialEq)]
-pub enum WindowLikeType {
-  LockScreen,
-  Window,
-  DesktopBackground,
-  Taskbar,
-  StartMenu,
-  WorkspaceIndicator,
-  OnscreenKeyboard,
-}
-
-pub trait WindowLike {
-  fn handle_message(&mut self, message: WindowMessage) -> WindowMessageResponse;
-
-  fn draw(&self, theme_info: &ThemeInfo) -> Vec<DrawInstructions>;
-
-  //properties
-  fn title(&self) -> String {
-    String::new()
-  }
-
-  fn resizable(&self) -> bool {
-    false
-  }
-
-  fn subtype(&self) -> WindowLikeType;
-
-  fn ideal_dimensions(&self, dimensions: Dimensions) -> Dimensions; //needs &self or its not object safe or some bullcrap
-}
-
 #[derive(PartialEq)]
-pub enum Workspace {
+enum Workspace {
   All,
   Workspace(u8), //goes from 0-8
 }
 
-pub struct WindowLikeInfo {
+struct WindowLikeInfo {
   id: usize,
   window_like: WindowBox,
   top_left: Point,
@@ -145,7 +99,7 @@ impl WindowManager {
     self.id_count = self.id_count + 1;
     let id = self.id_count;
     window_like.handle_message(WindowMessage::Init(dimensions));
-    let dimensions = if window_like.subtype() == WindowLikeType::Window { [dimensions[0], dimensions[1] + WINDOW_TOP_HEIGHT] } else { dimensions };
+    let dimensions = if subtype == WindowLikeType::Window { [dimensions[0], dimensions[1] + WINDOW_TOP_HEIGHT] } else { dimensions };
     let window_info = WindowLikeInfo {
       id,
       window_like,

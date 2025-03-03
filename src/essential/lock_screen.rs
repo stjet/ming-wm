@@ -1,10 +1,10 @@
 use std::vec;
 use std::vec::Vec;
 
-use crate::framebuffer::Dimensions;
-use crate::themes::ThemeInfo;
-use crate::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest };
-use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
+use ming_wm_lib::framebuffer_types::Dimensions;
+use ming_wm_lib::themes::ThemeInfo;
+use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest };
+use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType };
 use blake2::{ Blake2b512, Digest };
 
 include!(concat!(env!("OUT_DIR"), "/password.rs"));

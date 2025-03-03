@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use std::io::Read;
 use std::collections::HashMap;
 
-use crate::dirs;
-use crate::utils::get_rest_of_split;
+use ming_wm_lib::dirs;
+use ming_wm_lib::utils::get_rest_of_split;
 
 fn get_font_char(dir: &str, c: char) -> Option<(char, Vec<Vec<u8>>, u8)> {
   let c = if c == '/' { '𐘋' } else if c == '\\' { '𐚆' } else if c == '.' { '𐘅' } else { c };

@@ -1,10 +1,10 @@
 use std::io::{ stdin, BufRead };
 use std::panic;
 
-use crate::window_manager::WindowLike;
+use crate::window_manager_types::WindowLike;
 use crate::serialize::Serializable;
 use crate::themes::ThemeInfo;
-use crate::framebuffer::Dimensions;
+use crate::framebuffer_types::Dimensions;
 use crate::messages::WindowMessage;
 use crate::logging::log;
 

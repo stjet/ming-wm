@@ -2,10 +2,10 @@ use std::vec;
 use std::vec::Vec;
 use std::time::{ SystemTime, UNIX_EPOCH };
 
-use crate::window_manager::{ DrawInstructions, WindowLike, WindowLikeType, INDICATOR_HEIGHT };
-use crate::messages::{ WindowMessage, WindowMessageResponse, ShortcutType };
-use crate::framebuffer::Dimensions;
-use crate::themes::ThemeInfo;
+use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType, INDICATOR_HEIGHT };
+use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, ShortcutType };
+use ming_wm_lib::framebuffer_types::Dimensions;
+use ming_wm_lib::themes::ThemeInfo;
 
 const WIDTH: usize = 15;
 const ONE_MINUTE: u64 = 60;

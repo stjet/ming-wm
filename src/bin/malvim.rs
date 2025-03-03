@@ -4,13 +4,13 @@ use std::fmt;
 use std::path::PathBuf;
 use std::fs::{ read_to_string, write };
 
-use ming_wm::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest, ShortcutType };
-use ming_wm::themes::ThemeInfo;
-use ming_wm::framebuffer::Dimensions;
-use ming_wm::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
-use ming_wm::utils::{ calc_actual_lines, calc_new_cursor_pos, Substring };
-use ming_wm::dirs::home;
-use ming_wm::ipc::listen;
+use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest, ShortcutType };
+use ming_wm_lib::themes::ThemeInfo;
+use ming_wm_lib::framebuffer_types::Dimensions;
+use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType };
+use ming_wm_lib::utils::{ calc_actual_lines, calc_new_cursor_pos, Substring };
+use ming_wm_lib::dirs::home;
+use ming_wm_lib::ipc::listen;
 
 const MONO_WIDTH: u8 = 10;
 const LINE_HEIGHT: usize = 18;

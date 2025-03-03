@@ -3,12 +3,12 @@ use std::vec;
 use std::collections::VecDeque;
 use core::convert::TryFrom;
 
-use ming_wm::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
-use ming_wm::messages::{ WindowMessage, WindowMessageResponse };
-use ming_wm::framebuffer::Dimensions;
-use ming_wm::themes::ThemeInfo;
-use ming_wm::utils::{ u8_to_hex, hex_to_u8, HEX_CHARS };
-use ming_wm::ipc::listen;
+use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType };
+use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse };
+use ming_wm_lib::framebuffer_types::Dimensions;
+use ming_wm_lib::themes::ThemeInfo;
+use ming_wm_lib::utils::{ u8_to_hex, hex_to_u8, HEX_CHARS };
+use ming_wm_lib::ipc::listen;
 
 //16x16 with 40 mines
 

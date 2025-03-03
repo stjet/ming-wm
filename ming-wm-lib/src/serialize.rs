@@ -2,8 +2,8 @@ use std::fmt::Display;
 
 use crate::themes::ThemeInfo;
 use crate::messages::{ WindowMessageResponse, WindowManagerRequest, KeyPress, WindowMessage, Direction, ShortcutType, InfoType };
-use crate::window_manager::{ KeyChar, DrawInstructions, WindowLikeType };
-use crate::framebuffer::Dimensions;
+use crate::window_manager_types::{ KeyChar, DrawInstructions, WindowLikeType };
+use crate::framebuffer_types::Dimensions;
 use crate::utils::get_rest_of_split;
 
 //serde + ron but worse! yay
@@ -13,6 +13,8 @@ use crate::utils::get_rest_of_split;
 //todo: bug with extra byte when copy/pasting because of this... maybe it's the newline or something?
 
 //I can't do `impl fmt::Display for RGBColor` which is annoying
+
+//to type \x1F, do ctrl+7, for \x1E, do ctrl+6
 
 fn array_to_string<T: Display>(array: &[T]) -> String {
   let mut output = String::new();
@@ -133,7 +135,7 @@ impl Serializable for ThemeInfo {
 
 #[test]
 fn theme_info_serialize_deserialize() {
-  use crate::themes::{ Themes, get_theme_info };
+  use crate::themes::get_theme_info;
   let theme_info = get_theme_info(&Default::default()).unwrap();
   let serialized = theme_info.serialize();
   assert!(serialized == ThemeInfo::deserialize(&serialized).unwrap().serialize());
@@ -412,12 +414,18 @@ pub type DrawInstructionsVec = Vec<DrawInstructions>;
 
 impl Serializable for DrawInstructionsVec {
   fn serialize(&self) -> String {
+    if self.len() == 0 {
+      return "empty".to_string();
+    }
     let collected: Vec<_> = self.into_iter().map(|ins| ins.serialize()).collect();
     collected.join("\x1D")
   }
   fn deserialize(serialized: &str) -> Result<Self, ()> {
     //strip newline at the end
     let serialized = if serialized.ends_with("\n") { &serialized[..serialized.len() - 1] } else { serialized };
+    if serialized == "empty" {
+      return Ok(Vec::new());
+    }
     let mut instructions = Vec::new();
     for ser_ins in serialized.split("\x1D") {
       if let Ok(ser_ins) = DrawInstructions::deserialize(ser_ins) {
@@ -451,6 +459,9 @@ fn draw_instructions_serialize_deserialize() {
   ];
   let serialized = instructions.serialize() + "\n";
   assert!(serialized[..serialized.len() - 1] == DrawInstructionsVec::deserialize(&serialized).unwrap().serialize());
+  let instructions = Vec::new();
+  let serialized = instructions.serialize() + "\n";
+  assert!(DrawInstructionsVec::deserialize(&serialized).unwrap().len() == 0);
 }
 
 impl Serializable for WindowLikeType {

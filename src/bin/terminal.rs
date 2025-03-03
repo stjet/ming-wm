@@ -10,13 +10,13 @@ use std::fmt;
 
 use pty_process::blocking;
 
-use ming_wm::window_manager::{ DrawInstructions, WindowLike, WindowLikeType };
-use ming_wm::messages::{ WindowMessage, WindowMessageResponse, ShortcutType };
-use ming_wm::framebuffer::Dimensions;
-use ming_wm::themes::ThemeInfo;
-use ming_wm::utils::{ concat_paths, Substring };
-use ming_wm::dirs::home;
-use ming_wm::ipc::listen;
+use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType };
+use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, ShortcutType };
+use ming_wm_lib::framebuffer_types::Dimensions;
+use ming_wm_lib::themes::ThemeInfo;
+use ming_wm_lib::utils::{ concat_paths, Substring };
+use ming_wm_lib::dirs::home;
+use ming_wm_lib::ipc::listen;
 
 //todo: support copy and paste
 

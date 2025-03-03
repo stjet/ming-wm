@@ -1,8 +1,8 @@
 use std::boxed::Box;
 use std::vec::Vec;
 
-use crate::framebuffer::Dimensions;
-use crate::window_manager::{ WindowLike, KeyChar };
+use crate::framebuffer_types::Dimensions;
+use crate::window_manager_types::{ WindowLike, KeyChar };
 
 pub enum WindowManagerMessage {
   KeyChar(KeyChar),

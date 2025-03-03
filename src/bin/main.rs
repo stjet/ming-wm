@@ -10,11 +10,26 @@ use linux_framebuffer::Framebuffer;
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 use termion::{ clear, cursor };
+use termion::event::Key;
 
+use ming_wm_lib::window_manager_types::KeyChar;
+use ming_wm_lib::messages::*;
 use ming_wm::framebuffer::{ FramebufferWriter, FramebufferInfo };
-use ming_wm::window_manager::{ WindowManager, KeyChar };
-use ming_wm::utils::key_to_char;
-use ming_wm::messages::*;
+use ming_wm::window_manager::WindowManager;
+
+//use Linear A for escape, backspace, enter
+//Linear A used only internally in onscreen keyboard: 𐘎 is alt, 𐘧 is switch board, 𐘾 is ctrl
+fn key_to_char(key: Key) -> Option<KeyChar> {
+  match key {
+    Key::Char('\n') => Some(KeyChar::Press('𐘂')),
+    Key::Char(c) => Some(KeyChar::Press(c)),
+    Key::Alt(c) => Some(KeyChar::Alt(c)),
+    Key::Ctrl(c) => Some(KeyChar::Ctrl(c)),
+    Key::Backspace => Some(KeyChar::Press('𐘁')),
+    Key::Esc => Some(KeyChar::Press('𐘃')),
+    _ => None,
+  }
+}
 
 pub enum ThreadMessage {
   KeyChar(KeyChar),

@@ -3,11 +3,8 @@ use std::vec::Vec;
 
 use bmp_rust::bmp::BMP;
 
+use ming_wm_lib::framebuffer_types::*;
 use crate::fs::get_font_char_from_fonts;
-
-pub type Point = [usize; 2]; //x, y
-pub type Dimensions = [usize; 2]; //width, height
-pub type RGBColor = [u8; 3]; //rgb
 
 type FontChar = (char, Vec<Vec<u8>>, u8);
 

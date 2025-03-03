@@ -1,4 +1,4 @@
-use crate::framebuffer::RGBColor;
+use crate::framebuffer_types::RGBColor;
 
 #[derive(PartialEq, Default)]
 pub enum Themes {
