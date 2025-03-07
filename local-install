@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 cp -r ./target/release/bmps ~/.local/bin/bmps
 cp ./target/release/ming ~/.local/bin/ming
 cp ./target/release/mingUtils_Terminal ~/.local/bin/mingUtils_Terminal

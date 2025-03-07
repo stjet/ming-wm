@@ -104,17 +104,19 @@ impl WindowLike for Malvim {
         } else if (key_press.key == 'i' || key_press.key == 'A') && self.mode == Mode::Normal && self.state == State::None && self.files.len() > 0 {
           if key_press.key == 'A' {
             let current_file = &mut self.files[self.current_file_index];
-            current_file.cursor_pos = current_file.content[current_file.line_pos].len();
+            current_file.cursor_pos = current_file.content[current_file.line_pos].chars().count();
           }
           self.mode = Mode::Insert;
           changed = false;
         } else if self.mode == Mode::Insert {
           let current_file = &mut self.files[self.current_file_index];
-          let current_length = current_file.content[current_file.line_pos].len();
+          let current_length = current_file.content[current_file.line_pos].chars().count();
           let line = &current_file.content[current_file.line_pos];
           if key_press.key == '𐘂' { //the enter key
-            let mut line = line.clone();
+            let mut line: Vec<char> = line.chars().collect();
             let (left, right) = line.split_at_mut(current_file.cursor_pos);
+            let left = left.into_iter().map(|c| c.to_string()).collect::<Vec<String>>().join("");
+            let right = right.into_iter().map(|c| c.to_string()).collect::<Vec<String>>().join("");
             current_file.content[current_file.line_pos] = left.to_string();
             let spaces = if self.autoindent {
               //find out how many spaces the line starts with, copy that to the new line
@@ -130,7 +132,7 @@ impl WindowLike for Malvim {
             } else {
               0
             };
-            current_file.content.insert(current_file.line_pos + 1, " ".repeat(spaces) + right);
+            current_file.content.insert(current_file.line_pos + 1, " ".repeat(spaces) + &right);
             current_file.line_pos += 1;
             current_file.cursor_pos = spaces;
           } else if key_press.key == '𐘁' { //backspace
@@ -140,7 +142,7 @@ impl WindowLike for Malvim {
             } else {
               if current_file.line_pos > 0 {
                 //merge the prev line and this line
-                let old_previous_line_length = current_file.content[current_file.line_pos - 1].len();
+                let old_previous_line_length = current_file.content[current_file.line_pos - 1].chars().count();
                 let removed = current_file.content.remove(current_file.line_pos);
                 current_file.content[current_file.line_pos - 1] += &removed; 
                 current_file.line_pos -= 1;
@@ -148,18 +150,18 @@ impl WindowLike for Malvim {
               }
             }
           } else {
-            current_file.content[current_file.line_pos] = line.substring(0, current_file.cursor_pos).to_string() + &key_press.key.to_string() + line.substring(current_file.cursor_pos, line.len());
+            current_file.content[current_file.line_pos] = line.substring(0, current_file.cursor_pos).to_string() + &key_press.key.to_string() + line.substring(current_file.cursor_pos, line.chars().count());
             current_file.cursor_pos += 1;
           }
         } else if self.mode == Mode::Normal && self.files.len() > 0 {
           let current_file = &mut self.files[self.current_file_index];
-          let current_length = current_file.content[current_file.line_pos].len();
+          let current_length = current_file.content[current_file.line_pos].chars().count();
           let mut numbered = false;
           //
           if self.state == State::Replace {
             if current_length > 0 && current_file.cursor_pos < current_length {
               let line = &current_file.content[current_file.line_pos];
-              current_file.content[current_file.line_pos] = line.substring(0, current_file.cursor_pos).to_string() + &key_press.key.to_string() + line.substring(current_file.cursor_pos + 1, line.len());
+              current_file.content[current_file.line_pos] = line.substring(0, current_file.cursor_pos).to_string() + &key_press.key.to_string() + line.substring(current_file.cursor_pos + 1, line.chars().count());
             }
             self.state = State::None;
           } else if self.state == State::MaybeDelete {
@@ -170,7 +172,7 @@ impl WindowLike for Malvim {
               } else if current_file.line_pos == current_file.content.len() {
                 current_file.line_pos = current_file.content.len() - 1;
               }
-              let new_length = current_file.content[current_file.line_pos].len();
+              let new_length = current_file.content[current_file.line_pos].chars().count();
               current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
             } else if key_press.key == 'w' {
               //todo: currently doesn't work on a single space?
@@ -179,7 +181,7 @@ impl WindowLike for Malvim {
                 //offset until space or eol
                 let offset = line.chars().skip(current_file.cursor_pos).position(|c| c == ' ').unwrap_or(line.chars().count() - current_file.cursor_pos);
                 current_file.content[current_file.line_pos] = line.remove(current_file.cursor_pos, offset);
-                let new_length = current_file.content[current_file.line_pos].len();
+                let new_length = current_file.content[current_file.line_pos].chars().count();
                 current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
               }
             }
@@ -190,7 +192,7 @@ impl WindowLike for Malvim {
               if current_file.line_pos >= current_file.content.len() {
                 current_file.line_pos = current_file.content.len() - 1;
               }
-              let new_length = current_file.content[current_file.line_pos].len();
+              let new_length = current_file.content[current_file.line_pos].chars().count();
               current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
             }
             changed = false;
@@ -198,15 +200,25 @@ impl WindowLike for Malvim {
           } else if self.state == State::Find || self.state == State::BackFind {
             let old_pos = current_file.cursor_pos;
             let find_pos = if self.state == State::Find {
-              if old_pos < current_file.content[current_file.line_pos].len() {
-                old_pos + current_file.content[current_file.line_pos].chars().skip(old_pos + 1).position(|c| c == key_press.key).unwrap_or(0) + 1
+              if old_pos < current_file.content[current_file.line_pos].chars().count() {
+                let found_index = current_file.content[current_file.line_pos].chars().skip(old_pos + 1).position(|c| c == key_press.key);
+                if let Some(found_index) = found_index {
+                  old_pos + found_index + 1
+                } else {
+                  old_pos
+                }
               } else {
                 old_pos
               }
             } else {
               //how does this work again? no idea
               if old_pos != 0 {
-                old_pos - current_file.content[current_file.line_pos].chars().rev().skip(current_length - old_pos + 1).position(|c| c == key_press.key).unwrap_or(0) - 2
+                let found_index = current_file.content[current_file.line_pos].chars().rev().skip(current_length - old_pos + 1).position(|c| c == key_press.key);
+                if let Some(found_index) = found_index {
+                  old_pos - found_index - 2
+                } else {
+                  old_pos
+                }
               } else {
                 old_pos //0
               }
@@ -234,14 +246,15 @@ impl WindowLike for Malvim {
             } else {
               current_file.line_pos = current_file.line_pos.checked_sub(1).unwrap_or(0);
             }
-            let new_length = current_file.content[current_file.line_pos].len();
+            let new_length = current_file.content[current_file.line_pos].chars().count();
             current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
             changed = false;
           } else if key_press.key == 'l' {
             if current_length > 0 {
               current_file.cursor_pos += 1;
-              if current_file.cursor_pos > current_file.content[current_file.line_pos].len() {
-                current_file.cursor_pos = current_file.content[current_file.line_pos].len();
+              let line_len = current_file.content[current_file.line_pos].chars().count();
+              if current_file.cursor_pos > line_len {
+                current_file.cursor_pos = line_len;
               }
             }
             changed = false;
@@ -250,7 +263,7 @@ impl WindowLike for Malvim {
             changed = false;
           } else if key_press.key == '$' {
             //yeah, no `- 1`, that's right
-            current_file.cursor_pos = current_file.content[current_file.line_pos].len();
+            current_file.cursor_pos = current_file.content[current_file.line_pos].chars().count();
             changed = false;
           } else if key_press.key == '^' {
             current_file.cursor_pos = current_file.content[current_file.line_pos].chars().position(|c| c != ' ').unwrap_or(0);
@@ -266,7 +279,7 @@ impl WindowLike for Malvim {
             changed = false;
           } else if key_press.key == 'G' {
             current_file.line_pos = current_file.content.len() - 1;
-            let new_length = current_file.content[current_file.line_pos].len();
+            let new_length = current_file.content[current_file.line_pos].chars().count();
             current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
             changed = false;
           } else if key_press.key == 'f' {
@@ -278,6 +291,8 @@ impl WindowLike for Malvim {
           } else if key_press.key.is_digit(10) {
             self.maybe_num = Some(self.maybe_num.unwrap_or(0) * 10 + key_press.key.to_digit(10).unwrap() as usize);
             numbered = true;
+            changed = false;
+          } else {
             changed = false;
           }
           if !numbered && self.state != State::Maybeg {
@@ -313,6 +328,7 @@ impl WindowLike for Malvim {
       },
       WindowMessage::ChangeDimensions(dimensions) => {
         self.dimensions = dimensions;
+        self.calc_current();
         WindowMessageResponse::JustRedraw
       },
       WindowMessage::Shortcut(shortcut) => {
@@ -329,7 +345,7 @@ impl WindowLike for Malvim {
             if self.mode == Mode::Insert {
               let current_file = &mut self.files[self.current_file_index];
               let line = &current_file.content[current_file.line_pos];
-              current_file.content[current_file.line_pos] = line.substring(0, current_file.cursor_pos).to_string() + &copy_string + line.substring(current_file.cursor_pos, line.len());
+              current_file.content[current_file.line_pos] = line.substring(0, current_file.cursor_pos).to_string() + &copy_string + line.substring(current_file.cursor_pos, line.chars().count());
               current_file.cursor_pos += copy_string.len();
               self.calc_top_line_pos();
               self.calc_current(); //too over zealous but whatever

@@ -125,7 +125,7 @@ impl WindowLike for StartMenu {
   }
 
   fn ideal_dimensions(&self, _dimensions: Dimensions) -> Dimensions {
-    [175, 250]
+    [180, 250]
   }
 }
 

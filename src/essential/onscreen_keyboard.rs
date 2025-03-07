@@ -121,7 +121,7 @@ impl WindowLike for OnscreenKeyboard {
   }
 
   fn ideal_dimensions(&self, dimensions: Dimensions) -> Dimensions {
-    [dimensions[0] - 175, 250]
+    [dimensions[0] - 180, 250]
   }
 }
 

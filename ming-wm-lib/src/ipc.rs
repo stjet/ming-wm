@@ -60,7 +60,7 @@ pub fn listen(mut window_like: impl WindowLike) {
         format!("{}", &window_like.handle_message(WindowMessage::deserialize(arg).unwrap()).serialize())
       },
       "draw" => {
-        format!("{}", &window_like.draw(&ThemeInfo::deserialize(arg).unwrap()).serialize())
+        format!("{}", &window_like.draw(&ThemeInfo::deserialize(arg).unwrap()).serialize().replace("\n", ""))
       },
       "title" => {
         format!("{}", window_like.title())

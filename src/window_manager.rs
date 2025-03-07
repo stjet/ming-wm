@@ -323,7 +323,7 @@ impl WindowManager {
                       let focused_info = &self.window_infos[focused_index];
                       if focused_info.window_like.subtype() == WindowLikeType::Window && focused_info.window_like.resizable() && !focused_info.fullscreen {
                         //mostly arbitrary
-                        let min_window_size = [100, WINDOW_TOP_HEIGHT + 5];
+                        let min_window_size = [100, WINDOW_TOP_HEIGHT + 100];
                         let mut changed = false;
                         let delta = 15;
                         let window = &mut self.window_infos[focused_index];
@@ -734,6 +734,7 @@ impl WindowManager {
             window_writer.draw_circle(centre, radius, color);
           },
           DrawInstructions::Text(top_left, fonts, text, color, bg_color, horiz_spacing, mono_width) => {
+            //if overflow, won't draw, I think
             window_writer.draw_text(top_left, fonts, &text, color, bg_color, horiz_spacing.unwrap_or(1), mono_width);
           },
           DrawInstructions::Bmp(top_left, path, reverse) => {

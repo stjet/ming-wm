@@ -98,6 +98,7 @@ impl WindowLike for Terminal {
       },
       WindowMessage::ChangeDimensions(dimensions) => {
         self.dimensions = dimensions;
+        self.calc_actual_lines();
         WindowMessageResponse::JustRedraw
       },
       WindowMessage::KeyPress(key_press) => {
@@ -135,6 +136,7 @@ impl WindowLike for Terminal {
             let running_process = self.running_process.as_mut().unwrap();
             if let Some(_status) = running_process.try_wait().unwrap() {
               //process exited
+              self.pty_outerr_rx = None;
               self.mode = Mode::Input;
               changed = true;
             } else {
@@ -285,7 +287,13 @@ impl Terminal {
       thread::spawn(move || {
         let reader = BufReader::new(pty);
         for line in reader.lines() {
-          tx1.send(line.unwrap().to_string()).unwrap();
+          //panics too much
+          if let Ok(line) = line {
+            tx1.send(line.to_string()).unwrap();
+          } else {
+            //the process has exited. dead process = dead pty = os input/output error
+            break;
+          }
         }
       });
       let mut stdin = self.running_process.as_mut().unwrap().stdin.take().unwrap();

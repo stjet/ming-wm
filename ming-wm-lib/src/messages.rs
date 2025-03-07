@@ -85,6 +85,7 @@ pub enum ShortcutType {
 
 pub type WindowsVec = Vec<(usize, String)>;
 
+#[non_exhaustive]
 pub enum InfoType {
   //let taskbar know what the current windows in the workspace are
   WindowsInWorkspace(WindowsVec, usize), //Vec<(id, name)>, focused id

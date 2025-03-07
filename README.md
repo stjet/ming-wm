@@ -33,31 +33,47 @@ chmod +x local-install
 sudo ./local-install
 ```
 
+## Running
+
+```
+ming
+```
+
+Type in the password to unlock. Open the start menu by doing `Alt+s`, and use the `j` and `k` keys to move up and down (like Vim), and press the `Enter` key to select a category / open a window.
+
 ## Running on Mobile Linux
 
 Running with an onscreen keyboard. The framebuffer may not be redrawn to the screen without a (real) key press. The volume down button seems to work.
 
-`evtest` needs to be installed.
+`evtest` needs to be installed. Currently, the input device is assumed to be at `/dev/first-touchscreen`.
 
 ```
-cargo build --release
-./target/release/ming touch
+ming touch
 ```
 
 Optionally, in landscape mode:
 
 ```
-cargo build --release
-./target/release/ming touch rotate
+ming touch rotate
 ```
-
-After testing, the install scripts in the previous section can be used.
 
 <image alt="mobile example" src="/docs/images/mobile.png" width="50%">
 
 ## Philosophy
 
 See [/docs/philosophy.md](/docs/philosophy.md) for some hopefully interesting ramblings.
+
+## Documentation
+
+### Developing Windows
+
+[section incomplete]
+
+Windows (may be called apps in other window managers) can be developed in any language, though it is easiest to do so in Rust because the `ming-wm-lib` crate can be used.
+
+### Window Usage
+
+Usage for most of the included windows and window-likes are included in `docs/window-likes`, which can also be accessed from the "Help" entry in the start menu.
 
 ## Security
 

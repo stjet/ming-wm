@@ -1,6 +1,6 @@
 [package]
 name = "ming-wm-lib"
-version = "0.1.2"
+version = "0.1.3"
 repository = "https://github.com/stjet/ming-wm"
 description = "library for building windows for ming-wm in rust"
 license = "GPL-3.0-or-later"
