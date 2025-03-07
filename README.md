@@ -3,6 +3,10 @@ Ming-wm is a keyboard-based, retro-themed window manager for Linux. It is single
 ![example 1](/docs/images/ws1.png)
 ![example 2](/docs/images/ws3.png)
 
+The [Koxinga web browser](https://github.com/stjet/koxinga) can be separately installed.
+
+![koxinga browser example](/docs/images/koxinga.png)
+
 ## Building
 
 Create a `password.env` file in the same directory as `build.rs`, otherwise the default password will be "incorrect mule lightbulb niche".
