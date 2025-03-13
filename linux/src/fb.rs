@@ -2,13 +2,13 @@ use std::fs::{ File, OpenOptions };
 use std::os::fd::AsRawFd;
 use std::ptr;
 
-use libc::{ ioctl, mmap };
+use libc::{ ioctl, mmap, munmap, c_ulong, c_int };
 
 //https://stackoverflow.com/a/75402838
 
 //https://github.com/torvalds/linux/blob/master/include/uapi/linux/fb.h
-pub const FBIOGET_VSCREENINFO: u64 = 0x4600;
-pub const FBIOGET_FSCREENINFO: u64 = 0x4602;
+pub const FBIOGET_VSCREENINFO: c_ulong = 0x4600;
+pub const FBIOGET_FSCREENINFO: c_ulong = 0x4602;
 
 //https://www.kernel.org/doc/html/latest/fb/api.html
 
@@ -105,7 +105,7 @@ impl Framebuffer {
     OpenOptions::new().read(true).write(true).open(path).map_err(|_| ())
   }
   
-  fn get_vscreeninfo(raw_fd: i32) -> Result<FB_VAR_SCREENINFO, ()> {
+  fn get_vscreeninfo(raw_fd: c_int) -> Result<FB_VAR_SCREENINFO, ()> {
     let mut vi: FB_VAR_SCREENINFO = Default::default();
     let result = unsafe {
       ioctl(raw_fd, FBIOGET_VSCREENINFO, &mut vi)
@@ -117,7 +117,7 @@ impl Framebuffer {
     }
   }
   
-  fn get_fscreeninfo(raw_fd: i32) -> Result<FB_FIX_SCREENINFO, ()> {
+  fn get_fscreeninfo(raw_fd: c_int) -> Result<FB_FIX_SCREENINFO, ()> {
     let mut fi: FB_FIX_SCREENINFO = Default::default();
     let result = unsafe {
       ioctl(raw_fd, FBIOGET_FSCREENINFO, &mut fi)
@@ -139,7 +139,7 @@ impl Framebuffer {
 impl Drop for Framebuffer {
   fn drop(&mut self) {
     unsafe {
-      libc::munmap(self.pointer, self.size);
+      munmap(self.pointer, self.size);
     }
   }
 }

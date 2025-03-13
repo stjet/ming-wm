@@ -7,6 +7,7 @@ use std::io::{ Read, Write };
 use std::time::Duration;
 use std::path::PathBuf;
 use std::fmt;
+use std::fs::read_dir;
 
 use pty_process::blocking;
 
@@ -116,6 +117,36 @@ impl WindowLike for Terminal {
               self.last_command = Some(self.current_input.clone());
               self.mode = self.process_command();
               self.current_input = String::new();
+            } else if key_press.key == '\t' { //tab
+              //autocomplete assuming it's a file system path
+              //...mostly working
+              let mut useless_tab = true;
+              if self.current_input.len() > 0 {
+                let partial_path = self.current_input.split(" ").last().unwrap();
+                if let Ok(new_path) = concat_paths(&self.current_path, partial_path) {
+                  let partial_name;
+                  let parent;
+                  if self.current_input.ends_with("/") {
+                    partial_name = "".to_string();
+                    parent = new_path.as_path();
+                  } else {
+                    //this is just silly
+                    partial_name = new_path.clone().file_name().unwrap().to_os_string().to_string_lossy().to_string();
+                    parent = new_path.parent().unwrap();
+                  };
+                  for entry in read_dir(parent).unwrap() {
+                    let name = entry.unwrap().path().file_name().unwrap().to_os_string().to_string_lossy().to_string();
+                    if name.starts_with(&partial_name) {
+                      self.current_input += &name[partial_name.len()..];
+                      useless_tab = false;
+                      break;
+                    }
+                  }
+                }
+              }
+              if useless_tab {
+                return WindowMessageResponse::DoNothing;
+              }
             } else {
               self.current_input += &key_press.key.to_string();
             }
@@ -291,6 +322,8 @@ impl Terminal {
       if let Ok(new_path) = concat_paths(&self.current_path, arg) {
         if new_path.is_dir() {
           self.current_path = new_path.to_str().unwrap().to_string();
+        } else {
+          self.lines.push("Path not found or not directory".to_string());
         }
       }
       Mode::Input

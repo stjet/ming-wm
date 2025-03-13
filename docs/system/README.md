@@ -92,7 +92,7 @@ As windows are mostly just like other window-likes, they can be compiled in as p
 
 As apps are just any old binary that support the IPC that `proxy_window_like.rs` does, they can be written in any language, and be completely separate from this project. Of course, if they are not written in Rust, extra code is needed to do that IPC.
 
-//but what apps can be opened are currently hardcoded in start menu and the window manager
+Binaries in the same directory as the window manager binary and following a specific name format are automatically added to the start menu. See `docs/system/writing_windows.md` for more information.
 
 Some of the apps included are Malvim, the subset of vim (a text editor) I use, Minesweeper, and an Audio Player.
 
