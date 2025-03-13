@@ -7,8 +7,8 @@ use libc::{ ioctl, mmap, munmap, c_ulong, c_int };
 //https://stackoverflow.com/a/75402838
 
 //https://github.com/torvalds/linux/blob/master/include/uapi/linux/fb.h
-pub const FBIOGET_VSCREENINFO: c_ulong = 0x4600;
-pub const FBIOGET_FSCREENINFO: c_ulong = 0x4602;
+const FBIOGET_VSCREENINFO: c_ulong = 0x4600;
+const FBIOGET_FSCREENINFO: c_ulong = 0x4602;
 
 //https://www.kernel.org/doc/html/latest/fb/api.html
 
@@ -108,7 +108,7 @@ impl Framebuffer {
   fn get_vscreeninfo(raw_fd: c_int) -> Result<FB_VAR_SCREENINFO, ()> {
     let mut vi: FB_VAR_SCREENINFO = Default::default();
     let result = unsafe {
-      ioctl(raw_fd, FBIOGET_VSCREENINFO, &mut vi)
+      ioctl(raw_fd, FBIOGET_VSCREENINFO.try_into().unwrap(), &mut vi)
     };
     if result != -1 {
       Ok(vi)
@@ -120,7 +120,7 @@ impl Framebuffer {
   fn get_fscreeninfo(raw_fd: c_int) -> Result<FB_FIX_SCREENINFO, ()> {
     let mut fi: FB_FIX_SCREENINFO = Default::default();
     let result = unsafe {
-      ioctl(raw_fd, FBIOGET_FSCREENINFO, &mut fi)
+      ioctl(raw_fd, FBIOGET_FSCREENINFO.try_into().unwrap(), &mut fi)
     };
     if result != -1 {
       Ok(fi)
