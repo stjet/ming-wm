@@ -6,7 +6,7 @@ use std::io::{ stdin, stdout, BufReader, BufRead, Write };
 use std::process::exit;
 use std::env;
 
-use linux_framebuffer::Framebuffer;
+use linux::fb::Framebuffer;
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 use termion::{ clear, cursor };
@@ -162,7 +162,7 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
 }
 
 fn main() {
-  let fb = Framebuffer::new("/dev/fb0").unwrap();
+  let fb = Framebuffer::open("/dev/fb0").unwrap();
   let bytes_per_pixel = (fb.var_screen_info.bits_per_pixel as usize) / 8;
   let fb_info = FramebufferInfo {
     byte_len: (fb.var_screen_info.yres_virtual * fb.fix_screen_info.line_length) as usize,

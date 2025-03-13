@@ -1,5 +1,8 @@
 #!/bin/sh
-cp -r ./target/release/bmps /usr/local/bin/bmps
+rm -rf /usr/local/bin/ming_bmps
+cp -r ./bmps /usr/local/bin/ming_bmps
+rm -rf /usr/local/bin/ming_docs
+cp -r ./docs /usr/local/bin/ming_docs
 cp ./target/release/ming /usr/local/bin/ming
 cp ./target/release/mingUtils_Terminal /usr/local/bin/mingUtils_Terminal
 cp ./target/release/mingGames_Reversi /usr/local/bin/mingGames_Reversi

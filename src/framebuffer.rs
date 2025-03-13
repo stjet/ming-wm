@@ -249,17 +249,19 @@ impl FramebufferWriter {
   //reverse is workaround for when my bmp lib returns rgba instead of bgra
   pub fn draw_bmp(&mut self, top_left: Point, path: String, reverse: bool) {
     let b = BMP::new_from_file(&path);
-    let dib_header = b.get_dib_header().unwrap();
-    let pixel_data = b.get_pixel_data().unwrap();
-    let height = dib_header.height as usize;
-    let width = dib_header.width as usize;
-    let mut start_pos;
-    for row in 0..height {
-      start_pos = ((top_left[1] + row) * self.info.stride + top_left[0]) * self.info.bytes_per_pixel;
-      for column in 0..width {
-        let color = b.get_color_of_pixel_efficient(column, row, &dib_header, &pixel_data).unwrap();
-        self._draw_pixel(start_pos, if reverse { [color[2], color[1], color[0]] } else { [color[0], color[1], color[2]] });
-        start_pos += self.info.bytes_per_pixel;
+    if let Ok(b) = b {
+      let dib_header = b.get_dib_header().unwrap();
+      let pixel_data = b.get_pixel_data().unwrap();
+      let height = dib_header.height as usize;
+      let width = dib_header.width as usize;
+      let mut start_pos;
+      for row in 0..height {
+        start_pos = ((top_left[1] + row) * self.info.stride + top_left[0]) * self.info.bytes_per_pixel;
+        for column in 0..width {
+          let color = b.get_color_of_pixel_efficient(column, row, &dib_header, &pixel_data).unwrap();
+          self._draw_pixel(start_pos, if reverse { [color[2], color[1], color[0]] } else { [color[0], color[1], color[2]] });
+          start_pos += self.info.bytes_per_pixel;
+        }
       }
     }
   }

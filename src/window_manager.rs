@@ -7,8 +7,7 @@ use std::cell::RefCell;
 use std::fs::File;
 use std::io::Read;
 
-use linux_framebuffer::Framebuffer;
-
+use linux::fb::Framebuffer;
 use ming_wm_lib::framebuffer_types::{ Point, Dimensions };
 use ming_wm_lib::themes::{ Themes, get_theme_info };
 use ming_wm_lib::utils::{ min, point_inside };

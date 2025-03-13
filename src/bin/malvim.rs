@@ -213,9 +213,9 @@ impl WindowLike for Malvim {
             } else {
               //how does this work again? no idea
               if old_pos != 0 {
-                let found_index = current_file.content[current_file.line_pos].chars().rev().skip(current_length - old_pos + 1).position(|c| c == key_press.key);
+                let found_index = current_file.content[current_file.line_pos].chars().rev().skip(current_length - old_pos).position(|c| c == key_press.key);
                 if let Some(found_index) = found_index {
-                  old_pos - found_index - 2
+                  old_pos - found_index - 1
                 } else {
                   old_pos
                 }

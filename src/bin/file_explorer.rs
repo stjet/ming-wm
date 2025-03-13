@@ -138,6 +138,10 @@ impl WindowLike for FileExplorer {
       let bytes_len = metadata.len();
       instructions.push(DrawInstructions::Text([5, start_y], vec!["nimbus-roman".to_string()], format!("Size: {} mb ({} b)", bytes_len / (1024_u64).pow(2), bytes_len), theme_info.text, theme_info.background, None, None));
       start_y += HEIGHT;
+      if let Ok(elapsed) = metadata.modified().unwrap().elapsed() {
+        //properly format months, days, hours, minutes, secs instead
+        instructions.push(DrawInstructions::Text([5, start_y], vec!["nimbus-roman".to_string()], format!("Last Modified: {} minutes ago", elapsed.as_secs() / 60), theme_info.text, theme_info.background, None, None));
+      }
       //todo: other stuff
       //
     }

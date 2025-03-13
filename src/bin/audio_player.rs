@@ -215,6 +215,8 @@ impl AudioPlayer {
                   }
                 }
                 queue
+              } else if parts[1].ends_with(".mp3") {
+                vec![concat_paths(&self.base_directory, parts[1]).unwrap()]
               } else {
                 get_all_files(PathBuf::from(new_path))
               };

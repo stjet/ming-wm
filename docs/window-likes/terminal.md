@@ -1,4 +1,4 @@
-A basic, line-buffered, modal terminal.
+A basic, modal terminal.
 
 ## Usage
 
@@ -17,7 +17,7 @@ In STDIN mode, any keys typed followed by the 'enter' key will send those keys t
 
 ### Sudo
 
-To get sudo to read from stdin, the `-S` option will need to be used (eg, `sudo -S ls`). Also, the password prompt will not show since the terminal is line-buffered. Just switch to STDIN mode, type in the password and hit enter.
+To get sudo to read from stdin, the `-S` option will need to be used (eg, `sudo -S ls`). Then switch to STDIN mode, type in the password and hit enter.
 
 ## Copy / Paste
 

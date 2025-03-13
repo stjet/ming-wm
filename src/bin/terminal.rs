@@ -3,7 +3,7 @@ use std::vec;
 use std::sync::mpsc::{ channel, Receiver, Sender };
 use std::thread;
 use std::process::{ Child, Stdio };
-use std::io::{ BufReader, BufRead, Write };
+use std::io::{ Read, Write };
 use std::time::Duration;
 use std::path::PathBuf;
 use std::fmt;
@@ -79,7 +79,8 @@ pub struct Terminal {
   current_stdin_input: String,
   current_path: String,
   running_process: Option<Child>,
-  pty_outerr_rx: Option<Receiver<String>>,
+  process_current_line: Vec<u8>, //bytes of line
+  pty_outerr_rx: Option<Receiver<u8>>,
   pty_in_tx: Option<Sender<String>>,
   last_command: Option<String>,
 }
@@ -126,8 +127,17 @@ impl WindowLike for Terminal {
             //update
             let mut changed = false;
             loop {
-              if let Ok(line) = self.pty_outerr_rx.as_mut().unwrap().recv_timeout(Duration::from_millis(5)) {
-                self.lines.push(strip_ansi_escape_codes(line));
+              if let Ok(ci) = self.pty_outerr_rx.as_mut().unwrap().recv_timeout(Duration::from_millis(5)) {
+                if char::from(ci) == '\n' {
+                  let pcl_len = self.process_current_line.len();
+                  self.lines.push(strip_ansi_escape_codes(String::from_utf8(self.process_current_line.clone()).unwrap_or("?".repeat(pcl_len))));
+                  self.process_current_line = Vec::new();
+                } else if char::from(ci) == '\r' {
+                  //for now, ignore
+                  //
+                } else {
+                  self.process_current_line.push(ci);
+                }
                 changed = true;
               } else {
                 break;
@@ -138,6 +148,7 @@ impl WindowLike for Terminal {
               //process exited
               self.pty_outerr_rx = None;
               self.mode = Mode::Input;
+              self.process_current_line = Vec::new();
               changed = true;
             } else {
               if key_press.key == 'i' {
@@ -160,7 +171,10 @@ impl WindowLike for Terminal {
               //enter
               let _ = self.pty_in_tx.as_mut().unwrap().send(self.current_stdin_input.clone());
               self.mode = Mode::Running;
+              let pcl_len = self.process_current_line.len();
+              self.lines.push(strip_ansi_escape_codes(String::from_utf8(self.process_current_line.clone()).unwrap_or("?".repeat(pcl_len))) + &self.current_stdin_input);
               self.current_stdin_input = String::new();
+              self.process_current_line = Vec::new();
             } else if key_press.key == '𐘁' {
               //backspace
               if self.current_stdin_input.len() > 0 {
@@ -285,11 +299,9 @@ impl Terminal {
       self.running_process = Some(blocking::Command::new("sh").arg("-c").arg(&self.current_input).current_dir(&self.current_path).stdin(Stdio::piped()).spawn(pts).unwrap());
       let (tx1, rx1) = channel();
       thread::spawn(move || {
-        let reader = BufReader::new(pty);
-        for line in reader.lines() {
-          //panics too much
-          if let Ok(line) = line {
-            tx1.send(line.to_string()).unwrap();
+        for ci in pty.bytes() {
+          if let Ok(ci) = ci {
+            tx1.send(ci).unwrap();
           } else {
             //the process has exited. dead process = dead pty = os input/output error
             break;
@@ -310,6 +322,7 @@ impl Terminal {
       });
       self.pty_outerr_rx = Some(rx1);
       self.pty_in_tx = Some(tx2);
+      self.process_current_line = Vec::new();
       Mode::Running
     }
   }
@@ -317,18 +330,20 @@ impl Terminal {
   fn calc_actual_lines(&mut self) {
     self.actual_lines = Vec::new();
     let max_chars_per_line = (self.dimensions[0] - PADDING * 2) / MONO_WIDTH as usize;
-    let end = if self.mode != Mode::Running {
-      self.lines.len()
+    let lines_len = self.lines.len();
+    let end = if self.mode != Mode::Running || self.process_current_line.len() > 0 {
+      lines_len
     } else {
-      self.lines.len() - 1
+      lines_len - 1
     };
     for line_num in 0..=end {
-      let mut working_line = if line_num == self.lines.len() {
+      let mut working_line = if line_num >= lines_len {
         if self.mode == Mode::Input {
+          //must_add_current_line will be false
           "$ ".to_string() + &self.current_input + "█"
         } else {
-          //Mode::Stdin
-          self.current_stdin_input.clone() + "█"
+          let pcl_len = self.process_current_line.len();
+          strip_ansi_escape_codes(String::from_utf8(self.process_current_line.clone()).unwrap_or("?".repeat(pcl_len))) + &self.current_stdin_input.clone() + "█"
         }
       } else {
         self.lines[line_num].clone()

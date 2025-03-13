@@ -45,6 +45,8 @@ ming
 
 Type in the password to unlock. Open the start menu by doing `Alt+s`, and use the `j` and `k` keys to move up and down (like Vim), and press the `Enter` key to select a category / open a window.
 
+Usage for most of the included windows and window-likes are included in `docs/window-likes`, which can also be accessed from the "Help" entry in the start menu.
+
 ## Running on Mobile Linux
 
 Running with an onscreen keyboard. The framebuffer may not be redrawn to the screen without a (real) key press. The volume down button seems to work.
@@ -67,17 +69,11 @@ ming touch rotate
 
 See [/docs/philosophy.md](/docs/philosophy.md) for some hopefully interesting ramblings.
 
-## Documentation
-
-### Developing Windows
-
-[section incomplete]
+## Developing Windows
 
 Windows (may be called apps in other window managers) can be developed in any language, though it is easiest to do so in Rust because the `ming-wm-lib` crate can be used.
 
-### Window Usage
-
-Usage for most of the included windows and window-likes are included in `docs/window-likes`, which can also be accessed from the "Help" entry in the start menu.
+See [koxinga](https://github.com/stjet/koxinga) or `src/bin` for examples. The `docs` directory includes a [brief introduction to writing windows](docs/system/writing_windows.md). [incomplete] documentation on the architecture of ming-wm.
 
 ## Security
 

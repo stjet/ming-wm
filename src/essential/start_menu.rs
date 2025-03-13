@@ -11,7 +11,7 @@ use crate::fs::{ ExeWindowInfos, get_all_executable_windows };
 use crate::components::Component;
 use crate::components::highlight_button::HighlightButton;
 
-static CATEGORIES: [&'static str; 9] = ["About", "Utils", "Games", "Editing", "Files", "Internet", "Misc", "Help", "Logout"];
+static CATEGORIES: [&'static str; 9] = ["About", "Utils", "Games", "Editing", "Files", "Internet", "Misc", "Help", "Lock"];
 
 #[derive(Clone)]
 enum StartMenuMessage {
@@ -109,7 +109,7 @@ impl WindowLike for StartMenu {
       //background
       DrawInstructions::Rect([0, 1], [self.dimensions[0] - 1, self.dimensions[1] - 1], theme_info.background),
       //mingde logo
-      DrawInstructions::Bmp([2, 2], exe_dir(Some("bmps/mingde.bmp")).to_string_lossy().to_string(), false),
+      DrawInstructions::Bmp([2, 2], exe_dir(Some("ming_bmps/mingde.bmp")).to_string_lossy().to_string(), false),
       //I truly don't know why, it should be - 44 but - 30 seems to work better :shrug:
       DrawInstructions::Gradient([2, 42], [40, self.dimensions[1] - 30], [255, 201, 14], [225, 219, 77], 15),
     ];
@@ -138,7 +138,7 @@ impl StartMenu {
     if let Some(message) = message {
       match message {
         StartMenuMessage::CategoryClick(name) => {
-          if name == "Logout" {
+          if name == "Lock" {
             WindowMessageResponse::Request(WindowManagerRequest::Lock)
           } else if name == "About" || name == "Help" {
             //todo above: also do the same for Help

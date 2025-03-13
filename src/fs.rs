@@ -24,12 +24,12 @@ fn get_font_char(dir: &str, c: char) -> Option<(char, Vec<Vec<u8>>, u8)> {
 
 pub fn get_font_char_from_fonts(fonts: &[String], c: char) -> (char, Vec<Vec<u8>>, u8) {
   for font in fonts {
-    let p = dirs::exe_dir(Some(&("bmps/".to_string() + &font))).to_string_lossy().to_string();
+    let p = dirs::exe_dir(Some(&("ming_bmps/".to_string() + &font))).to_string_lossy().to_string();
     if let Some(font_char) = get_font_char(&p, c) {
       return font_char;
     }
   }
-  let p = dirs::exe_dir(Some(&("bmps/".to_string() + &fonts[0]))).to_string_lossy().to_string();
+  let p = dirs::exe_dir(Some(&("ming_bmps/".to_string() + &fonts[0]))).to_string_lossy().to_string();
   //so a ? char must be in every font
   get_font_char(&p, '?').unwrap()
 }

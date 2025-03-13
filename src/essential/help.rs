@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType };
 use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse };
+use ming_wm_lib::dirs::exe_dir;
 use ming_wm_lib::framebuffer_types::Dimensions;
 use ming_wm_lib::themes::ThemeInfo;
 use crate::components::paragraph::Paragraph;
@@ -40,8 +41,12 @@ impl WindowLike for Help {
               self.file_index += 1;
             }
           }
-          self.paragraph.as_mut().unwrap().new_text(read_to_string(self.files[self.file_index].clone()).unwrap());
-          WindowMessageResponse::JustRedraw
+          if self.files.len() > 0 {
+            self.paragraph.as_mut().unwrap().new_text(read_to_string(self.files[self.file_index].clone()).unwrap());
+            WindowMessageResponse::JustRedraw
+          } else {
+            WindowMessageResponse::DoNothing
+          }
         } else if self.paragraph.as_mut().unwrap().handle_message(WindowMessage::KeyPress(key_press)).is_some() {
           WindowMessageResponse::JustRedraw
         } else {
@@ -53,14 +58,17 @@ impl WindowLike for Help {
   }
 
   fn draw(&self, theme_info: &ThemeInfo) -> Vec<DrawInstructions> {
-    let mut instructions = vec![DrawInstructions::Text([2, 2], vec!["nimbus-romono".to_string()], self.files[self.file_index].clone().file_name().unwrap().to_string_lossy().to_string(), theme_info.text, theme_info.background, Some(0), None)];
+    let mut instructions = Vec::new();
+    if self.files.len() > 0 {
+      instructions.push(DrawInstructions::Text([2, 2], vec!["nimbus-romono".to_string()], self.files[self.file_index].clone().file_name().unwrap().to_string_lossy().to_string(), theme_info.text, theme_info.background, Some(0), None));
+    }
     instructions.extend(self.paragraph.as_ref().unwrap().draw(theme_info));
     instructions
   }
 
   //properties
   fn title(&self) -> String {
-    "About".to_string()
+    "Help".to_string()
   }
 
   fn subtype(&self) -> WindowLikeType {
@@ -74,9 +82,12 @@ impl WindowLike for Help {
 
 impl Help {
   pub fn new() -> Self {
-    let mut files = vec![PathBuf::from("docs/system/shortcuts.md")];
-    for entry in read_dir("docs/window-likes").unwrap() {
-      files.push(entry.unwrap().path());
+    let mut files = Vec::new();
+    if let Ok(contents) = read_dir(exe_dir(Some("ming_docs/window-likes"))) {
+      files.push(exe_dir(Some("ming_docs/system/shortcuts.md")));
+      for entry in contents {
+        files.push(entry.unwrap().path());
+      }
     }
     Self {
       dimensions: [0, 0],

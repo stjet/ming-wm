@@ -18,7 +18,7 @@ fn font_chars_to_alphas(dir: &str) {
     if file_name[1] == "bmp" {
       if !path.is_dir() {
         let mut ch: Vec<Vec<String>> = Vec::new();
-        let b = BMP::new_from_file(&path.clone().into_os_string().into_string().unwrap());
+        let b = BMP::new_from_file(&path.clone().into_os_string().into_string().unwrap()).unwrap();
         let dib_header = b.get_dib_header().unwrap();
         let width = dib_header.width as usize;
         let height = dib_header.height as usize;
@@ -64,5 +64,7 @@ fn main() {
   }
   //copy bmp folders to target
   let profile = env::var_os("PROFILE").unwrap().to_string_lossy().to_string();
-  Command::new("cp").arg("-r").arg("./bmps").arg(format!("./target/{}/bmps", profile)).output().unwrap();
+  Command::new("cp").arg("-r").arg("./bmps").arg(format!("./target/{}/ming_bmps", profile)).output().unwrap();
+  //also copy the docs folder
+  Command::new("cp").arg("-r").arg("./docs").arg(format!("./target/{}/ming_docs", profile)).output().unwrap();
 }

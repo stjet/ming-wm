@@ -1,6 +1,6 @@
 [package]
 name = "ming-wm"
-version = "0.1.0"
+version = "1.0.0-beta.0"
 repository = "https://github.com/stjet/ming-wm"
 license = "GPL-3.0-or-later"
 edition = "2021"
@@ -9,22 +9,23 @@ default-run = "ming"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace]
+members = ["linux"]
 
 [build-dependencies]
-bmp-rust = "0.4.1"
+bmp-rust = "0.5.0"
 blake2 = { version = "0.10.6", default-features = false }
 
 [dependencies]
 ming-wm-lib = { path = "ming-wm-lib" }
 blake2 = { version = "0.10.6", default-features = false }
-linux_framebuffer = { package = "framebuffer", version = "0.3.1" }
+linux = { path = "linux" }
 termion = { version = "4.0.3", optional = true }
 rodio = { version = "0.19.0", optional = true }
 rand = { version = "0.9.0", default-features = false, features = [ "small_rng" ], optional = true }
 id3 = { version = "1.10.0", optional = true }
 mp4ameta = { version = "0.11.0", optional = true }
 metaflac = { version = "0.2.5", optional = true }
-bmp-rust = "0.4.1"
+bmp-rust = "0.5.0"
 pty-process = { version = "0.5.1", optional = true }
 
 [features]

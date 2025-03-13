@@ -6,6 +6,7 @@ use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLik
 use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse };
 use ming_wm_lib::framebuffer_types::Dimensions;
 use ming_wm_lib::themes::ThemeInfo;
+use ming_wm_lib::dirs::exe_dir;
 use crate::components::Component;
 use crate::components::paragraph::Paragraph;
 
@@ -19,7 +20,7 @@ impl WindowLike for About {
     match message {
       WindowMessage::Init(dimensions) => {
         self.dimensions = dimensions;
-        self.components.push(Box::new(Paragraph::new("help".to_string(), [2, 2], [self.dimensions[0] - 4, self.dimensions[1] - 4], read_to_string("docs/system/README.md").unwrap_or("docs/system/README.md not found".to_string()), ())));
+        self.components.push(Box::new(Paragraph::new("help".to_string(), [2, 2], [self.dimensions[0] - 4, self.dimensions[1] - 4], read_to_string(exe_dir(Some("ming_docs/system/README.md"))).unwrap_or("ming_docs/system/README.md not found".to_string()), ())));
         WindowMessageResponse::JustRedraw
       },
       WindowMessage::KeyPress(key_press) => {
