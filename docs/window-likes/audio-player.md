@@ -12,6 +12,8 @@ Type to write commands, backspace to delete last character, and enter to run com
 - `p <dir / playlist file>`: Play audio files in `<dir>` or play the songs listed in the `<playlist file>`. Unless paths are absolute, they will be relative to the directory specified by the `b <dir>` command
 - `a <dir / playlist file>`: Same as `p` but appends to the end of the queue instead of clearing the current song and the queue
 
+Tab completion is supported for the `<dir>` and `<dir / playlist file>` arguments.
+
 ## Playlists
 
 Example playlist file:

@@ -17,7 +17,7 @@ use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLik
 use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse };
 use ming_wm_lib::framebuffer_types::Dimensions;
 use ming_wm_lib::themes::ThemeInfo;
-use ming_wm_lib::utils::{ concat_paths, format_seconds, Substring };
+use ming_wm_lib::utils::{ concat_paths, path_autocomplete, format_seconds, Substring };
 use ming_wm_lib::dirs::home;
 use ming_wm_lib::ipc::listen;
 use ming_wm::fs::get_all_files;
@@ -97,6 +97,18 @@ impl WindowLike for AudioPlayer {
         } else if key_press.key == '𐘁' { //backspace
           if self.command.len() > 0 {
             self.command = self.command.remove_last();
+          }
+        } else if key_press.key == '\t' { //tab
+          let mut parts = self.command.split(" ");
+          let parts_len = parts.clone().count();
+          if parts_len == 2 {
+            if let Some(add) = path_autocomplete(&self.base_directory, parts.nth(1).unwrap()) {
+              self.command += &add;
+            } else {
+              return WindowMessageResponse::DoNothing;
+            }
+          } else {
+            return WindowMessageResponse::DoNothing;
           }
         } else {
           self.command += &key_press.key.to_string();

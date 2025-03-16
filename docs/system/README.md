@@ -104,9 +104,9 @@ Further documentation on specific window-likes can be found in `docs/window-like
 
 The window manager passes information about it's theme to all window-likes as a parameter to `draw`, so windows can have appropriate background colours, highlight colours, text colours, etc.
 
-//can't change themes yet. in fact, no other themes yet
+See the end of `docs/window-likes/desktop-background.md` for theme config information.
 
 ## Fonts / Text
 
-//
-//Japanese / Chinese characters can only be used for display, not input, as there is no CJK input system. yet. And these text inputs don't yet handle multi-byte input very gracefully
+See `docs/system/fonts.md`. There is no Japanese input system... yet.
+

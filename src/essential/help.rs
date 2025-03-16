@@ -23,7 +23,12 @@ impl WindowLike for Help {
     match message {
       WindowMessage::Init(dimensions) => {
         self.dimensions = dimensions;
-        self.paragraph = Some(Box::new(Paragraph::new("help".to_string(), [2, 22], [self.dimensions[0] - 4, self.dimensions[1] - 24], "Press the 'h' and 'l' keys to read the different help pages".to_string(), ())));
+        let first_content = if self.files.len() > 0 {
+          read_to_string(self.files[0].clone()).unwrap()
+        } else {
+          String::new()
+        };
+        self.paragraph = Some(Box::new(Paragraph::new("help".to_string(), [2, 22], [self.dimensions[0] - 4, self.dimensions[1] - 24], "Press the 'h' and 'l' keys to read the different help pages".to_string() + &first_content, ())));
         WindowMessageResponse::JustRedraw
       },
       WindowMessage::KeyPress(key_press) => {
@@ -97,4 +102,3 @@ impl Help {
     }
   }
 }
-

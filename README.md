@@ -1,4 +1,4 @@
-Ming-wm is a keyboard-based, retro-themed window manager for Linux. It is single-threaded, and is neither for Wayland or the X Window System - it writes directly to the framebuffer. Inspirations include i3, Haiku, SerenityOS, and Windows98, and it is a conceptual successor to the previous [mingde](https://github.com/stjet/mingde) and [ming-os](https://github.com/stjet/ming-os).
+Ming-wm is a keyboard-based, retro-themed window manager for Linux. It is neither for Wayland or the X Window System - it writes directly to the framebuffer. Inspirations include i3, Haiku, SerenityOS, and Windows98, and it is a conceptual successor to the previous [mingde](https://github.com/stjet/mingde) and [ming-os](https://github.com/stjet/ming-os).
 
 ![example 1](/docs/images/ws1.png)
 ![example 2](/docs/images/ws3.png)
@@ -49,7 +49,7 @@ Usage for most of the included windows and window-likes are included in `docs/wi
 
 ## Running on Mobile Linux
 
-Running with an onscreen keyboard. The framebuffer may not be redrawn to the screen without a (real) key press. The volume down button seems to work.
+Running with an onscreen keyboard. The framebuffer may not be redrawn to the screen without a (real) key press. The volume down button seems to work. If someone knows why this is the case, and/or how to fix this, please let me know.
 
 `evtest` needs to be installed. Currently, the input device is assumed to be at `/dev/first-touchscreen`.
 
@@ -73,7 +73,7 @@ See [/docs/philosophy.md](/docs/philosophy.md) for some hopefully interesting ra
 
 Windows (may be called apps in other window managers) can be developed in any language, though it is easiest to do so in Rust because the `ming-wm-lib` crate can be used.
 
-See [koxinga](https://github.com/stjet/koxinga) or `src/bin` for examples. The `docs` directory includes a [brief introduction to writing windows](docs/system/writing_windows.md). [incomplete] documentation on the architecture of ming-wm.
+See [koxinga](https://github.com/stjet/koxinga) or `src/bin` for examples. The `docs` directory includes a [brief introduction to writing windows](docs/system/writing_windows.md), and (incomplete) documentation on the workings of ming-wm.
 
 ## Security
 

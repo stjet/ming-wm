@@ -7,7 +7,6 @@ use std::io::{ Read, Write };
 use std::time::Duration;
 use std::path::PathBuf;
 use std::fmt;
-use std::fs::read_dir;
 
 use pty_process::blocking;
 
@@ -15,11 +14,9 @@ use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLik
 use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, ShortcutType };
 use ming_wm_lib::framebuffer_types::Dimensions;
 use ming_wm_lib::themes::ThemeInfo;
-use ming_wm_lib::utils::{ concat_paths, Substring };
+use ming_wm_lib::utils::{ concat_paths, path_autocomplete, Substring };
 use ming_wm_lib::dirs::home;
 use ming_wm_lib::ipc::listen;
-
-//todo: support copy and paste
 
 const MONO_WIDTH: u8 = 10;
 const LINE_HEIGHT: usize = 15;
@@ -83,7 +80,8 @@ pub struct Terminal {
   process_current_line: Vec<u8>, //bytes of line
   pty_outerr_rx: Option<Receiver<u8>>,
   pty_in_tx: Option<Sender<String>>,
-  last_command: Option<String>,
+  history: Vec<String>,
+  history_index: Option<usize>,
 }
 
 //for some reason key presses, then moving the window leaves the old window still there, behind it. weird
@@ -114,38 +112,20 @@ impl WindowLike for Terminal {
               }
             } else if key_press.key == '𐘂' { //the enter key
               self.lines.push("$ ".to_string() + &self.current_input);
-              self.last_command = Some(self.current_input.clone());
+              self.history.push(self.current_input.clone());
+              self.history_index = None;
               self.mode = self.process_command();
               self.current_input = String::new();
             } else if key_press.key == '\t' { //tab
               //autocomplete assuming it's a file system path
               //...mostly working
-              let mut useless_tab = true;
               if self.current_input.len() > 0 {
                 let partial_path = self.current_input.split(" ").last().unwrap();
-                if let Ok(new_path) = concat_paths(&self.current_path, partial_path) {
-                  let partial_name;
-                  let parent;
-                  if self.current_input.ends_with("/") {
-                    partial_name = "".to_string();
-                    parent = new_path.as_path();
-                  } else {
-                    //this is just silly
-                    partial_name = new_path.clone().file_name().unwrap().to_os_string().to_string_lossy().to_string();
-                    parent = new_path.parent().unwrap();
-                  };
-                  for entry in read_dir(parent).unwrap() {
-                    let name = entry.unwrap().path().file_name().unwrap().to_os_string().to_string_lossy().to_string();
-                    if name.starts_with(&partial_name) {
-                      self.current_input += &name[partial_name.len()..];
-                      useless_tab = false;
-                      break;
-                    }
-                  }
+                if let Some(add) = path_autocomplete(&self.current_path, partial_path) {
+                  self.current_input += &add;
+                } else {
+                  return WindowMessageResponse::DoNothing;
                 }
-              }
-              if useless_tab {
-                return WindowMessageResponse::DoNothing;
               }
             } else {
               self.current_input += &key_press.key.to_string();
@@ -229,12 +209,25 @@ impl WindowLike for Terminal {
           WindowMessageResponse::JustRedraw
         } else if self.mode == Mode::Input && (key_press.key == 'p' || key_press.key == 'n') {
           //only the last command is saved unlike other terminals. good enough for me
-          if key_press.key == 'p' && self.last_command.is_some() {
-            self.current_input = self.last_command.clone().unwrap();
+          if key_press.key == 'p' && self.history.len() > 0 {
+            if let Some(history_index) = self.history_index {
+              if history_index > 0 {
+                self.history_index = Some(history_index - 1);
+              }
+            } else {
+              self.history_index = Some(self.history.len() - 1);
+            }
+            self.current_input = self.history[self.history_index.unwrap()].clone();
             self.calc_actual_lines();
             WindowMessageResponse::JustRedraw
           } else if key_press.key == 'n' {
-            self.current_input = String::new();
+            if self.history_index.is_none() || self.history_index.unwrap() == self.history.len() - 1 {
+              self.history_index = None;
+              self.current_input = String::new();
+            } else {
+              self.history_index = Some(self.history_index.unwrap() + 1);
+              self.current_input = self.history[self.history_index.unwrap()].clone();
+            }
             self.calc_actual_lines();
             WindowMessageResponse::JustRedraw
           } else {

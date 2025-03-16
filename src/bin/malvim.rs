@@ -10,6 +10,7 @@ use ming_wm_lib::framebuffer_types::Dimensions;
 use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType };
 use ming_wm_lib::utils::{ calc_actual_lines, calc_new_cursor_pos, Substring };
 use ming_wm_lib::dirs::home;
+use ming_wm_lib::utils::path_autocomplete;
 use ming_wm_lib::ipc::listen;
 
 const MONO_WIDTH: u8 = 10;
@@ -175,11 +176,17 @@ impl WindowLike for Malvim {
               let new_length = current_file.content[current_file.line_pos].chars().count();
               current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
             } else if key_press.key == 'w' {
-              //todo: currently doesn't work on a single space?
               let line = &current_file.content[current_file.line_pos];
-              if line.len() > 0 {
+              let line_len = line.chars().count();
+              if line_len > 0 && current_file.cursor_pos < line_len {
                 //offset until space or eol
-                let offset = line.chars().skip(current_file.cursor_pos).position(|c| c == ' ').unwrap_or(line.chars().count() - current_file.cursor_pos);
+                let mut line_chars = line.chars().skip(current_file.cursor_pos).peekable();
+                let current_char = line_chars.peek().unwrap().clone();
+                let offset = line_chars.position(|c| if current_char == ' ' {
+                  c != ' '
+                } else {
+                  c == ' '
+                }).unwrap_or(line_len - current_file.cursor_pos);
                 current_file.content[current_file.line_pos] = line.remove(current_file.cursor_pos, offset);
                 let new_length = current_file.content[current_file.line_pos].chars().count();
                 current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
@@ -235,23 +242,23 @@ impl WindowLike for Malvim {
               }
             }
           } else if key_press.key == 'h' {
-            current_file.cursor_pos = current_file.cursor_pos.checked_sub(1).unwrap_or(0);
+            current_file.cursor_pos = current_file.cursor_pos.checked_sub(self.maybe_num.unwrap_or(1)).unwrap_or(0);
             changed = false;
           } else if key_press.key == 'j' || key_press.key == 'k' {
             if key_press.key == 'j' {
-              current_file.line_pos += 1;
-              if current_file.line_pos == current_file.content.len() {
+              current_file.line_pos += self.maybe_num.unwrap_or(1);
+              if current_file.line_pos >= current_file.content.len() {
                 current_file.line_pos = current_file.content.len() - 1;
               }
             } else {
-              current_file.line_pos = current_file.line_pos.checked_sub(1).unwrap_or(0);
+              current_file.line_pos = current_file.line_pos.checked_sub(self.maybe_num.unwrap_or(1)).unwrap_or(0);
             }
             let new_length = current_file.content[current_file.line_pos].chars().count();
             current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
             changed = false;
           } else if key_press.key == 'l' {
             if current_length > 0 {
-              current_file.cursor_pos += 1;
+              current_file.cursor_pos += self.maybe_num.unwrap_or(1);
               let line_len = current_file.content[current_file.line_pos].chars().count();
               if current_file.cursor_pos > line_len {
                 current_file.cursor_pos = line_len;
@@ -295,10 +302,10 @@ impl WindowLike for Malvim {
           } else {
             changed = false;
           }
+          //reset maybe_num if not num
           if !numbered && self.state != State::Maybeg {
             self.maybe_num = None;
           }
-          //
         } else if self.mode == Mode::Command {
           self.bottom_message = None;
           let command = self.command.clone().unwrap_or("".to_string());
@@ -306,6 +313,23 @@ impl WindowLike for Malvim {
             new = self.process_command();
             self.command = None;
             self.mode = Mode::Normal;
+          } else if key_press.key == '\t' { //tab
+            let mut parts = command.split(" ").skip(1);
+            let parts_len = parts.clone().count();
+            if parts_len == 1 { //caused one skipped
+              if let Some(second) = parts.next() {
+                let base_path = if self.files.len() > 0 {
+                  //this is a file path, not a directory,
+                  //but path_autocomplete's concat_path will sort it out for us
+                  &self.files[self.current_file_index].path
+                } else {
+                  &home().unwrap_or(PathBuf::from("/")).to_string_lossy().to_string()
+                };
+                if let Some(add) = path_autocomplete(&base_path, second) {
+                  self.command = Some(command + &add);
+                }
+              }
+            }
           } else if key_press.key == '𐘁' { //backspace
             if command.len() > 0 {
               self.command = Some(command[..command.len() - 1].to_string());
@@ -388,7 +412,7 @@ impl WindowLike for Malvim {
         theme_info.alt_secondary
       };
       instructions.extend(vec![
-        DrawInstructions::Rect([used_width, 2], [future_used_width, BAND_HEIGHT - 2], background),
+        DrawInstructions::Rect([used_width, 2], [future_used_width - used_width, BAND_HEIGHT - 2], background),
         DrawInstructions::Text([used_width + 2, 2], vec!["nimbus-romono".to_string()], if file_info.changed { "+ ".to_string() } else { String::new() } + &file_info.name, theme_info.alt_text, background, Some(0), Some(MONO_WIDTH)),
       ]);
       used_width = future_used_width;
@@ -550,12 +574,12 @@ impl Malvim {
             }
           } else {
             //t(abe)
-            self.current_file_index += 1;
             if self.current_file_index == self.files.len() - 1 {
               self.files.push(file_info);
             } else {
-              self.files.insert(self.current_file_index, file_info);
+              self.files.insert(self.current_file_index + 1, file_info);
             }
+            self.current_file_index += 1;
           }
           return true;
         } else {
@@ -577,15 +601,18 @@ impl Malvim {
           current_file.cursor_pos = 0;
         }
       }
-    } else if first == "w" || first == "write" {
-      let current_file = &self.files[self.current_file_index];
-      let _ = write(&current_file.path, &current_file.content.join("\n"));
-      self.files[self.current_file_index].changed = false;
-      self.bottom_message = Some("Written".to_string());
-    } else if first == "q" || first == "quit" {
-      self.files.remove(self.current_file_index);
-      self.current_file_index = self.current_file_index.checked_sub(1).unwrap_or(0);
-      return true;
+    } else if first == "x" || first == "w" || first == "write" || first == "q" || first == "quit" {
+      if first == "x" || first == "w" || first == "write" {
+        let current_file = &self.files[self.current_file_index];
+        let _ = write(&current_file.path, &current_file.content.join("\n"));
+        self.files[self.current_file_index].changed = false;
+        self.bottom_message = Some("Written".to_string());
+      }
+      if first == "x" || first == "q" || first == "quit" {
+        self.files.remove(self.current_file_index);
+        self.current_file_index = self.current_file_index.checked_sub(1).unwrap_or(0);
+        return true;
+      }
     } else if first == "p" || first == "tabp" {
       self.current_file_index = self.current_file_index.checked_sub(1).unwrap_or(self.files.len() - 1);
       return true;

@@ -30,8 +30,8 @@ pub fn get_font_char_from_fonts(fonts: &[String], c: char) -> (char, Vec<Vec<u8>
     }
   }
   let p = dirs::exe_dir(Some(&("ming_bmps/".to_string() + &fonts[0]))).to_string_lossy().to_string();
-  //so a ? char must be in every font
-  get_font_char(&p, '?').unwrap()
+  //so a ? char should be in every font. otherwise will just return blank
+  get_font_char(&p, '?').unwrap_or(('?', vec![vec![0]], 0))
 }
 
 pub fn get_all_files(dir: PathBuf) -> Vec<PathBuf> {

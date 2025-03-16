@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::fs::read_dir;
 
 use crate::framebuffer_types::{ Dimensions, Point };
 
@@ -80,6 +81,10 @@ pub fn calc_new_cursor_pos(cursor_pos: usize, new_length: usize) -> usize {
 
 pub fn concat_paths(current_path: &str, add_path: &str) -> Result<PathBuf, ()> {
   let mut new_path = PathBuf::from(current_path);
+  //if current_path is a file, automatically uses it's parent (a directory)
+  if new_path.is_file() {
+    new_path = new_path.parent().unwrap().to_path_buf();
+  }
   if add_path.starts_with("/") {
     //absolute path
     new_path = PathBuf::from(add_path);
@@ -154,5 +159,38 @@ pub fn get_rest_of_split(split: &mut dyn Iterator<Item = &str>, sep: Option<&str
     }
   }
   rest
+}
+
+pub fn path_autocomplete(current_path: &str, partial_path: &str) -> Option<String> {
+  if let Ok(new_path) = concat_paths(current_path, &partial_path) {
+    let partial_name;
+    let parent;
+    if partial_path.ends_with("/") {
+      partial_name = "".to_string();
+      parent = new_path.as_path();
+    } else {
+      //this is just silly
+      partial_name = new_path.clone().file_name().unwrap().to_os_string().to_string_lossy().to_string();
+      parent = new_path.parent().unwrap();
+    };
+    if let Ok(entries) = read_dir(parent) {
+      for entry in entries {
+        let entry_path = entry.unwrap().path();
+        let name = entry_path.file_name().unwrap().to_os_string().to_string_lossy().to_string();
+        if name.starts_with(&partial_name) {
+          let add = name[partial_name.len()..].to_string();
+          let add_len = add.len();
+          return Some(add + if entry_path.is_dir() && add_len > 0 {
+            "/"
+          } else {
+            ""
+          });
+        }
+      }
+    }
+    None
+  } else {
+    None
+  }
 }
 
