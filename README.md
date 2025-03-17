@@ -9,7 +9,7 @@ The [Koxinga web browser](https://github.com/stjet/koxinga) can be separately in
 
 ## Building
 
-Create a `password.env` file in the same directory as `build.rs`, otherwise the default password will be "incorrect mule lightbulb niche".
+Create a `password.env` file in the same directory as `build.rs`, otherwise the default password will be "password".
 
 For best performance:
 

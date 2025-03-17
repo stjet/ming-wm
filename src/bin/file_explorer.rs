@@ -11,6 +11,16 @@ use ming_wm_lib::ipc::listen;
 
 const HEIGHT: usize = 20;
 
+fn format_secs(secs: u64) -> String {
+  let minute = 60;
+  let hour = minute * 60;
+  let day = 24 * hour;
+  let days = secs / day;
+  let hours = (secs % day) / hour;
+  let minutes = ((secs % day) % hour) / minute;
+  format!("{}d {}h {}m", days, hours, minutes)
+}
+
 struct DirectoryChild {
   //if some, use instead of file/dir name
   override_name: Option<String>,
@@ -140,7 +150,7 @@ impl WindowLike for FileExplorer {
       start_y += HEIGHT;
       if let Ok(elapsed) = metadata.modified().unwrap().elapsed() {
         //properly format months, days, hours, minutes, secs instead
-        instructions.push(DrawInstructions::Text([5, start_y], vec!["nimbus-roman".to_string()], format!("Last Modified: {} minutes ago", elapsed.as_secs() / 60), theme_info.text, theme_info.background, None, None));
+        instructions.push(DrawInstructions::Text([5, start_y], vec!["nimbus-roman".to_string()], format!("Last Modified: {} ago", format_secs(elapsed.as_secs())), theme_info.text, theme_info.background, None, None));
       }
       //todo: other stuff
       //

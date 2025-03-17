@@ -405,6 +405,7 @@ impl WindowManager {
                     }
                   },
                   &ShortcutType::FocusPrevWindow | &ShortcutType::FocusNextWindow => {
+                    self.toggle_start_menu(true);
                     let current_index = self.get_focused_index().unwrap_or(0);
                     let mut new_focus_index = current_index;
                     loop {
