@@ -28,12 +28,12 @@ impl WindowLike for Help {
         } else {
           String::new()
         };
-        self.paragraph = Some(Box::new(Paragraph::new("help".to_string(), [2, 22], [self.dimensions[0] - 4, self.dimensions[1] - 24], "Press the 'h' and 'l' keys to read the different help pages".to_string() + &first_content, ())));
+        self.paragraph = Some(Box::new(Paragraph::new("help".to_string(), [2, 22], [self.dimensions[0] - 4, self.dimensions[1] - 24], "Press the 'h' and 'l' keys (or the left and right arrow keys) to read the different help pages".to_string() + &first_content, ())));
         WindowMessageResponse::JustRedraw
       },
       WindowMessage::KeyPress(key_press) => {
-        if key_press.key == 'h' || key_press.key == 'l' {
-          if key_press.key == 'h' {
+        if key_press.key == 'h' || key_press.is_left_arrow() || key_press.key == 'l' || key_press.is_right_arrow() {
+          if key_press.key == 'h' || key_press.is_left_arrow() {
             if self.file_index == 0 {
               self.file_index = self.files.len() - 1;
             } else {

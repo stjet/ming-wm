@@ -8,8 +8,8 @@ The terminal starts off in INPUT mode, which allows entering commands to run. If
 
 In INPUT mode, commands can be freely typed. There are a few special control sequences:
 
-- `ctrl+p`: Equivalent to the up arrow in most terminals. Brings up the previous command in the command history, and so on.
-- `ctrl+n`: Equivalent to the down arrow in most terminals. Either clears the current input if not in a previous command, else brings up the next command in the command history.
+- `ctrl+p` (or up arrow): Equivalent to the up arrow in most terminals. Brings up the previous command in the command history, and so on.
+- `ctrl+n` (or down arrow): Equivalent to the down arrow in most terminals. Either clears the current input if not in a previous command, else brings up the next command in the command history.
 
 Tab completion is also supported, though only for file/directory paths.
 

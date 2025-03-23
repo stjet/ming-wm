@@ -24,7 +24,7 @@ impl WindowLike for LockScreen {
         WindowMessageResponse::JustRedraw
       },
       WindowMessage::KeyPress(key_press) => {
-        if key_press.key == '𐘂' { //the enter key
+        if key_press.is_enter() {
           //check password
           let mut hasher = Blake2b512::new();
           hasher.update((self.input_password.clone() + "salt?sorrycryptographers").as_bytes());
@@ -34,15 +34,17 @@ impl WindowLike for LockScreen {
             self.input_password = String::new();
             WindowMessageResponse::JustRedraw
           }
-        } else if key_press.key == '𐘁' { //backspace
+        } else if key_press.is_backspace() {
           let p_len = self.input_password.len();
           if p_len != 0 {
             self.input_password = self.input_password[..p_len - 1].to_string();
           }
           WindowMessageResponse::JustRedraw
-        } else {
+        } else if key_press.is_regular() {
           self.input_password += &key_press.key.to_string();
           WindowMessageResponse::JustRedraw
+        } else {
+          WindowMessageResponse::DoNothing
         }
       },
       _ => WindowMessageResponse::DoNothing,

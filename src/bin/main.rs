@@ -9,7 +9,6 @@ use std::env;
 use linux::fb::Framebuffer;
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
-use termion::{ clear, cursor };
 use termion::event::Key;
 
 use ming_wm_lib::window_manager_types::KeyChar;
@@ -17,7 +16,11 @@ use ming_wm_lib::messages::*;
 use ming_wm::framebuffer::{ FramebufferWriter, FramebufferInfo };
 use ming_wm::window_manager::WindowManager;
 
-//use Linear A for escape, backspace, enter
+const CLEAR_ALL: &'static str = "\x1b[2J";
+const HIDE_CURSOR: &'static str = "\x1b[?25l";
+const SHOW_CURSOR: &'static str = "\x1b[?25h";
+
+//use Linear A for escape, backspace, enter, arrow keys
 //Linear A used only internally in onscreen keyboard: 𐘎 is alt, 𐘧 is switch board, 𐘾 is ctrl
 fn key_to_char(key: Key) -> Option<KeyChar> {
   match key {
@@ -27,6 +30,10 @@ fn key_to_char(key: Key) -> Option<KeyChar> {
     Key::Ctrl(c) => Some(KeyChar::Ctrl(c)),
     Key::Backspace => Some(KeyChar::Press('𐘁')),
     Key::Esc => Some(KeyChar::Press('𐘃')),
+    Key::Up => Some(KeyChar::Press('𐙘')),
+    Key::Down => Some(KeyChar::Press('𐘞')),
+    Key::Left => Some(KeyChar::Press('𐙣')),
+    Key::Right => Some(KeyChar::Press('𐙥')),
     _ => None,
   }
 }
@@ -68,9 +75,9 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
 
   let mut stdout = stdout().into_raw_mode().unwrap();
 
-  write!(stdout, "{}", clear::All).unwrap();
+  write!(stdout, "{}", CLEAR_ALL).unwrap();
 
-  write!(stdout, "{}", cursor::Hide).unwrap();
+  write!(stdout, "{}", HIDE_CURSOR).unwrap();
 
   stdout.flush().unwrap();
 
@@ -147,12 +154,12 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
       ThreadMessage::KeyChar(kc) => wm.handle_message(WindowManagerMessage::KeyChar(kc.clone())),
       ThreadMessage::Touch(x, y) => wm.handle_message(WindowManagerMessage::Touch(x, y)),
       ThreadMessage::Clear => {
-        write!(stdout, "{}", clear::All).unwrap();
+        write!(stdout, "{}", CLEAR_ALL).unwrap();
         stdout.flush().unwrap();
       },
       ThreadMessage::Exit => {
         if !wm.locked {
-          write!(stdout, "{}", cursor::Show).unwrap();
+          write!(stdout, "{}", SHOW_CURSOR).unwrap();
           stdout.suspend_raw_mode().unwrap();
           exit(0);
         }

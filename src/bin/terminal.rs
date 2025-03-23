@@ -104,13 +104,13 @@ impl WindowLike for Terminal {
       WindowMessage::KeyPress(key_press) => {
         match self.mode {
           Mode::Input => {
-            if key_press.key == '𐘁' { //backspace
+            if key_press.is_backspace() {
               if self.current_input.len() > 0 {
                 self.current_input = self.current_input.remove_last();
               } else {
                 return WindowMessageResponse::DoNothing;
               }
-            } else if key_press.key == '𐘂' { //the enter key
+            } else if key_press.is_enter() {
               self.lines.push("$ ".to_string() + &self.current_input);
               self.history.push(self.current_input.clone());
               self.history_index = None;
@@ -127,6 +127,10 @@ impl WindowLike for Terminal {
                   return WindowMessageResponse::DoNothing;
                 }
               }
+            } else if key_press.is_up_arrow() {
+              self.prev();
+            } else if key_press.is_down_arrow() {
+              self.next();
             } else {
               self.current_input += &key_press.key.to_string();
             }
@@ -175,19 +179,16 @@ impl WindowLike for Terminal {
             }
           },
           Mode::Stdin => {
-            if key_press.key == '𐘃' {
-              //esc
+            if key_press.is_escape() {
               self.mode = Mode::Running;
-            } else if key_press.key == '𐘂' {
-              //enter
+            } else if key_press.is_enter() {
               let _ = self.pty_in_tx.as_mut().unwrap().send(self.current_stdin_input.clone());
               self.mode = Mode::Running;
               let pcl_len = self.process_current_line.len();
               self.lines.push(strip_ansi_escape_codes(String::from_utf8(self.process_current_line.clone()).unwrap_or("?".repeat(pcl_len))) + &self.current_stdin_input);
               self.current_stdin_input = String::new();
               self.process_current_line = Vec::new();
-            } else if key_press.key == '𐘁' {
-              //backspace
+            } else if key_press.is_backspace() {
               if self.current_stdin_input.len() > 0 {
                 self.current_stdin_input = self.current_stdin_input.remove_last();
               } else {
@@ -210,24 +211,12 @@ impl WindowLike for Terminal {
         } else if self.mode == Mode::Input && (key_press.key == 'p' || key_press.key == 'n') {
           //only the last command is saved unlike other terminals. good enough for me
           if key_press.key == 'p' && self.history.len() > 0 {
-            if let Some(history_index) = self.history_index {
-              if history_index > 0 {
-                self.history_index = Some(history_index - 1);
-              }
-            } else {
-              self.history_index = Some(self.history.len() - 1);
-            }
-            self.current_input = self.history[self.history_index.unwrap()].clone();
+
+            self.prev();
             self.calc_actual_lines();
             WindowMessageResponse::JustRedraw
           } else if key_press.key == 'n' {
-            if self.history_index.is_none() || self.history_index.unwrap() == self.history.len() - 1 {
-              self.history_index = None;
-              self.current_input = String::new();
-            } else {
-              self.history_index = Some(self.history_index.unwrap() + 1);
-              self.current_input = self.history[self.history_index.unwrap()].clone();
-            }
+            self.next();
             self.calc_actual_lines();
             WindowMessageResponse::JustRedraw
           } else {
@@ -298,6 +287,27 @@ impl WindowLike for Terminal {
 impl Terminal {
   pub fn new() -> Self {
     Default::default()
+  }
+
+  fn prev(&mut self) {
+    if let Some(history_index) = self.history_index {
+      if history_index > 0 {
+        self.history_index = Some(history_index - 1);
+      }
+    } else {
+      self.history_index = Some(self.history.len() - 1);
+    }
+    self.current_input = self.history[self.history_index.unwrap()].clone();
+  }
+
+  fn next(&mut self) {
+    if self.history_index.is_none() || self.history_index.unwrap() == self.history.len() - 1 {
+      self.history_index = None;
+      self.current_input = String::new();
+    } else {
+      self.history_index = Some(self.history_index.unwrap() + 1);
+      self.current_input = self.history[self.history_index.unwrap()].clone();
+    }
   }
 
   fn get_max_lines(&self) -> usize {

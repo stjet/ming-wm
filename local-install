@@ -1,10 +1,11 @@
 #!/bin/sh
 rm -rf ~/.local/bin/ming_bmps
 cp -r ./bmps ~/.local/bin/ming_bmps
-rm -rf ~/.local/bin/ming_bmps/nimbus-roman/*.bmp
-rm -rf ~/.local/bin/ming_bmps/nimbus-romano/*.bmp
-rm -rf ~/.local/bin/ming_bmps/shippori-mincho/*.bmp
-rm ~/.local/bin/ming_bmps/*1440x842.bmp
+rm -f ~/.local/bin/ming_bmps/nimbus-roman/*.bmp
+rm -f ~/.local/bin/ming_bmps/nimbus-romano/*.bmp
+rm -f ~/.local/bin/ming_bmps/shippori-mincho/*.bmp
+rm -f ~/.local/bin/ming_bmps/*1440x842.bmp
+rm -f ~/.local/bin/ming_bmps/*.svg
 rm -rf ~/.local/bin/ming_docs
 cp -r ./docs ~/.local/bin/ming_docs
 rm -rf ~/.local/bin/ming_docs/images

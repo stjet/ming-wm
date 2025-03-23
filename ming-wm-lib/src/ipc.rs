@@ -31,6 +31,7 @@ pub trait WindowLike {
 
 const LOG: bool = false;
 
+/// Listen and process what the window manager writes to our stdin
 pub fn listen(mut window_like: impl WindowLike) {
   panic::set_hook(Box::new(|panic_info| {
     let (filename, line) = panic_info.location().map(|l| (l.file(), l.line())).unwrap_or(("<unknown>", 0));

@@ -101,8 +101,17 @@ mv target/release/mingMisc_Example /usr/bin/mingMisc_Example #or whatever direct
 
 ![The example Hello World window!](/docs/images/window_example.png)
 
+## Now what?
+
+Handle various inputs in `handle_message`, and have it mutate the state. Draw the relevant state in `draw`. Not too hard, eh?
+
+Besides looking at the examples (Koxinga, `src/bin`), read the [ming-wm-lib docs](https://docs.rs/ming-wm-lib)!
+
+Also, `docs/system/keys.md` may be useful.
+
 ## Tips
 
 - For windows that are separate binaries, the Elm Architecture obviously cannot be enforced (unless the window is written in Rust and uses the `ming-wm-lib`. However, the design of the IPC and the nature of the window manager being keyboard-driven makes it so using the Elm Architecture is highly recommended.
 - Since the window manager currently queries and reads the responses to/from window binaries in the main thread, while the response is being waited for, the window manager is "frozen". Therefore, time-consuming tasks (>1 second) should not be done in the main thread, but rather a separate thread. For example, the ming-wm audio player (`src/bin/audio_player.rs`) does the time-consuming process of reading audio files in a separate thread to not hold up the window manager, and provide quick responses.
+- Window panics will be logged to `~/.local/share/ming-wm/logs.txt`.
 

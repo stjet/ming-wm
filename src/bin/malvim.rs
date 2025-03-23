@@ -94,7 +94,7 @@ impl WindowLike for Malvim {
       WindowMessage::KeyPress(key_press) => {
         let mut changed = true;
         let mut new = false;
-        if key_press.key == '𐘃' { //escape key
+        if key_press.is_escape() {
           self.mode = Mode::Normal;
           self.state = State::None;
           changed = false;
@@ -113,7 +113,7 @@ impl WindowLike for Malvim {
           let current_file = &mut self.files[self.current_file_index];
           let current_length = current_file.content[current_file.line_pos].chars().count();
           let line = &current_file.content[current_file.line_pos];
-          if key_press.key == '𐘂' { //the enter key
+          if key_press.is_enter() {
             let mut line: Vec<char> = line.chars().collect();
             let (left, right) = line.split_at_mut(current_file.cursor_pos);
             let left = left.into_iter().map(|c| c.to_string()).collect::<Vec<String>>().join("");
@@ -136,7 +136,7 @@ impl WindowLike for Malvim {
             current_file.content.insert(current_file.line_pos + 1, " ".repeat(spaces) + &right);
             current_file.line_pos += 1;
             current_file.cursor_pos = spaces;
-          } else if key_press.key == '𐘁' { //backspace
+          } else if key_press.is_backspace() {
             if current_length > 0 && current_file.cursor_pos > 0 {
               current_file.content[current_file.line_pos] = line.remove(current_file.cursor_pos - 1, 1);
               current_file.cursor_pos -= 1;
@@ -150,7 +150,7 @@ impl WindowLike for Malvim {
                 current_file.cursor_pos = old_previous_line_length;
               }
             }
-          } else {
+          } else if !key_press.is_arrow() { //arrow keys in insert mode is something i cannot support in good conscience
             current_file.content[current_file.line_pos] = line.substring(0, current_file.cursor_pos).to_string() + &key_press.key.to_string() + line.substring(current_file.cursor_pos, line.chars().count());
             current_file.cursor_pos += 1;
           }
@@ -241,11 +241,11 @@ impl WindowLike for Malvim {
                 current_file.cursor_pos = 0;
               }
             }
-          } else if key_press.key == 'h' {
+          } else if key_press.key == 'h' || key_press.is_left_arrow() {
             current_file.cursor_pos = current_file.cursor_pos.checked_sub(self.maybe_num.unwrap_or(1)).unwrap_or(0);
             changed = false;
-          } else if key_press.key == 'j' || key_press.key == 'k' {
-            if key_press.key == 'j' {
+          } else if key_press.key == 'j' || key_press.is_down_arrow() || key_press.key == 'k' || key_press.is_up_arrow() {
+            if key_press.key == 'j' || key_press.is_down_arrow() {
               current_file.line_pos += self.maybe_num.unwrap_or(1);
               if current_file.line_pos >= current_file.content.len() {
                 current_file.line_pos = current_file.content.len() - 1;
@@ -256,7 +256,7 @@ impl WindowLike for Malvim {
             let new_length = current_file.content[current_file.line_pos].chars().count();
             current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
             changed = false;
-          } else if key_press.key == 'l' {
+          } else if key_press.key == 'l' || key_press.is_right_arrow() {
             if current_length > 0 {
               current_file.cursor_pos += self.maybe_num.unwrap_or(1);
               let line_len = current_file.content[current_file.line_pos].chars().count();
@@ -309,7 +309,7 @@ impl WindowLike for Malvim {
         } else if self.mode == Mode::Command {
           self.bottom_message = None;
           let command = self.command.clone().unwrap_or("".to_string());
-          if key_press.key == '𐘂' { //the enter key
+          if key_press.is_enter() {
             new = self.process_command();
             self.command = None;
             self.mode = Mode::Normal;
@@ -330,7 +330,7 @@ impl WindowLike for Malvim {
                 }
               }
             }
-          } else if key_press.key == '𐘁' { //backspace
+          } else if key_press.is_backspace() {
             if command.len() > 0 {
               self.command = Some(command[..command.len() - 1].to_string());
             }

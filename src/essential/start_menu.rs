@@ -42,15 +42,15 @@ impl WindowLike for StartMenu {
       },
       WindowMessage::KeyPress(key_press) => {
         //up and down
-        if key_press.key == 'k' || key_press.key == 'j' {
+        if key_press.key == 'j' || key_press.is_down_arrow() || key_press.key == 'k' || key_press.is_up_arrow() {
           let old_focus_index = self.get_focus_index().unwrap();
           self.components[old_focus_index].handle_message(WindowMessage::Unfocus);
-          let current_focus_index = if key_press.key == 'j' {
-              if old_focus_index + 1 == self.components.len() {
-                0
-              } else {
-                old_focus_index + 1
-              }
+          let current_focus_index = if key_press.key == 'j' || key_press.is_down_arrow() {
+            if old_focus_index + 1 == self.components.len() {
+              0
+            } else {
+              old_focus_index + 1
+            }
           } else {
             if old_focus_index == 0 {
               self.components.len() - 1
@@ -61,7 +61,7 @@ impl WindowLike for StartMenu {
           self.current_focus = self.components[current_focus_index].name().to_string();
           self.components[current_focus_index].handle_message(WindowMessage::Focus);
           WindowMessageResponse::JustRedraw
-        } else if key_press.key == '𐘂' { //the enter key
+        } else if key_press.is_enter() {
           let focus_index = self.get_focus_index();
           if let Some(focus_index) = focus_index {
             let r = self.components[focus_index].handle_message(WindowMessage::FocusClick);
@@ -108,13 +108,20 @@ impl WindowLike for StartMenu {
       DrawInstructions::Rect([self.dimensions[0] - 1, 0], [1, self.dimensions[1]], theme_info.border_right_bottom),
       //background
       DrawInstructions::Rect([0, 1], [self.dimensions[0] - 1, self.dimensions[1] - 1], theme_info.background),
-      //mingde logo
-      DrawInstructions::Bmp([2, 2], exe_dir(Some("ming_bmps/mingde.bmp")).to_string_lossy().to_string(), false),
+      //ming-wm logo
+      DrawInstructions::Bmp([2, 2], exe_dir(Some("ming_bmps/ming-wm.bmp")).to_string_lossy().to_string(), true),
       //I truly don't know why, it should be - 44 but - 30 seems to work better :shrug:
-      DrawInstructions::Gradient([2, 42], [40, self.dimensions[1] - 30], [255, 201, 14], [225, 219, 77], 15),
+      DrawInstructions::Gradient([2, 42], [40, self.dimensions[1] - 30], [255, 201, 14], [225, 219, 100], 15), //[225, 219, 77]
     ];
+    let max_per_page = CATEGORIES.len();
+    let current_focus = self.get_focus_index().unwrap();
+    let mut index = 0;
     for component in &self.components {
-      instructions.extend(component.draw(theme_info));
+      //supports multiple pages of window options per category
+      if (index >= max_per_page && current_focus >= max_per_page) || (index < max_per_page && current_focus < max_per_page) {
+        instructions.extend(component.draw(theme_info));
+      }
+      index += 1;
     }
     instructions
   }
@@ -152,9 +159,13 @@ impl StartMenu {
             ];
             //add window buttons
             if let Some(to_add) = self.executable_windows.get(&("ming".to_string() + name)) {
-              for a in 0..to_add.len() {
-               self.components.push(Box::new(HighlightButton::new(
-                  to_add[a].1.to_string(), [42, (a + 1) * self.y_each], [self.dimensions[0] - 42 - 1, self.y_each], to_add[a].0.to_string(), StartMenuMessage::WindowClick(to_add[a].1.clone()), StartMenuMessage::ChangeAcknowledge, false
+              let max_per_page = CATEGORIES.len();
+              //starts at 1 because of back button
+              for a in 1..=to_add.len() {
+                let ta = &to_add[a - 1];
+                //the modulo is for multiple pages for windows per category
+                self.components.push(Box::new(HighlightButton::new(
+                  ta.1.to_string(), [42, (a % max_per_page) * self.y_each], [self.dimensions[0] - 42 - 1, self.y_each], ta.0.to_string(), StartMenuMessage::WindowClick(ta.1.clone()), StartMenuMessage::ChangeAcknowledge, false
                 )));
               }
             }

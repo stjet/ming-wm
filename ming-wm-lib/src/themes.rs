@@ -97,6 +97,7 @@ const THEME_INFOS: [(Themes, ThemeInfo); 5] = [
   //
 ];
 
+/// Window manager internal usage
 pub fn get_theme_info(theme: &Themes) -> Option<ThemeInfo> {
   for pair in THEME_INFOS {
     if &pair.0 == theme {

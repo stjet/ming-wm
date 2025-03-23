@@ -62,7 +62,7 @@ impl WindowLike for FileExplorer {
       },
       WindowMessage::KeyPress(key_press) => {
         self.state = State::List;
-        if key_press.key == '𐘂' { //the enter key
+        if key_press.is_enter() {
           if self.current_dir_contents.len() > 0 {
             let selected_entry = &self.current_dir_contents[self.position];
             if !selected_entry.is_file {
@@ -74,8 +74,8 @@ impl WindowLike for FileExplorer {
             }
           }
           WindowMessageResponse::DoNothing
-        } else if key_press.key == 'j' || key_press.key == 'k' {
-          if key_press.key == 'j' {
+        } else if key_press.key == 'j' || key_press.is_down_arrow() || key_press.key == 'k' || key_press.is_up_arrow() {
+          if key_press.key == 'j' || key_press.is_down_arrow() {
             //down
             if self.position == self.current_dir_contents.len() - 1 {
               self.position = 0;
@@ -94,7 +94,7 @@ impl WindowLike for FileExplorer {
           let max_height = self.dimensions[1] - HEIGHT;
           if self.position > self.top_position {
             let current_height = (self.position - self.top_position + 1) * HEIGHT;
-            if current_height > self.dimensions[1] {
+            if current_height > max_height {
               //somehow this is slightly off sometimes
               self.top_position += (current_height - max_height).div_ceil(HEIGHT);
             }
@@ -138,7 +138,7 @@ impl WindowLike for FileExplorer {
         } else {
           name.unwrap()
         };
-        instructions.push(DrawInstructions::Text([5, start_y], vec!["nimbus-roman".to_string(), "shippori-mincho".to_string()], name, if is_selected { theme_info.top_text } else { theme_info.text }, if is_selected { theme_info.top } else { theme_info.background }, None, None));
+        instructions.push(DrawInstructions::Text([5, start_y + 4], vec!["nimbus-roman".to_string(), "shippori-mincho".to_string()], name, if is_selected { theme_info.top_text } else { theme_info.text }, if is_selected { theme_info.top } else { theme_info.background }, None, None));
         start_y += HEIGHT;
         i += 1;
       }

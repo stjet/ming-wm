@@ -29,8 +29,8 @@ Tab completion is supported for the `<file>` argument.
 - `f<char>`
 - `F<char>`
 - `x`
-- `h`, `j`, `k`, `l`
-- `<num>h`, `<num>j`, `<num>k`, `<num>l`
+- `h` (or left arrow), `j` (or down arrow), `k` (or up arrow), `l` (or right arrow)
+- `<num>h`, `<num>j` (or down arrow), `<num>k` (or up arrow), `<num>l`
 - `0`, `^`, `$`
 
 ### Malvim Specific

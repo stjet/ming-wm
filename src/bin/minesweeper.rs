@@ -54,6 +54,7 @@ impl WindowLike for Minesweeper {
             self.random_chars = String::new();
             self.state = State::BeforePlaying;
           } else {
+            //since must be u8, the Linear A (enter, backspace, etc) stuff won't do anything
             if u8::try_from(key_press.key).is_ok() {
               self.random_chars.push(key_press.key);
             }
