@@ -1,6 +1,6 @@
 #!/bin/sh
 rm -rf /usr/local/bin/ming_bmps
-cp -f ./bmps /usr/local/bin/ming_bmps
+cp -r ./bmps /usr/local/bin/ming_bmps
 rm -f /usr/local/bin/ming_bmps/nimbus-roman/*.bmp
 rm -f /usr/local/bin/ming_bmps/nimbus-romano/*.bmp
 rm -f /usr/local/bin/ming_bmps/shippori-mincho/*.bmp
