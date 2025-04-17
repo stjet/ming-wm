@@ -11,6 +11,7 @@ pub trait Substring {
   fn substring(&self, start: usize, end: usize) -> &str;
   fn remove(&self, index: usize, len: usize) -> String;
   fn remove_last(&self) -> String;
+  fn find_substring(&self, substr: &str) -> Option<usize>;
 }
 
 impl Substring for String {
@@ -29,6 +30,14 @@ impl Substring for String {
       byte_end += char_length;
     }
     &self[byte_start..byte_end]
+    /*
+    let mut result = String::new();
+    let mut chars = self.chars().skip(start);
+    for _i in 0..(end - start) {
+      result += &chars.next().unwrap().to_string();
+    }
+    result
+    */
   }
 
   fn remove(&self, index: usize, len: usize) -> String {
@@ -38,13 +47,26 @@ impl Substring for String {
   fn remove_last(&self) -> String {
     self.substring(0, self.chars().count() - 1).to_string()
   }
+
+  fn find_substring(&self, substr: &str) -> Option<usize> {
+    //slightly inefficient
+    let substr_len = substr.chars().count();
+    let self_len = self.chars().count();
+    if substr_len <= self_len {
+      for start in 0..=(self_len - substr_len) {
+        if self.substring(start, start + substr_len) == substr {
+          return Some(start);
+        }
+      }
+    }
+    None
+  }
 }
 
 //the tuple is first, line #, actual line
 pub fn calc_actual_lines<'a>(lines: impl Iterator<Item = &'a String>, max_chars_per_line: usize, one_extra: bool) -> Vec<(bool, usize, String)> {
   let mut actual_lines = Vec::new();
-  let mut line_num = 0;
-  for real_line in lines {
+  for (line_num, real_line) in lines.enumerate() {
     let mut line = real_line.to_string() + if one_extra { " " } else { "" };
     let mut first = true;
     loop {
@@ -62,7 +84,6 @@ pub fn calc_actual_lines<'a>(lines: impl Iterator<Item = &'a String>, max_chars_
       }
       first = false;
     }
-    line_num += 1;
   }
   actual_lines
 }
@@ -132,7 +153,7 @@ pub fn hex_to_u8(c1: char, c2: char) -> u8 {
 }
 
 pub fn is_hex(c: char) -> bool {
-  HEX_CHARS.iter().position(|hc| hc == &c).is_some()
+  HEX_CHARS.iter().any(|hc| hc == &c)
 }
 
 pub fn point_inside(point: Point, top_left: Point, size: Dimensions) -> bool {
@@ -193,4 +214,3 @@ pub fn path_autocomplete(current_path: &str, partial_path: &str) -> Option<Strin
     None
   }
 }
-

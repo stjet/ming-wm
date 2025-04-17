@@ -15,34 +15,32 @@ fn font_chars_to_alphas(dir: &str) {
     if file_name.len() < 2 {
       continue;
     }
-    if file_name[1] == "bmp" {
-      if !path.is_dir() {
-        let mut ch: Vec<Vec<String>> = Vec::new();
-        let b = BMP::new_from_file(&path.clone().into_os_string().into_string().unwrap()).unwrap();
-        let dib_header = b.get_dib_header().unwrap();
-        let width = dib_header.width as usize;
-        let height = dib_header.height as usize;
-        for y in 0..height {
-          let mut row = Vec::new();
-          for x in 0..width {
-            let pixel_color = b.get_color_of_px(x, y).unwrap();
-            if pixel_color[3] == 0 {
-              //zeroes are just empty. eg 255,0,255 becomes 255,,255
-              row.push(String::new());
-            } else {
-              row.push(pixel_color[3].to_string()); //push alpha channel
-            }
+    if file_name[1] == "bmp" && !path.is_dir() {
+      let mut ch: Vec<Vec<String>> = Vec::new();
+      let b = BMP::new_from_file(&path.clone().into_os_string().into_string().unwrap()).unwrap();
+      let dib_header = b.get_dib_header().unwrap();
+      let width = dib_header.width as usize;
+      let height = dib_header.height as usize;
+      for y in 0..height {
+        let mut row = Vec::new();
+        for x in 0..width {
+          let pixel_color = b.get_color_of_px(x, y).unwrap();
+          if pixel_color[3] == 0 {
+            //zeroes are just empty. eg 255,0,255 becomes 255,,255
+            row.push(String::new());
+          } else {
+            row.push(pixel_color[3].to_string()); //push alpha channel
           }
-          ch.push(row);
         }
-        let ch: Vec<String> = ch.into_iter().map(|row| {
-          row.join(",")
-        }).collect();
-        let chars: Vec<char> = file_name[0].chars().collect();
-        File::create(dir.to_string() + "/" + &chars[0].to_string() + ".alpha").unwrap().write_all(
-            (chars[1].to_string() + "\n" + &ch.join("\n")).as_bytes()
-        ).unwrap();
+        ch.push(row);
       }
+      let ch: Vec<String> = ch.into_iter().map(|row| {
+        row.join(",")
+      }).collect();
+      let chars: Vec<char> = file_name[0].chars().collect();
+      File::create(dir.to_string() + "/" + &chars[0].to_string() + ".alpha").unwrap().write_all(
+          (chars[1].to_string() + "\n" + &ch.join("\n")).as_bytes()
+      ).unwrap();
     }
   }
 }

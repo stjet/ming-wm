@@ -58,22 +58,22 @@ pub fn listen(mut window_like: impl WindowLike) {
     let arg = &parts.collect::<Vec<&str>>().join(" ");
     let output = match method {
       "handle_message" => {
-        format!("{}", &window_like.handle_message(WindowMessage::deserialize(arg).unwrap()).serialize())
+        window_like.handle_message(WindowMessage::deserialize(arg).unwrap()).serialize().to_string()
       },
       "draw" => {
-        format!("{}", &window_like.draw(&ThemeInfo::deserialize(arg).unwrap()).serialize().replace("\n", ""))
+        window_like.draw(&ThemeInfo::deserialize(arg).unwrap()).serialize().replace("\n", "").to_string()
       },
       "title" => {
-        format!("{}", window_like.title())
+        window_like.title().to_string()
       },
       "resizable" => {
-        format!("{}", window_like.resizable())
+        window_like.resizable().to_string()
       },
       "subtype" => {
-        format!("{}", &window_like.subtype().serialize())
+        window_like.subtype().serialize().to_string()
       },
       "ideal_dimensions" => {
-        format!("{}", &window_like.ideal_dimensions(Dimensions::deserialize(arg).unwrap()).serialize())
+        window_like.ideal_dimensions(Dimensions::deserialize(arg).unwrap()).serialize().to_string()
       },
       _ => String::new(),
     };

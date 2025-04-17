@@ -16,5 +16,9 @@
 - Alt+J: Move window to bottom edge
 - Alt+K: Move window to top edge
 - Alt+L: Move window to right edge
+- Alt+n: Expand window width
+- Alt+m: Expand window height
+- Alt+N: Shrink window width
+- Alt+M: Shrink window height
 - Alt+1, Alt+2, ..., Alt+[n], ..., Alt+9: Switch to workspace [n]
 - Alt+shift+1, Alt+shift+2, ..., Alt+shift+[n], ..., Alt+shift+9: Move window to workspace [n]

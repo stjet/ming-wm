@@ -65,15 +65,15 @@ impl WindowLike for Minesweeper {
             self.first_char = '\0';
             WindowMessageResponse::DoNothing
           } else if self.first_char == '\0' {
-            if HEX_CHARS.iter().find(|c| c == &&key_press.key).is_some() {
+            if HEX_CHARS.iter().any(|c| c == &key_press.key) {
               self.first_char = key_press.key;
             }
             WindowMessageResponse::DoNothing
-          } else if HEX_CHARS.iter().find(|c| c == &&key_press.key).is_some() {
+          } else if HEX_CHARS.iter().any(|c| c == &key_press.key) {
             let u = hex_to_u8(self.first_char, key_press.key) as usize;
             let y = u / 16;
             let x = u % 16;
-            if HEX_CHARS.iter().find(|c| c == &&key_press.key).is_some() {
+            if HEX_CHARS.iter().any(|c| c == &key_press.key) {
               if self.state == State::BeforePlaying {
                 loop {
                   self.new_tiles();

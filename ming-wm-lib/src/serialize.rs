@@ -39,10 +39,10 @@ fn option_to_string<T: Display>(option: &Option<T>) -> String {
 fn get_color(serialized: &str) -> Result<[u8; 3], ()> {
   let rgb = serialized.split("\x1F");
   let mut color = [0; 3];
-  let mut c_i = 0;
   //won't return error if rgb is 0, 1, or 2 elements.
   //I guess that's okay, since it doesn't panic either
-  for c in rgb {
+  //c_i is the loop counter. enumerate(), you are awesome
+  for (c_i, c) in rgb.enumerate() {
     if c_i == 3 {
       return Err(());
     }
@@ -51,7 +51,6 @@ fn get_color(serialized: &str) -> Result<[u8; 3], ()> {
     } else {
       return Err(());
     }
-    c_i += 1;
   }
   Ok(color)
 }
@@ -68,7 +67,7 @@ fn get_two_array(serialized: &str) -> Result<[usize; 2], ()> {
     }
     return Err(());
   }
-  return Ok(a);
+  Ok(a)
 }
 
 pub trait Serializable {
@@ -87,9 +86,8 @@ impl Serializable for ThemeInfo {
     let serialized = if serialized.ends_with("\n") { &serialized[..serialized.len() - 1] } else { serialized };
     let mut theme_info: ThemeInfo = Default::default();
     let arrays = serialized.split(":");
-    let mut a_i = 0;
     //won't error or panic if less than 9... rest will just be black by default I guess
-    for a in arrays {
+    for (a_i, a) in arrays.enumerate() {
       if a_i == 9 {
         return Err(());
       }
@@ -127,7 +125,6 @@ impl Serializable for ThemeInfo {
       if a_i == 8 {
         return Ok(theme_info);
       }
-      a_i += 1;
     }
     Err(())
   }
@@ -220,7 +217,7 @@ impl Serializable for DrawInstructions {
     match self {
       //use \x1E (record separator) because it won't be in strings. it better fucking not be at least
       DrawInstructions::Rect(p, d, c) => format!("Rect/{}\x1E{}\x1E{}", array_to_string(p), array_to_string(d), array_to_string(c)),
-      DrawInstructions::Text(p, vs, s, c1, c2, ou1, ou2) => format!("Text/{}\x1E{}\x1E{}\x1E{}\x1E{}\x1E{}\x1E{}", array_to_string(p), array_to_string(&vs), s, array_to_string(c1), array_to_string(c2), option_to_string(ou1), option_to_string(ou2)),
+      DrawInstructions::Text(p, vs, s, c1, c2, ou1, ou2) => format!("Text/{}\x1E{}\x1E{}\x1E{}\x1E{}\x1E{}\x1E{}", array_to_string(p), array_to_string(vs), s, array_to_string(c1), array_to_string(c2), option_to_string(ou1), option_to_string(ou2)),
       DrawInstructions::Gradient(p, d, c1, c2, u) => format!("Gradient/{}\x1E{}\x1E{}\x1E{}\x1E{}", array_to_string(p), array_to_string(d), array_to_string(c1), array_to_string(c2), u),
       DrawInstructions::Bmp(p, s, b) => format!("Bmp/{}\x1E{}\x1E{}", array_to_string(p), s, b),
       DrawInstructions::Circle(p, u, c) => format!("Circle/{}\x1E{}\x1E{}", array_to_string(p), u, array_to_string(c)),
@@ -674,8 +671,7 @@ impl Serializable for WindowMessage {
         }
         let mut w_tuple: (usize, String) = Default::default();
         let mut w_vec = Vec::new();
-        let mut i = 0;
-        for a in arg2.unwrap().split("\x1F") {
+        for (i, a) in arg2.unwrap().split("\x1F").enumerate() {
           if i % 2 == 0 {
             if let Ok(n) = a.parse() {
               w_tuple.0 = n;
@@ -684,7 +680,6 @@ impl Serializable for WindowMessage {
             w_tuple.1 = a.to_string();
             w_vec.push(w_tuple.clone());
           }
-          i += 1;
         }
         let arg2 = parts2.next();
         if arg2.is_none() {

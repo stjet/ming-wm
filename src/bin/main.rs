@@ -116,10 +116,10 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
       let mut y: Option<usize> = None;
       for line in reader.lines() {
         let line = line.unwrap();
-        if line.contains(&"ABS_X), value ") || line.contains(&"ABS_Y), value ") {
+        if line.contains("ABS_X), value ") || line.contains("ABS_Y), value ") {
           let value: Vec<_> = line.split("), value ").collect();
           let value = value[value.len() - 1].parse::<usize>().unwrap();
-          if line.contains(&"ABS_X") {
+          if line.contains("ABS_X") {
             x = Some(value);
           } else {
             y = Some(value);

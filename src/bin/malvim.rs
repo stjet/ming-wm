@@ -2,6 +2,7 @@ use std::vec::Vec;
 use std::vec;
 use std::fmt;
 use std::path::PathBuf;
+use std::collections::HashMap;
 use std::fs::{ read_to_string, write };
 
 use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest, ShortcutType };
@@ -10,7 +11,7 @@ use ming_wm_lib::framebuffer_types::Dimensions;
 use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType };
 use ming_wm_lib::utils::{ calc_actual_lines, calc_new_cursor_pos, Substring };
 use ming_wm_lib::dirs::home;
-use ming_wm_lib::utils::path_autocomplete;
+use ming_wm_lib::utils::{ get_rest_of_split, path_autocomplete };
 use ming_wm_lib::ipc::listen;
 
 const MONO_WIDTH: u8 = 10;
@@ -175,18 +176,23 @@ impl WindowLike for Malvim {
               }
               let new_length = current_file.content[current_file.line_pos].chars().count();
               current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
-            } else if key_press.key == 'w' {
+            } else if key_press.key == 'w' || key_press.key == '$' {
               let line = &current_file.content[current_file.line_pos];
               let line_len = line.chars().count();
               if line_len > 0 && current_file.cursor_pos < line_len {
                 //offset until space or eol
                 let mut line_chars = line.chars().skip(current_file.cursor_pos).peekable();
-                let current_char = line_chars.peek().unwrap().clone();
-                let offset = line_chars.position(|c| if current_char == ' ' {
-                  c != ' '
+                //deref is Copy
+                let current_char = *line_chars.peek().unwrap();
+                let offset = if key_press.key == 'w' {
+                  line_chars.position(|c| if current_char == ' ' {
+                    c != ' '
+                  } else {
+                    c == ' '
+                  }).unwrap_or(line_len - current_file.cursor_pos)
                 } else {
-                  c == ' '
-                }).unwrap_or(line_len - current_file.cursor_pos);
+                  line_chars.count()
+                };
                 current_file.content[current_file.line_pos] = line.remove(current_file.cursor_pos, offset);
                 let new_length = current_file.content[current_file.line_pos].chars().count();
                 current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
@@ -240,6 +246,8 @@ impl WindowLike for Malvim {
               if current_length == 1 {
                 current_file.cursor_pos = 0;
               }
+            } else {
+              changed = false;
             }
           } else if key_press.key == 'h' || key_press.is_left_arrow() {
             current_file.cursor_pos = current_file.cursor_pos.checked_sub(self.maybe_num.unwrap_or(1)).unwrap_or(0);
@@ -295,7 +303,88 @@ impl WindowLike for Malvim {
           } else if key_press.key == 'F' {
             self.state = State::BackFind;
             changed = false;
-          } else if key_press.key.is_digit(10) {
+          } else if key_press.key == '%' {
+            let current_l = &current_file.content[current_file.line_pos];
+            if current_file.cursor_pos < current_l.len() {
+              let current_c = current_l.chars().nth(current_file.cursor_pos).unwrap();
+              let pairs = HashMap::from([
+                ('(', (')', true)),
+                (')', ('(', false)),
+                ('[', (']', true)),
+                (']', ('[', false)),
+                ('"', ('"', true)), //could be either, really
+                ('{', ('}', true)),
+                ('}', ('{', false)),
+                ('<', ('>', true)),
+                ('>', ('<', false)),
+                //
+              ]);
+              if let Some((corres, forwards)) = pairs.get(&current_c) {
+                let mut count = 0;
+                let content_len = current_file.content.len();
+                let lines: Vec<&String> = if *forwards {
+                  current_file.content.iter().skip(current_file.line_pos).collect()
+                } else {
+                  current_file.content.iter().rev().skip(content_len - current_file.line_pos - 1).collect()
+                };
+                let end = if *forwards {
+                  content_len - current_file.line_pos
+                } else {
+                  current_file.line_pos + 1
+                };
+                'outer: for i in 0..end {
+                  let line = if i == 0 {
+                    let l = lines[i];
+                    let l_len = l.len();
+                    if *forwards {
+                      if current_file.cursor_pos + 1 < l_len {
+                        l.substring(current_file.cursor_pos + 1, l_len)
+                      } else {
+                        ""
+                      }
+                    } else {
+                      &l.substring(0, current_file.cursor_pos).chars().rev().collect::<String>()
+                    }
+                  } else {
+                    if *forwards {
+                      lines[i]
+                    } else {
+                      &lines[i].chars().rev().collect::<String>()
+                    }
+                  };
+                  for (c_i, c) in line.chars().enumerate() {
+                    if c == current_c {
+                      count += 1;
+                    } else if &c == corres {
+                      if count == 0 {
+                        if *forwards {
+                          current_file.line_pos += i;
+                        } else {
+                          current_file.line_pos -= i;
+                        };
+                        current_file.cursor_pos = if i == 0 {
+                          if *forwards {
+                            current_file.cursor_pos + c_i + 1
+                          } else {
+                            current_file.cursor_pos - c_i - 1
+                          }
+                        } else {
+                          if *forwards {
+                            c_i
+                          } else {
+                            line.chars().count() - c_i - 1
+                          }
+                        };
+                        break 'outer;
+                      }
+                      count -= 1;
+                    }
+                  }
+                }
+              }
+            }
+            changed = false;
+          } else if key_press.key.is_ascii_digit() {
             self.maybe_num = Some(self.maybe_num.unwrap_or(0) * 10 + key_press.key.to_digit(10).unwrap() as usize);
             numbered = true;
             changed = false;
@@ -401,7 +490,7 @@ impl WindowLike for Malvim {
     let mut used_width = 0;
     for file_index in 0..self.files.len() {
       let file_info = &self.files[file_index];
-      let future_used_width = used_width + 4 + (file_info.name.len() + if file_info.changed { 2 } else { 0 }) * MONO_WIDTH as usize;
+      let future_used_width = used_width + 4 + (file_info.name.len() + if file_info.changed { 2 } else { 0 }) * MONO_WIDTH as usize + 15;
       //just cut off when too many file tabs open to fit
       if future_used_width > self.dimensions[0] {
         break;
@@ -455,12 +544,11 @@ impl WindowLike for Malvim {
     //bottom blue band stuff
     //write mode
     instructions.push(DrawInstructions::Text([0, self.dimensions[1] - BAND_HEIGHT * 2 + 2], vec!["nimbus-romono".to_string()], self.mode.to_string(), theme_info.top_text, theme_info.top, Some(0), Some(MONO_WIDTH)));
-    let file_status;
-    if self.files.len() > 0 {
-      file_status = self.files[self.current_file_index].name.clone();
+    let file_status = if self.files.len() > 0 {
+      self.files[self.current_file_index].name.clone()
     } else {
-      file_status = "No file open".to_string();
-    }
+      "No file open".to_string()
+    };
     instructions.push(DrawInstructions::Text([self.dimensions[0] - file_status.len() * (MONO_WIDTH as usize), self.dimensions[1] - BAND_HEIGHT * 2 + 2], vec!["nimbus-romono".to_string()], file_status, theme_info.top_text, theme_info.top, Some(0), Some(MONO_WIDTH)));
     //write command or bottom message
     if self.mode == Mode::Command {
@@ -593,12 +681,40 @@ impl Malvim {
     } else if first.starts_with("/") {
       let current_file = &mut self.files[self.current_file_index];
       if current_file.content.len() > 0 {
-        let found_line_no = current_file.content.iter().skip(current_file.line_pos + 1).position(|line| {
-          line.contains(&first[1..])
-        });
-        if let Some(found_line_no) = found_line_no {
-          current_file.line_pos = found_line_no + current_file.line_pos + 1;
-          current_file.cursor_pos = 0;
+        let p1 = if arg == "" {
+          String::new()
+        } else {
+          " ".to_string() + arg
+        };
+        let rest = get_rest_of_split(&mut parts, Some(" "));
+        let rest = if rest == "" {
+          String::new()
+        } else {
+          " ".to_string() + &rest
+        };
+        let query = first[1..].to_string() + &p1 + &rest;
+        let mut lines = current_file.content.iter().skip(current_file.line_pos);
+        for i in 0..(current_file.content.len() - current_file.line_pos) {
+          let line = if i == 0 {
+            let l = lines.next().unwrap();
+            let l_len = l.len();
+            if (current_file.cursor_pos + 1) < l_len {
+              l.substring(current_file.cursor_pos + 1, l_len)
+            } else {
+              ""
+            }
+          } else {
+            lines.next().unwrap()
+          };
+          if let Some(found_index) = line.to_string().find_substring(&query) {
+            current_file.line_pos += i;
+            current_file.cursor_pos = if i == 0 {
+              current_file.cursor_pos + found_index + 1
+            } else {
+              found_index
+            };
+            break;
+          }
         }
       }
     } else if first == "x" || first == "w" || first == "write" || first == "q" || first == "quit" {

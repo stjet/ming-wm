@@ -115,13 +115,11 @@ impl WindowLike for StartMenu {
     ];
     let max_per_page = CATEGORIES.len();
     let current_focus = self.get_focus_index().unwrap();
-    let mut index = 0;
-    for component in &self.components {
+    for (index, component) in self.components.iter().enumerate() {
       //supports multiple pages of window options per category
       if (index >= max_per_page && current_focus >= max_per_page) || (index < max_per_page && current_focus < max_per_page) {
         instructions.extend(component.draw(theme_info));
       }
-      index += 1;
     }
     instructions
   }
@@ -194,8 +192,7 @@ impl StartMenu {
   pub fn add_category_components(&mut self) {
     self.current_focus = "About".to_string();
     self.components = Vec::new();
-    for c in 0..CATEGORIES.len() {
-      let name = CATEGORIES[c];
+    for (c, name) in CATEGORIES.iter().enumerate() {
       self.components.push(Box::new(HighlightButton::new(
         name.to_string(), [42, self.y_each * c + 1], [self.dimensions[0] - 42 - 1, self.y_each], name.to_string(), StartMenuMessage::CategoryClick(name), StartMenuMessage::ChangeAcknowledge, c == 0
       )));

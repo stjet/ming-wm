@@ -104,6 +104,6 @@ pub fn get_theme_info(theme: &Themes) -> Option<ThemeInfo> {
       return Some(pair.1);
     }
   }
-  return None;
+  None
 }
 

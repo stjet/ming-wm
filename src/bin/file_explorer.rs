@@ -61,8 +61,7 @@ impl WindowLike for FileExplorer {
         WindowMessageResponse::JustRedraw
       },
       WindowMessage::KeyPress(key_press) => {
-        self.state = State::List;
-        if key_press.is_enter() {
+        if key_press.is_enter() && self.state == State::List {
           if self.current_dir_contents.len() > 0 {
             let selected_entry = &self.current_dir_contents[self.position];
             if !selected_entry.is_file {
@@ -75,6 +74,7 @@ impl WindowLike for FileExplorer {
           }
           WindowMessageResponse::DoNothing
         } else if key_press.key == 'j' || key_press.is_down_arrow() || key_press.key == 'k' || key_press.is_up_arrow() {
+          self.state = State::List;
           if key_press.key == 'j' || key_press.is_down_arrow() {
             //down
             if self.position == self.current_dir_contents.len() - 1 {
@@ -103,12 +103,21 @@ impl WindowLike for FileExplorer {
           };
           WindowMessageResponse::JustRedraw
         } else if key_press.key == 'i' {
-          self.state = State::Info;
-          let selected_entry = &self.current_dir_contents[self.position];
-          self.metadata = Some(metadata(&selected_entry.path).unwrap());
+          if self.state == State::Info {
+            self.state = State::List;
+          } else {
+            self.state = State::Info;
+            let selected_entry = &self.current_dir_contents[self.position];
+            self.metadata = Some(metadata(&selected_entry.path).unwrap());
+          }
           WindowMessageResponse::JustRedraw
         } else {
-          WindowMessageResponse::DoNothing
+          if self.state == State::Info {
+            self.state = State::List;
+            WindowMessageResponse::JustRedraw
+          } else {
+            WindowMessageResponse::DoNothing
+          }
         }
       },
       _ => WindowMessageResponse::DoNothing,

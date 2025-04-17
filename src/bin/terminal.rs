@@ -131,7 +131,7 @@ impl WindowLike for Terminal {
               self.prev();
             } else if key_press.is_down_arrow() {
               self.next();
-            } else {
+            } else if key_press.is_regular() {
               self.current_input += &key_press.key.to_string();
             }
             self.calc_actual_lines();

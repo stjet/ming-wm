@@ -95,7 +95,7 @@ impl WindowManager {
   pub fn add_window_like(&mut self, mut window_like: Box<dyn WindowLike>, top_left: Point, dimensions: Option<Dimensions>) {
     let subtype = window_like.subtype();
     let dimensions = dimensions.unwrap_or(window_like.ideal_dimensions(self.dimensions));
-    self.id_count = self.id_count + 1;
+    self.id_count += 1;
     let id = self.id_count;
     window_like.handle_message(WindowMessage::Init(dimensions));
     let dimensions = if subtype == WindowLikeType::Window { [dimensions[0], dimensions[1] + WINDOW_TOP_HEIGHT] } else { dimensions };
@@ -154,7 +154,7 @@ impl WindowManager {
       file.read_to_string(&mut contents).unwrap();
       let lines: Vec<&str> = contents.split("\n").collect();
       if lines.len() > self.current_workspace.into() {
-        self.theme = Themes::from_str(lines[self.current_workspace as usize]).unwrap_or(Default::default());
+        self.theme = Themes::from_str(lines[self.current_workspace as usize]).unwrap_or_default();
       }
     }
   }
@@ -667,8 +667,7 @@ impl WindowManager {
     });
     //these are needed to decide when to snapshot
     let max_index = if redraw_ids.len() > 0 { redraw_ids.len() } else { maybe_length } - 1;
-    let mut w_index = 0;
-    for window_info in redraw_windows {
+    for (w_index, window_info) in redraw_windows.enumerate() {
       let window_dimensions = if window_info.fullscreen {
         [self.dimensions[0], self.dimensions[1] - TASKBAR_HEIGHT - INDICATOR_HEIGHT]
       } else {
@@ -746,7 +745,6 @@ impl WindowManager {
         }
       }
       self.writer.borrow_mut().draw_buffer(window_info.top_left, window_dimensions[1], window_dimensions[0] * bytes_per_pixel, &window_writer.get_buffer());
-      w_index += 1;
     }
     //could probably figure out a way to do borrow() when self.rotate is false but does it matter?
     let mut writer_borrow = self.writer.borrow_mut();

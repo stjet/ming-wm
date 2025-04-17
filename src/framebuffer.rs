@@ -89,7 +89,7 @@ impl FramebufferWriter {
       }
     }
     self.rotate_buffer = Some(output_array);
-    &self.rotate_buffer.as_ref().unwrap()
+    self.rotate_buffer.as_ref().unwrap()
   }
 
   pub fn save_buffer(&mut self) {

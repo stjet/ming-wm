@@ -12,6 +12,7 @@ It is probably best to read a Vim tutorial for the basics. All supportd keystrok
 - `t[abe] <file>`, `[tab]n`, `[tab]p`
 - `q[uit]`
 - `w[rite]`
+- `/<query>`
 
 Tab completion is supported for the `<file>` argument.
 
@@ -23,6 +24,7 @@ Tab completion is supported for the `<file>` argument.
 - `r`
 - `dd`
 - `dw`
+- `d$`
 - `G`
 - `gg`
 - `<number>gg`
@@ -32,6 +34,7 @@ Tab completion is supported for the `<file>` argument.
 - `h` (or left arrow), `j` (or down arrow), `k` (or up arrow), `l` (or right arrow)
 - `<num>h`, `<num>j` (or down arrow), `<num>k` (or up arrow), `<num>l`
 - `0`, `^`, `$`
+- `%`
 
 ### Malvim Specific
 
