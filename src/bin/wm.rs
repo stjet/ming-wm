@@ -6,15 +6,19 @@ use std::io::{ stdin, stdout, BufReader, BufRead, Write };
 use std::process::exit;
 use std::env;
 
-use linux::fb::Framebuffer;
-use linux::raw::RawStdout;
-use termion::input::TermRead;
-use termion::event::Key;
+//termion is an external dep, will be removed eventually
+use wm::termion::input::TermRead;
+use wm::termion::event::Key;
+
+use wm::linux::fb::Framebuffer;
+use wm::linux::raw::RawStdout;
+use wm::framebuffer::{ FramebufferWriter, FramebufferInfo };
+use wm::window_manager::WindowManager;
 
 use ming_wm_lib::window_manager_types::KeyChar;
 use ming_wm_lib::messages::*;
-use ming_wm::framebuffer::{ FramebufferWriter, FramebufferInfo };
-use ming_wm::window_manager::WindowManager;
+
+include!(concat!(env!("OUT_DIR"), "/password.rs"));
 
 const CLEAR_ALL: &'static str = "\x1b[2J";
 const HIDE_CURSOR: &'static str = "\x1b[?25l";
@@ -71,7 +75,7 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
 
   writer.init(framebuffer_info.clone());
 
-  let mut wm: WindowManager = WindowManager::new(writer, framebuffer, dimensions, rotate, grayscale);
+  let mut wm: WindowManager = WindowManager::new(writer, framebuffer, dimensions, rotate, grayscale, PASSWORD_HASH);
 
   let mut stdout = RawStdout::new(stdout());
   stdout.enter_raw_mode().unwrap();

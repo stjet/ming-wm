@@ -6,8 +6,8 @@ use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLik
 use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest, ShortcutType, InfoType, WindowsVec };
 use ming_wm_lib::framebuffer_types::Dimensions;
 use ming_wm_lib::themes::ThemeInfo;
-use crate::components::Component;
-use crate::components::toggle_button::ToggleButton;
+use ming_wm_lib::components::Component;
+use ming_wm_lib::components::toggle_button::ToggleButton;
 
 const PADDING: usize = 4;
 const META_WIDTH: usize = 175; //of the window button

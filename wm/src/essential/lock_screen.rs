@@ -7,13 +7,12 @@ use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, WindowManager
 use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType };
 use blake2::{ Blake2b512, Digest };
 
-include!(concat!(env!("OUT_DIR"), "/password.rs"));
-
 //const PASSWORD_HASH: [u8; 64] = [220, 88, 183, 188, 240, 27, 107, 181, 58, 191, 198, 170, 114, 38, 7, 148, 6, 179, 75, 128, 231, 171, 172, 220, 85, 38, 36, 113, 116, 146, 70, 197, 163, 179, 158, 192, 130, 53, 247, 48, 47, 209, 95, 96, 179, 211, 4, 122, 254, 127, 21, 165, 139, 199, 151, 226, 216, 176, 123, 41, 194, 221, 58, 69];
 
 pub struct LockScreen {
   dimensions: Dimensions,
   input_password: String,
+  password_hash: [u8; 64],
 }
 
 impl WindowLike for LockScreen {
@@ -28,7 +27,7 @@ impl WindowLike for LockScreen {
           //check password
           let mut hasher = Blake2b512::new();
           hasher.update((self.input_password.clone() + "salt?sorrycryptographers").as_bytes());
-          if hasher.finalize() == PASSWORD_HASH.into() {
+          if hasher.finalize() == self.password_hash.into() {
             WindowMessageResponse::Request(WindowManagerRequest::Unlock)
           } else {
             self.input_password = String::new();
@@ -73,10 +72,11 @@ impl WindowLike for LockScreen {
 }
 
 impl LockScreen {
-  pub fn new() -> Self {
+  pub fn new(password_hash: [u8; 64]) -> Self {
     Self {
       dimensions: [0, 0],
       input_password: String::new(),
+      password_hash,
     }
   }
 }

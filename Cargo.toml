@@ -9,7 +9,7 @@ default-run = "ming"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace]
-members = [ "linux" ]
+members = [ "wm", "wm/linux" ]
 
 [build-dependencies]
 bmp-rust = "0.5.0"
@@ -17,20 +17,16 @@ blake2 = { version = "0.10.6", default-features = false }
 
 [dependencies]
 ming-wm-lib = { path = "ming-wm-lib" }
-blake2 = { version = "0.10.6", default-features = false }
-linux = { path = "linux" }
-termion = { version = "4.0.3", optional = true }
+wm = { path = "wm", optional = true }
 rodio = { version = "0.19.0", default-features = false, features = [ "flac", "mp3", "symphonia-vorbis", "wav" ], optional = true }
 rand = { version = "0.9.0", default-features = false, features = [ "small_rng" ], optional = true }
 id3 = { version = "1.10.0", optional = true }
 mp4ameta = { version = "0.11.0", optional = true }
 metaflac = { version = "0.2.5", optional = true }
-bmp-rust = "0.5.0"
 pty-process = { version = "0.5.1", optional = true }
 
 [features]
-default = [ "main", "terminal" ]
-main = [ "termion" ]
+default = [ "wm", "terminal" ]
 terminal = [ "pty-process" ]
 audio_player = [ "id3", "mp4ameta", "metaflac", "rand", "rodio" ]
 
@@ -39,8 +35,8 @@ lto = true
 
 [[bin]]
 name = "ming"
-path = "src/bin/main.rs"
-required-features = [ "main" ]
+path = "src/bin/wm.rs"
+required-features = [ "wm" ]
 
 [[bin]]
 name = "mingFiles_Audio_Player"

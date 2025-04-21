@@ -7,8 +7,8 @@ use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, WindowManager
 use ming_wm_lib::framebuffer_types::Dimensions;
 use ming_wm_lib::themes::ThemeInfo;
 use ming_wm_lib::utils::point_inside;
-use crate::components::Component;
-use crate::components::press_button::PressButton;
+use ming_wm_lib::components::Component;
+use ming_wm_lib::components::press_button::PressButton;
 
 //seems like framebuffer only updates if (real) key is pressed...
 //on mobile, volume down button seems to work but is annoying

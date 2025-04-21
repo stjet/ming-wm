@@ -17,10 +17,9 @@ use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLik
 use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse };
 use ming_wm_lib::framebuffer_types::Dimensions;
 use ming_wm_lib::themes::ThemeInfo;
-use ming_wm_lib::utils::{ concat_paths, path_autocomplete, format_seconds, Substring };
+use ming_wm_lib::utils::{ concat_paths, get_all_files, path_autocomplete, format_seconds, Substring };
 use ming_wm_lib::dirs::home;
 use ming_wm_lib::ipc::listen;
-use ming_wm::fs::get_all_files;
 
 fn get_artist(path: &PathBuf) -> Option<String> {
   let ext = path.extension().unwrap();

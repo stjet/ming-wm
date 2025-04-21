@@ -1,8 +1,8 @@
 use std::vec::Vec;
 
-use ming_wm_lib::themes::ThemeInfo;
-use ming_wm_lib::messages::WindowMessage;
-use ming_wm_lib::window_manager_types::DrawInstructions;
+use crate::themes::ThemeInfo;
+use crate::messages::WindowMessage;
+use crate::window_manager_types::DrawInstructions;
 
 pub mod toggle_button;
 pub mod highlight_button;

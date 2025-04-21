@@ -214,3 +214,16 @@ pub fn path_autocomplete(current_path: &str, partial_path: &str) -> Option<Strin
     None
   }
 }
+
+pub fn get_all_files(dir: PathBuf) -> Vec<PathBuf> {
+  let mut files = Vec::new();
+  for entry in read_dir(dir).unwrap() {
+    let path = entry.unwrap().path();
+    if path.is_dir() {
+      files.extend(get_all_files(path));
+    } else {
+      files.push(path);
+    }
+  }
+  files
+}

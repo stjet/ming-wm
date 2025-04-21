@@ -2,10 +2,10 @@ use std::vec;
 use std::vec::Vec;
 
 use crate::components::Component;
-use ming_wm_lib::framebuffer_types::{ Dimensions, Point };
-use ming_wm_lib::themes::ThemeInfo;
-use ming_wm_lib::messages::WindowMessage;
-use ming_wm_lib::window_manager_types::DrawInstructions;
+use crate::framebuffer_types::{ Dimensions, Point };
+use crate::themes::ThemeInfo;
+use crate::messages::WindowMessage;
+use crate::window_manager_types::DrawInstructions;
 
 pub struct HighlightButton<T> {
   name_: String,

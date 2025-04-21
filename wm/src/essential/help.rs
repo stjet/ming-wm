@@ -8,8 +8,8 @@ use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse };
 use ming_wm_lib::dirs::exe_dir;
 use ming_wm_lib::framebuffer_types::Dimensions;
 use ming_wm_lib::themes::ThemeInfo;
-use crate::components::paragraph::Paragraph;
-use crate::components::Component;
+use ming_wm_lib::components::paragraph::Paragraph;
+use ming_wm_lib::components::Component;
 
 pub struct Help {
   dimensions: Dimensions,

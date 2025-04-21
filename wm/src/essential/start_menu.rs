@@ -7,9 +7,9 @@ use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, WindowManager
 use ming_wm_lib::framebuffer_types::Dimensions;
 use ming_wm_lib::themes::ThemeInfo;
 use ming_wm_lib::dirs::exe_dir;
+use ming_wm_lib::components::Component;
+use ming_wm_lib::components::highlight_button::HighlightButton;
 use crate::fs::{ ExeWindowInfos, get_all_executable_windows };
-use crate::components::Component;
-use crate::components::highlight_button::HighlightButton;
 
 static CATEGORIES: [&'static str; 9] = ["About", "Utils", "Games", "Editing", "Files", "Internet", "Misc", "Help", "Lock"];
 

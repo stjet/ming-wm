@@ -65,12 +65,13 @@ pub struct WindowManager {
   current_workspace: u8,
   framebuffer: Framebuffer,
   clipboard: Option<String>,
+  password_hash: [u8; 64],
 }
 
 //1 is up, 2 is down
 
 impl WindowManager {
-  pub fn new(writer: FramebufferWriter, framebuffer: Framebuffer, dimensions: Dimensions, rotate: bool, grayscale: bool) -> Self {
+  pub fn new(writer: FramebufferWriter, framebuffer: Framebuffer, dimensions: Dimensions, rotate: bool, grayscale: bool, password_hash: [u8; 64]) -> Self {
     //println!("bg: {}x{}", dimensions[0], dimensions[1] - TASKBAR_HEIGHT - INDICATOR_HEIGHT);
     let mut wm = WindowManager {
       writer: RefCell::new(writer),
@@ -86,6 +87,7 @@ impl WindowManager {
       current_workspace: 0,
       framebuffer,
       clipboard: None,
+      password_hash,
     };
     wm.lock();
     wm.change_theme();
@@ -136,7 +138,7 @@ impl WindowManager {
   fn lock(&mut self) {
     self.locked = true;
     self.window_infos = Vec::new();
-    self.add_window_like(Box::new(LockScreen::new()), [0, 0], None);
+    self.add_window_like(Box::new(LockScreen::new(self.password_hash)), [0, 0], None);
   }
 
   fn unlock(&mut self) {
