@@ -7,8 +7,8 @@ use std::process::exit;
 use std::env;
 
 use linux::fb::Framebuffer;
+use linux::raw::RawStdout;
 use termion::input::TermRead;
-use termion::raw::IntoRawMode;
 use termion::event::Key;
 
 use ming_wm_lib::window_manager_types::KeyChar;
@@ -73,13 +73,14 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
 
   let mut wm: WindowManager = WindowManager::new(writer, framebuffer, dimensions, rotate, grayscale);
 
-  let mut stdout = stdout().into_raw_mode().unwrap();
+  let mut stdout = RawStdout::new(stdout());
+  stdout.enter_raw_mode().unwrap();
 
-  write!(stdout, "{}", CLEAR_ALL).unwrap();
+  write!(stdout.stdout, "{}", CLEAR_ALL).unwrap();
 
-  write!(stdout, "{}", HIDE_CURSOR).unwrap();
+  write!(stdout.stdout, "{}", HIDE_CURSOR).unwrap();
 
-  stdout.flush().unwrap();
+  stdout.stdout.flush().unwrap();
 
   wm.draw(None, false);
 
@@ -154,13 +155,13 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
       ThreadMessage::KeyChar(kc) => wm.handle_message(WindowManagerMessage::KeyChar(kc.clone())),
       ThreadMessage::Touch(x, y) => wm.handle_message(WindowManagerMessage::Touch(x, y)),
       ThreadMessage::Clear => {
-        write!(stdout, "{}", CLEAR_ALL).unwrap();
-        stdout.flush().unwrap();
+        write!(stdout.stdout, "{}", CLEAR_ALL).unwrap();
+        stdout.stdout.flush().unwrap();
       },
       ThreadMessage::Exit => {
         if !wm.locked {
-          write!(stdout, "{}", SHOW_CURSOR).unwrap();
-          stdout.suspend_raw_mode().unwrap();
+          write!(stdout.stdout, "{}", SHOW_CURSOR).unwrap();
+          stdout.exit_raw_mode().unwrap();
           exit(0);
         }
       },

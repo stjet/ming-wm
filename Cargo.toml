@@ -9,7 +9,7 @@ default-run = "ming"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace]
-members = ["linux"]
+members = [ "linux" ]
 
 [build-dependencies]
 bmp-rust = "0.5.0"
