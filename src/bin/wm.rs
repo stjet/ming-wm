@@ -6,12 +6,9 @@ use std::io::{ stdin, stdout, BufReader, BufRead, Write };
 use std::process::exit;
 use std::env;
 
-//termion is an external dep, will be removed eventually
-use wm::termion::input::TermRead;
-use wm::termion::event::Key;
-
 use wm::linux::fb::Framebuffer;
 use wm::linux::raw::RawStdout;
+use wm::linux::keys::{ RawStdin, Key };
 use wm::framebuffer::{ FramebufferWriter, FramebufferInfo };
 use wm::window_manager::WindowManager;
 
@@ -34,10 +31,10 @@ fn key_to_char(key: Key) -> Option<KeyChar> {
     Key::Ctrl(c) => Some(KeyChar::Ctrl(c)),
     Key::Backspace => Some(KeyChar::Press('𐘁')),
     Key::Esc => Some(KeyChar::Press('𐘃')),
-    Key::Up => Some(KeyChar::Press('𐙘')),
-    Key::Down => Some(KeyChar::Press('𐘞')),
-    Key::Left => Some(KeyChar::Press('𐙣')),
-    Key::Right => Some(KeyChar::Press('𐙥')),
+    Key::ArrowUp => Some(KeyChar::Press('𐙘')),
+    Key::ArrowDown => Some(KeyChar::Press('𐘞')),
+    Key::ArrowLeft => Some(KeyChar::Press('𐙣')),
+    Key::ArrowRight => Some(KeyChar::Press('𐙥')),
     _ => None,
   }
 }
@@ -94,9 +91,9 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
 
   //read key presses
   thread::spawn(move || {
-    let stdin = stdin().lock();
-    for c in stdin.keys() {
-      if let Some(kc) = key_to_char(c.unwrap()) {
+    let stdin = RawStdin::new(stdin());
+    for c in stdin {
+      if let Some(kc) = key_to_char(c) {
         //do not allow exit when locked unless debugging
         //if kc == KeyChar::Alt('E') {
         if kc == KeyChar::Alt('E') {

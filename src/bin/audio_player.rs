@@ -109,8 +109,10 @@ impl WindowLike for AudioPlayer {
           } else {
             return WindowMessageResponse::DoNothing;
           }
-        } else {
+        } else if key_press.is_regular() {
           self.command += &key_press.key.to_string();
+        } else {
+          return WindowMessageResponse::DoNothing
         }
         WindowMessageResponse::JustRedraw
       },

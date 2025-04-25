@@ -1,5 +1,4 @@
 pub use linux;
-pub use termion;
 
 pub mod framebuffer;
 pub mod window_manager;

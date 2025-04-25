@@ -13,7 +13,7 @@ members = [ "wm", "wm/linux" ]
 
 [build-dependencies]
 bmp-rust = "0.5.0"
-blake2 = { version = "0.10.6", default-features = false }
+bitcoin_hashes = { version = "0.16.0", default-features = false }
 
 [dependencies]
 ming-wm-lib = { path = "ming-wm-lib" }

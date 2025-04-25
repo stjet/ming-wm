@@ -150,6 +150,9 @@ impl WindowLike for Terminal {
                 } else if char::from(ci) == '\r' {
                   //for now, ignore
                   //
+                } else if char::from(ci) == '\t' {
+                  //for now, ignore
+                  //
                 } else {
                   self.process_current_line.push(ci);
                 }

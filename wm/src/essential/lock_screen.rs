@@ -5,7 +5,7 @@ use ming_wm_lib::framebuffer_types::Dimensions;
 use ming_wm_lib::themes::ThemeInfo;
 use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest };
 use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType };
-use blake2::{ Blake2b512, Digest };
+use bitcoin_hashes::Sha512;
 
 //const PASSWORD_HASH: [u8; 64] = [220, 88, 183, 188, 240, 27, 107, 181, 58, 191, 198, 170, 114, 38, 7, 148, 6, 179, 75, 128, 231, 171, 172, 220, 85, 38, 36, 113, 116, 146, 70, 197, 163, 179, 158, 192, 130, 53, 247, 48, 47, 209, 95, 96, 179, 211, 4, 122, 254, 127, 21, 165, 139, 199, 151, 226, 216, 176, 123, 41, 194, 221, 58, 69];
 
@@ -25,9 +25,7 @@ impl WindowLike for LockScreen {
       WindowMessage::KeyPress(key_press) => {
         if key_press.is_enter() {
           //check password
-          let mut hasher = Blake2b512::new();
-          hasher.update((self.input_password.clone() + "salt?sorrycryptographers").as_bytes());
-          if hasher.finalize() == self.password_hash.into() {
+          if Sha512::hash((self.input_password.clone() + "salt?sorrycryptographers!1!").as_bytes()).to_byte_array() == self.password_hash {
             WindowMessageResponse::Request(WindowManagerRequest::Unlock)
           } else {
             self.input_password = String::new();
