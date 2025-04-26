@@ -146,7 +146,7 @@ impl Serializable for WindowMessageResponse {
       WindowMessageResponse::Request(req) => {
         let req = match req {
           WindowManagerRequest::OpenWindow(name) => format!("OpenWindow/{}", name),
-          WindowManagerRequest::ClipboardCopy(name) => format!("ClipboardCopy/{}", name),
+          WindowManagerRequest::ClipboardCopy(copy_string) => format!("ClipboardCopy/{}", copy_string.replace("\n", "𐘂")), //serialised output must be 1 line
           WindowManagerRequest::CloseStartMenu => "CloseStartMenu".to_string(),
           WindowManagerRequest::Unlock => "Unlock".to_string(),
           WindowManagerRequest::Lock => "Lock".to_string(),
@@ -646,7 +646,7 @@ impl Serializable for WindowMessage {
           "FullscreenWindow" => Some(ShortcutType::FullscreenWindow),
           "HalfWidthWindow" => Some(ShortcutType::HalfWidthWindow),
           "ClipboardCopy" => Some(ShortcutType::ClipboardCopy),
-          "ClipboardPaste" => Some(ShortcutType::ClipboardPaste(get_rest_of_split(&mut parts, Some("/")))),
+          "ClipboardPaste" => Some(ShortcutType::ClipboardPaste(get_rest_of_split(&mut parts, Some("/")).replace("𐘂", "\n"))),
           _ => None,
         };
         if let Some(shortcut) = shortcut {
