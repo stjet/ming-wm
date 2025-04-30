@@ -6,9 +6,9 @@ use std::io::{ stdin, stdout, BufReader, BufRead, Write };
 use std::process::exit;
 use std::env;
 
-use wm::linux::fb::Framebuffer;
-use wm::linux::raw::RawStdout;
-use wm::linux::keys::{ RawStdin, Key };
+use linux::fb::Framebuffer;
+use linux::raw::RawStdout;
+use linux::keys::{ RawStdin, Key };
 use wm::framebuffer::{ FramebufferWriter, FramebufferInfo };
 use wm::window_manager::WindowManager;
 

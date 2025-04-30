@@ -3,12 +3,13 @@ use std::vec;
 use std::sync::mpsc::{ channel, Receiver, Sender };
 use std::thread;
 use std::process::{ Child, Stdio };
+use std::process::Command;
 use std::io::{ Read, Write };
 use std::time::Duration;
 use std::path::PathBuf;
 use std::fmt;
 
-use pty_process::blocking;
+use linux::pty::open_pty;
 
 use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType };
 use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest, ShortcutType };
@@ -160,8 +161,8 @@ impl WindowLike for Terminal {
                   //for now, ignore
                   //
                 } else if char::from(ci) == '\t' {
-                  //for now, ignore
-                  //
+                  //for now, interpret as space
+                  self.process_current_line.push(b' ');
                 } else {
                   self.process_current_line.push(ci);
                 }
@@ -358,11 +359,13 @@ impl Terminal {
       }
       Mode::Input
     } else {
-      let (pty, pts) = blocking::open().unwrap();
-      self.running_process = Some(blocking::Command::new("sh").arg("-c").arg(&self.current_input).current_dir(&self.current_path).stdin(Stdio::piped()).spawn(pts).unwrap());
+      let (pty, pts) = open_pty().unwrap();
+      let mut cmd = Command::new("sh");
+      let cmd = cmd.arg("-c").arg(&self.current_input).current_dir(&self.current_path).stdin(Stdio::piped());
+      self.running_process = Some(pts.attach_and_spawn(cmd).unwrap());
       let (tx1, rx1) = channel();
       thread::spawn(move || {
-        for ci in pty.bytes() {
+        for ci in pty.file.bytes() {
           if let Ok(ci) = ci {
             tx1.send(ci).unwrap();
           } else {
