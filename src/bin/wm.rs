@@ -1,14 +1,14 @@
-use std::process::{ Command, Stdio };
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
-use std::io::{ stdin, stdout, BufReader, BufRead, Write };
+use std::io::{ stdin, stdout, Write };
 use std::process::exit;
 use std::env;
 
 use linux::fb::Framebuffer;
 use linux::raw::RawStdout;
 use linux::keys::{ RawStdin, Key };
+use linux::input::{ Input, EventType };
 use wm::framebuffer::{ FramebufferWriter, FramebufferInfo };
 use wm::window_manager::WindowManager;
 
@@ -112,35 +112,35 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
   thread::spawn(move || {
     //spawn evtest, parse it for touch coords
     if touch {
-      let mut evtest = Command::new("evtest").arg("/dev/input/by-path/first-touchscreen").stdout(Stdio::piped()).spawn().unwrap();
-      let reader = BufReader::new(evtest.stdout.as_mut().unwrap());
+      let mut events = Input::new("/dev/input/by-path/first-touchscreen").unwrap(); //panics in threads don't matter in this case
       let mut x: Option<usize> = None;
       let mut y: Option<usize> = None;
-      for line in reader.lines() {
-        let line = line.unwrap();
-        println!(" "); //without any stdout, on my phone, for some reason the framebuffer doesn't get redrawn to the screen
-        if line.contains("ABS_X), value ") || line.contains("ABS_Y), value ") {
-          let value: Vec<_> = line.split("), value ").collect();
-          let value = value[value.len() - 1].parse::<usize>().unwrap();
-          if line.contains("ABS_X") {
-            x = Some(value);
-          } else {
-            y = Some(value);
-          }
-          if x.is_some() && y.is_some() {
-            let (x2, y2) = if rotate {
-              (dimensions[0] - y.unwrap(), x.unwrap())
+      loop {
+        let event = events.next();
+        if let Some(event) = event {
+          //ABS_X = 0, ABS_Y = 1
+          if event.type_ == EventType::EV_ABS && (event.code == 0 || event.code == 1) {
+            if event.code == 0 {
+              x = Some(event.value as usize); //event.value is u16 so this should be fine. unless usize is u8, lmao
             } else {
-              (x.unwrap(), y.unwrap())
-            };
-            //top right, clear
-            //useful sometimes, I think.
-            if x2 > dimensions[0] - 100 && y2 < 100 {
-              tx1.send(ThreadMessage::Clear).unwrap();
+              y = Some(event.value as usize);
             }
-            tx1.send(ThreadMessage::Touch(x2, y2)).unwrap();
-            x = None;
-            y = None;
+            if x.is_some() && y.is_some() {
+              let (x2, y2) = if rotate {
+                (dimensions[0] - y.unwrap(), x.unwrap())
+              } else {
+                (x.unwrap(), y.unwrap())
+              };
+              //top right, clear
+              //useful sometimes, I think.
+              if x2 > dimensions[0] - 100 && y2 < 100 {
+                tx1.send(ThreadMessage::Clear).unwrap();
+              }
+              println!(" "); //without any stdout, on my phone, for some reason the framebuffer doesn't get redrawn to the screen
+              tx1.send(ThreadMessage::Touch(x2, y2)).unwrap();
+              x = None;
+              y = None;
+            }
           }
         }
         thread::sleep(Duration::from_millis(1));
