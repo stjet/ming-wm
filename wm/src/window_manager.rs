@@ -24,7 +24,6 @@ use crate::essential::start_menu::StartMenu;
 use crate::essential::about::About;
 use crate::essential::help::Help;
 use crate::essential::onscreen_keyboard::OnscreenKeyboard;
-//use crate::logging::log;
 
 //todo: a lot of the usize should be changed to u16
 
@@ -40,6 +39,7 @@ struct WindowLikeInfo {
   id: usize,
   window_like: WindowBox,
   top_left: Point,
+  old_top_left: Point,
   dimensions: Dimensions,
   workspace: Workspace,
   fullscreen: bool,
@@ -105,6 +105,7 @@ impl WindowManager {
       id,
       window_like,
       top_left,
+      old_top_left: top_left,
       dimensions,
       workspace: if subtype == WindowLikeType::Window {
         Workspace::Workspace(self.current_workspace)
@@ -458,17 +459,20 @@ impl WindowManager {
                       let window_like = &self.window_infos[focused_index].window_like;
                       if window_like.subtype() == WindowLikeType::Window && window_like.resizable() {
                         //toggle fullscreen
-                        self.window_infos[focused_index].fullscreen ^= true;
+                        let window_info = &mut self.window_infos[focused_index];
+                        window_info.fullscreen ^= true;
                         //todo: send message to window about resize
                         let new_dimensions;
-                        if self.window_infos[focused_index].fullscreen {
+                        if window_info.fullscreen {
                           new_dimensions = [self.dimensions[0], self.dimensions[1] - TASKBAR_HEIGHT - INDICATOR_HEIGHT];
-                          self.window_infos[focused_index].top_left = [0, INDICATOR_HEIGHT];
-                          redraw_ids = Some(vec![self.window_infos[focused_index].id]);
+                          window_info.old_top_left = window_info.top_left;
+                          window_info.top_left = [0, INDICATOR_HEIGHT];
+                          redraw_ids = Some(vec![window_info.id]);
                         } else {
-                          new_dimensions = self.window_infos[focused_index].dimensions;
+                          window_info.top_left = window_info.old_top_left;
+                          new_dimensions = window_info.dimensions;
                         }
-                        self.window_infos[focused_index].window_like.handle_message(WindowMessage::ChangeDimensions([new_dimensions[0], new_dimensions[1] - WINDOW_TOP_HEIGHT]));
+                        window_info.window_like.handle_message(WindowMessage::ChangeDimensions([new_dimensions[0], new_dimensions[1] - WINDOW_TOP_HEIGHT]));
                         press_response = WindowMessageResponse::JustRedraw;
                       }
                     }

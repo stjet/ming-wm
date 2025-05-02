@@ -118,6 +118,7 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
       let mut y: Option<usize> = None;
       for line in reader.lines() {
         let line = line.unwrap();
+        println!(" "); //without any stdout, on my phone, for some reason the framebuffer doesn't get redrawn to the screen
         if line.contains("ABS_X), value ") || line.contains("ABS_Y), value ") {
           let value: Vec<_> = line.split("), value ").collect();
           let value = value[value.len() - 1].parse::<usize>().unwrap();
