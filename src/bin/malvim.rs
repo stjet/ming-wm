@@ -457,11 +457,21 @@ impl WindowLike for Malvim {
           ShortcutType::ClipboardPaste(copy_string) => {
             if self.mode == Mode::Insert {
               let current_file = &mut self.files[self.current_file_index];
-              let line = &current_file.content[current_file.line_pos];
-              current_file.content[current_file.line_pos] = line.substring(0, current_file.cursor_pos).to_string() + &copy_string + line.substring(current_file.cursor_pos, line.chars().count());
-              current_file.cursor_pos += copy_string.len();
+              for (i, cs) in copy_string.split("\n").enumerate() {
+                if i == 0 {
+                  //modify current line
+                  let line = &current_file.content[current_file.line_pos];
+                  current_file.content[current_file.line_pos] = line.substring(0, current_file.cursor_pos).to_string() + &cs + line.substring(current_file.cursor_pos, line.chars().count());
+                  current_file.cursor_pos += copy_string.len();
+                } else {
+                  //insert a new line
+                  current_file.content.insert(current_file.line_pos + 1, cs.to_string());
+                  current_file.line_pos += 1;
+                  current_file.cursor_pos = cs.chars().count();
+                }
+              }
               self.calc_top_line_pos();
-              self.calc_current(); //too over zealous but whatever
+              self.calc_current();
               self.files[self.current_file_index].changed = true;
               WindowMessageResponse::JustRedraw
             } else {

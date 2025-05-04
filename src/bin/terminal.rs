@@ -3,15 +3,16 @@ use std::vec;
 use std::sync::mpsc::{ channel, Receiver, Sender };
 use std::thread;
 use std::process::{ Child, Stdio };
+use std::process::Command;
 use std::io::{ Read, Write };
 use std::time::Duration;
 use std::path::PathBuf;
 use std::fmt;
 
-use pty_process::blocking;
+use linux::pty::open_pty;
 
 use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType };
-use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, ShortcutType };
+use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest, ShortcutType };
 use ming_wm_lib::framebuffer_types::Dimensions;
 use ming_wm_lib::themes::ThemeInfo;
 use ming_wm_lib::utils::{ concat_paths, path_autocomplete, Substring };
@@ -46,6 +47,11 @@ fn strip_ansi_escape_codes(line: String) -> String {
   new_line
 }
 
+fn bytes_to_string(bytes: Vec<u8>) -> String {
+  let bytes_len = bytes.len();
+  String::from_utf8(bytes).unwrap_or("?".repeat(bytes_len))
+}
+
 #[derive(Default, PartialEq)]
 enum Mode {
   #[default]
@@ -78,6 +84,7 @@ pub struct Terminal {
   current_path: String,
   running_process: Option<Child>,
   process_current_line: Vec<u8>, //bytes of line
+  output: String, //current or previous running output of command
   pty_outerr_rx: Option<Receiver<u8>>,
   pty_in_tx: Option<Sender<String>>,
   history: Vec<String>,
@@ -116,6 +123,7 @@ impl WindowLike for Terminal {
               self.history_index = None;
               self.mode = self.process_command();
               self.current_input = String::new();
+              self.output = String::new();
             } else if key_press.key == '\t' { //tab
               //autocomplete assuming it's a file system path
               //...mostly working
@@ -144,12 +152,17 @@ impl WindowLike for Terminal {
             loop {
               if let Ok(ci) = self.pty_outerr_rx.as_mut().unwrap().recv_timeout(Duration::from_millis(5)) {
                 if char::from(ci) == '\n' {
-                  let pcl_len = self.process_current_line.len();
-                  self.lines.push(strip_ansi_escape_codes(String::from_utf8(self.process_current_line.clone()).unwrap_or("?".repeat(pcl_len))));
+                  let append_line = strip_ansi_escape_codes(bytes_to_string(self.process_current_line.clone()));
+                  self.output += &append_line;
+                  self.output += "\n";
+                  self.lines.push(append_line);
                   self.process_current_line = Vec::new();
                 } else if char::from(ci) == '\r' {
                   //for now, ignore
                   //
+                } else if char::from(ci) == '\t' {
+                  //for now, interpret as space
+                  self.process_current_line.push(b' ');
                 } else {
                   self.process_current_line.push(ci);
                 }
@@ -163,7 +176,14 @@ impl WindowLike for Terminal {
               //process exited
               self.pty_outerr_rx = None;
               self.mode = Mode::Input;
-              self.process_current_line = Vec::new();
+              if self.process_current_line.len() > 0 {
+                //add to lines
+                let append_line = strip_ansi_escape_codes(bytes_to_string(self.process_current_line.clone()));
+                self.output += &append_line;
+                self.lines.push(append_line);
+                //only need to reset if not empty
+                self.process_current_line = Vec::new();
+              }
               changed = true;
             } else {
               if key_press.key == 'i' {
@@ -184,8 +204,9 @@ impl WindowLike for Terminal {
             } else if key_press.is_enter() {
               let _ = self.pty_in_tx.as_mut().unwrap().send(self.current_stdin_input.clone());
               self.mode = Mode::Running;
-              let pcl_len = self.process_current_line.len();
-              self.lines.push(strip_ansi_escape_codes(String::from_utf8(self.process_current_line.clone()).unwrap_or("?".repeat(pcl_len))) + &self.current_stdin_input);
+              let append_line = strip_ansi_escape_codes(bytes_to_string(self.process_current_line.clone()) + &self.current_stdin_input);
+              self.output += &append_line;
+              self.lines.push(append_line);
               self.current_stdin_input = String::new();
               self.process_current_line = Vec::new();
             } else if key_press.is_backspace() {
@@ -207,6 +228,12 @@ impl WindowLike for Terminal {
           //kills and running_process is now None
           let _ = self.running_process.take().unwrap().kill();
           self.mode = Mode::Input;
+          if self.process_current_line.len() > 0 {
+            let append_line = strip_ansi_escape_codes(bytes_to_string(self.process_current_line.clone()));
+            self.output += &append_line;
+            self.lines.push(append_line);
+            self.process_current_line = Vec::new();
+          }
           WindowMessageResponse::JustRedraw
         } else if self.mode == Mode::Input && (key_press.key == 'p' || key_press.key == 'n') {
           //only the last command is saved unlike other terminals. good enough for me
@@ -228,6 +255,7 @@ impl WindowLike for Terminal {
       },
       WindowMessage::Shortcut(shortcut) => {
         match shortcut {
+          ShortcutType::ClipboardCopy => WindowMessageResponse::Request(WindowManagerRequest::ClipboardCopy(self.output.clone())),
           ShortcutType::ClipboardPaste(copy_string) => {
             if self.mode == Mode::Input || self.mode == Mode::Stdin {
               if self.mode == Mode::Input {
@@ -331,11 +359,13 @@ impl Terminal {
       }
       Mode::Input
     } else {
-      let (pty, pts) = blocking::open().unwrap();
-      self.running_process = Some(blocking::Command::new("sh").arg("-c").arg(&self.current_input).current_dir(&self.current_path).stdin(Stdio::piped()).spawn(pts).unwrap());
+      let (pty, pts) = open_pty().unwrap();
+      let mut cmd = Command::new("sh");
+      let cmd = cmd.arg("-c").arg(&self.current_input).current_dir(&self.current_path).stdin(Stdio::piped());
+      self.running_process = Some(pts.attach_and_spawn(cmd).unwrap());
       let (tx1, rx1) = channel();
       thread::spawn(move || {
-        for ci in pty.bytes() {
+        for ci in pty.file.bytes() {
           if let Ok(ci) = ci {
             tx1.send(ci).unwrap();
           } else {
@@ -378,8 +408,7 @@ impl Terminal {
           //must_add_current_line will be false
           "$ ".to_string() + &self.current_input + "█"
         } else {
-          let pcl_len = self.process_current_line.len();
-          strip_ansi_escape_codes(String::from_utf8(self.process_current_line.clone()).unwrap_or("?".repeat(pcl_len))) + &self.current_stdin_input.clone() + "█"
+          strip_ansi_escape_codes(bytes_to_string(self.process_current_line.clone()) + &self.current_stdin_input.clone() + "█")
         }
       } else {
         self.lines[line_num].clone()

@@ -58,9 +58,11 @@ pub fn listen(mut window_like: impl WindowLike) {
     let arg = &parts.collect::<Vec<&str>>().join(" ");
     let output = match method {
       "handle_message" => {
+        //newlines allowed for ClipboardCopy, but represented by the Linear A char
         window_like.handle_message(WindowMessage::deserialize(arg).unwrap()).serialize().to_string()
       },
       "draw" => {
+        //newlines never allowed
         window_like.draw(&ThemeInfo::deserialize(arg).unwrap()).serialize().replace("\n", "").to_string()
       },
       "title" => {

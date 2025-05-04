@@ -25,7 +25,7 @@ To get sudo to read from stdin, the `-S` option will need to be used (eg, `sudo 
 
 ## Copy / Paste
 
-This window-like supports the paste [shortcut](../system/shortcuts.md) (`Alt+P`) if in INPUT or STDIN mode.
+This window-like supports the paste [shortcut](../system/shortcuts.md) (`Alt+P`) if in INPUT or STDIN mode. The copy shortcut will copy the output of the last ran command.
 
 ## Notes
 

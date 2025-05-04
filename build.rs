@@ -4,7 +4,7 @@ use std::env;
 use std::path::Path;
 use std::process::Command;
 
-use blake2::{ Blake2b512, Digest };
+use bitcoin_hashes::Sha512;
 use bmp_rust::bmp::BMP;
 
 fn font_chars_to_alphas(dir: &str) {
@@ -47,12 +47,11 @@ fn font_chars_to_alphas(dir: &str) {
 
 fn main() {
   //hash + "salt" password and add to build
-  let password = read_to_string("password.env").unwrap_or("password".to_string()).replace("\n", "") + "salt?sorrycryptographers";
-  let mut hasher = Blake2b512::new();
-  hasher.update(password.as_bytes());
+  let password = read_to_string("password.env").unwrap_or("password".to_string()).replace("\n", "") + "salt?sorrycryptographers!1!";
+  let hash = Sha512::hash(password.as_bytes()).to_byte_array();
   let out_dir = env::var_os("OUT_DIR").unwrap();
   let dest_path = Path::new(&out_dir).join("password.rs");
-  write(&dest_path, format!("pub const PASSWORD_HASH: [u8; 64] = {:?};", hasher.finalize())).unwrap();
+  write(&dest_path, format!("pub const PASSWORD_HASH: [u8; 64] = {:?};", hash)).unwrap();
   //process bmps
   for entry in read_dir("./bmps").unwrap() {
     let path = entry.unwrap().path();

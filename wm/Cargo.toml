@@ -1,0 +1,12 @@
+[package]
+name = "wm"
+version = "1.0.3"
+repository = "https://github.com/stjet/ming-wm"
+license = "GPL-3.0-or-later"
+edition = "2021"
+
+[dependencies]
+ming-wm-lib = { path = "../ming-wm-lib" }
+linux = { path = "../linux" }
+bitcoin_hashes = { version = "0.16.0", default-features = false }
+bmp-rust = "0.5.0"

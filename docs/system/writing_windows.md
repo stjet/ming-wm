@@ -15,6 +15,8 @@ Since the windows and the window manager are separate binaries, they need some w
 
 The serialization format is in `ming-wm-lib/src/serialize.rs`. Make sure any newlines (`\n`) in strings are removed before/after serializations. When doing IPC, the window manager assumes the response to a query is one line, so if a newline is present, it will fail to parse the response.
 
+> In the case of `WindowMessage::Request(WindowManagerRequest::ClipboardCopy(<copy_string>))`, windows should convert any `\n` into `𐘂` when copying to clipboard and vice versa when pasting, in order to allow for multi-line clipboard contents.
+
 ## Hello, World!
 
 A minimal example using `ming-wm-lib`.

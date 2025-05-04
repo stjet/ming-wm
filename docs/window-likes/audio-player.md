@@ -14,6 +14,8 @@ Type to write commands, backspace to delete last character, and enter to run com
 
 Tab completion is supported for the `<dir>` and `<dir / playlist file>` arguments.
 
+The copy shortcut will copy the currently playing song's file name, if there is a currently playing song.
+
 ## Playlists
 
 Example playlist file:

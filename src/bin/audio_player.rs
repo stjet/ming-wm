@@ -14,13 +14,12 @@ use mp4ameta;
 use metaflac;
 
 use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType };
-use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse };
+use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest, ShortcutType };
 use ming_wm_lib::framebuffer_types::Dimensions;
 use ming_wm_lib::themes::ThemeInfo;
-use ming_wm_lib::utils::{ concat_paths, path_autocomplete, format_seconds, Substring };
+use ming_wm_lib::utils::{ concat_paths, get_all_files, path_autocomplete, format_seconds, Substring };
 use ming_wm_lib::dirs::home;
 use ming_wm_lib::ipc::listen;
-use ming_wm::fs::get_all_files;
 
 fn get_artist(path: &PathBuf) -> Option<String> {
   let ext = path.extension().unwrap();
@@ -80,7 +79,6 @@ pub struct AudioPlayer {
 
 impl WindowLike for AudioPlayer {
   fn handle_message(&mut self, message: WindowMessage) -> WindowMessageResponse {
-    //
     match message {
       WindowMessage::Init(dimensions) => {
         self.dimensions = dimensions;
@@ -110,10 +108,33 @@ impl WindowLike for AudioPlayer {
           } else {
             return WindowMessageResponse::DoNothing;
           }
-        } else {
+        } else if key_press.is_regular() {
           self.command += &key_press.key.to_string();
+        } else {
+          return WindowMessageResponse::DoNothing
         }
         WindowMessageResponse::JustRedraw
+      },
+      WindowMessage::Shortcut(shortcut) => {
+        match shortcut {
+          ShortcutType::ClipboardPaste(paste_string) => {
+            self.command += &paste_string.replace("\n", "");
+            WindowMessageResponse::JustRedraw
+          },
+          ShortcutType::ClipboardCopy => {
+            let internal_locked = self.internal.lock().unwrap();
+            let sink_len = internal_locked.sink.len();
+            if sink_len > 0 {
+              let queue = &internal_locked.queue;
+              let current = &queue[queue.len() - sink_len];
+              let current_name = current.0.file_name().unwrap().to_string_lossy().into_owned();
+              WindowMessageResponse::Request(WindowManagerRequest::ClipboardCopy(current_name))
+            } else {
+              WindowMessageResponse::DoNothing
+            }
+          },
+          _ => WindowMessageResponse::DoNothing,
+        }
       },
       _ => {
         WindowMessageResponse::DoNothing
