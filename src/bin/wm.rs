@@ -136,7 +136,6 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
               if x2 > dimensions[0] - 100 && y2 < 100 {
                 tx1.send(ThreadMessage::Clear).unwrap();
               }
-              println!(" "); //without any stdout, on my phone, for some reason the framebuffer doesn't get redrawn to the screen
               tx1.send(ThreadMessage::Touch(x2, y2)).unwrap();
               x = None;
               y = None;
@@ -155,7 +154,10 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
   for message in rx {
     match message {
       ThreadMessage::KeyChar(kc) => wm.handle_message(WindowManagerMessage::KeyChar(kc.clone())),
-      ThreadMessage::Touch(x, y) => wm.handle_message(WindowManagerMessage::Touch(x, y)),
+      ThreadMessage::Touch(x, y) => {
+        wm.handle_message(WindowManagerMessage::Touch(x, y));
+        println!(" "); //without any stdout, on my phone, for some reason the framebuffer doesn't get redrawn to the screen
+      },
       ThreadMessage::Clear => {
         write!(stdout.stdout, "{}", CLEAR_ALL).unwrap();
         stdout.stdout.flush().unwrap();
