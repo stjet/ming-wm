@@ -51,7 +51,7 @@ Usage for most of the included windows and window-likes are included in `docs/wi
 
 More or the less the same, but includes with an onscreen keyboard for touchscreens.
 
-`evtest` needs to be installed. Currently, the input device is assumed to be at `/dev/input/by-path/first-touchscreen`, but this is easily editable (see `src/bin/wm.rs`). So, for touchscreen support, the user running `ming` needs to have read permissions for that `dev/input/` file.
+Currently, the touchscreen input device is assumed to be at `/dev/input/by-path/first-touchscreen`, but this is easily editable (see `src/bin/wm.rs`). For touchscreen support, the user running `ming` needs to have read permissions for that `/dev/input/` file.
 
 ```
 ming touch
