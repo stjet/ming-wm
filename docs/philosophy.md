@@ -75,4 +75,4 @@ PS:
 > ### Update
 > Ignoring the audio player dependencies and `bmp-rust`, the only dependencies not written by me are now `libc` for libc Rust bindings and `bitcoin-hashes` for SHA-512 password hashing (yes, I know SHA-512 is not the greatest password hash function, but it is lightweight, relatively).
 >
-> Prior dependencies like `termion`, `linux_framebuffer`, `pty-process`, have been removed and replaced by a me-written version in the `linux` crate. As of v1.1, the dependency removing goal has been achieved. Huzzah!
+> Prior dependencies like `termion`, `linux_framebuffer`, `pty-process`, `evtest` have been removed and replaced by a me-written version in the `linux` crate. As of v1.1, the dependency removing goal has been achieved. Huzzah!
