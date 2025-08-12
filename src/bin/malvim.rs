@@ -168,11 +168,14 @@ impl WindowLike for Malvim {
             self.state = State::None;
           } else if self.state == State::MaybeDelete {
             if key_press.key == 'd' {
-              current_file.content.remove(current_file.line_pos);
-              if current_file.content.len() == 0 {
-                current_file.content = vec![String::new()];
-              } else if current_file.line_pos == current_file.content.len() {
-                current_file.line_pos = current_file.content.len() - 1;
+              for _ in 0..self.maybe_num.unwrap_or(1) {
+                current_file.content.remove(current_file.line_pos);
+                if current_file.content.len() == 0 {
+                  current_file.content = vec![String::new()];
+                } else if current_file.line_pos == current_file.content.len() {
+                  current_file.line_pos = current_file.content.len() - 1;
+                  break;
+                }
               }
               let new_length = current_file.content[current_file.line_pos].chars().count();
               current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
@@ -392,7 +395,7 @@ impl WindowLike for Malvim {
             changed = false;
           }
           //reset maybe_num if not num
-          if !numbered && self.state != State::Maybeg {
+          if !numbered && self.state != State::Maybeg && self.state != State::MaybeDelete {
             self.maybe_num = None;
           }
         } else if self.mode == Mode::Command {

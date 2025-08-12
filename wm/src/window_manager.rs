@@ -648,6 +648,13 @@ impl WindowManager {
     [top_left[0], top_left[1] + if is_window { WINDOW_TOP_HEIGHT } else { 0 }]
   }
 
+  fn prevent_overflow_dimensions(dimensions: Dimensions, window_dimensions: Dimensions, top_left: Point) -> Dimensions {
+    [
+      min(dimensions[0], window_dimensions[0] - top_left[0]),
+      min(dimensions[1], window_dimensions[1] - top_left[1]),
+    ]
+  }
+
   //another issue with a huge vector of draw instructions; it takes up heap memory
   pub fn draw(&mut self, maybe_redraw_ids: Option<Vec<usize>>, use_saved_buffer: bool) {
     let theme_info = get_theme_info(&self.theme).unwrap();
@@ -694,6 +701,7 @@ impl WindowManager {
             DrawInstructions::Text(top_left, fonts, text, color, bg_color, horiz_spacing, mono_width) => DrawInstructions::Text(WindowManager::get_true_top_left(top_left, is_window), fonts.clone(), text.clone(), *color, *bg_color, *horiz_spacing, *mono_width),
             DrawInstructions::Bmp(top_left, path, reverse) => DrawInstructions::Bmp(WindowManager::get_true_top_left(top_left, is_window), path.to_string(), *reverse),
             DrawInstructions::Gradient(top_left, dimensions, start_color, end_color, steps) => DrawInstructions::Gradient(WindowManager::get_true_top_left(top_left, is_window), *dimensions, *start_color, *end_color, *steps),
+            DrawInstructions::Line(start, end, width, color) => DrawInstructions::Line(WindowManager::get_true_top_left(start, is_window), WindowManager::get_true_top_left(end, is_window), *width, *color),
           }
         }).collect();
         //draw window background
@@ -729,10 +737,7 @@ impl WindowManager {
         match instruction {
           DrawInstructions::Rect(top_left, dimensions, color) => {
             //try and prevent overflows out of the window
-            let true_dimensions = [
-              min(dimensions[0], window_dimensions[0] - top_left[0]),
-              min(dimensions[1], window_dimensions[1] - top_left[1]),
-            ];
+            let true_dimensions = WindowManager::prevent_overflow_dimensions(dimensions, window_dimensions, top_left);
             window_writer.draw_rect(top_left, true_dimensions, color);
           },
           DrawInstructions::Circle(centre, radius, color) => {
@@ -746,7 +751,11 @@ impl WindowManager {
             window_writer.draw_bmp(top_left, path, reverse);
           },
           DrawInstructions::Gradient(top_left, dimensions, start_color, end_color, steps) => {
-            window_writer.draw_gradient(top_left, dimensions, start_color, end_color, steps);
+            let true_dimensions = WindowManager::prevent_overflow_dimensions(dimensions, window_dimensions, top_left);
+            window_writer.draw_gradient(top_left, true_dimensions, start_color, end_color, steps);
+          },
+          DrawInstructions::Line(start, end, width, color) => {
+            window_writer.draw_line(start, end, width, color);
           },
         }
       }

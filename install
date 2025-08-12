@@ -16,3 +16,4 @@ cp ./target/release/mingGames_Minesweeper /usr/local/bin/mingGames_Minesweeper
 cp ./target/release/mingFiles_File_Explorer /usr/local/bin/mingFiles_File_Explorer
 cp ./target/release/mingFiles_Audio_Player /usr/local/bin/mingFiles_Audio_Player
 cp ./target/release/mingEditing_Malvim /usr/local/bin/mingEditing_Malvim
+cp ./target/release/mingUtils_Draw /usr/local/bin/mingUtils_Draw

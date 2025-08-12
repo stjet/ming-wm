@@ -108,6 +108,7 @@ impl FramebufferWriter {
       .copy_from_slice(&color[..]);
   }
 
+  //straight horizontal line
   fn _draw_line(&mut self, start_pos: usize, bytes: &[u8]) {
     self.buffer[start_pos..(start_pos + bytes.len())]
       .copy_from_slice(bytes);
@@ -240,6 +241,34 @@ impl FramebufferWriter {
         }
         self.draw_char(top_left, &char_info, color, bg_color);
         top_left[0] += add_after;
+      }
+    }
+  }
+
+  //line
+
+  pub fn draw_line(&mut self, start: Point, end: Point, width: usize, color: RGBColor) {
+    //leftmost point
+    let lm;
+    let rm;
+    if start[0] < end[0] || (start[0] == end[0] && end[1] > start[1]) {
+      lm = start;
+      rm = end;
+    } else {
+      lm = end;
+      rm = start;
+    };
+    let dx = (rm[0] - lm[0]) as f64; //will not be negative
+    let dy = rm[1] as f64 - lm[1] as f64; //surely no point will be big enough to lose data here?
+    let use_x = dy.abs() < dx;
+    //slope
+    let m = if use_x { dy / dx } else { dx / dy };
+    for ci in 0..if use_x { dx as usize } else { dy.abs() as usize } {
+      let i = if !use_x && dy < 0.0 { -(ci as f64) } else { ci as f64 };
+      let ix = if use_x { i } else { (m * i).round() };
+      let iy = if use_x { (m * i).round() } else { i };
+      for j in 0..width {
+        self.draw_pixel([(lm[0] as f64 + ix) as usize + j, (lm[1] as f64 + iy) as usize], color);
       }
     }
   }

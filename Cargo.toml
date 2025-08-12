@@ -1,6 +1,6 @@
 [package]
 name = "ming-wm"
-version = "1.1.0"
+version = "1.2.0-beta.0"
 repository = "https://github.com/stjet/ming-wm"
 license = "GPL-3.0-or-later"
 edition = "2021"
@@ -63,3 +63,7 @@ path = "src/bin/malvim.rs"
 [[bin]]
 name = "mingGames_Reversi"
 path = "src/bin/reversi.rs"
+
+[[bin]]
+name = "mingUtils_Draw"
+path = "src/bin/draw.rs"

@@ -221,6 +221,7 @@ impl Serializable for DrawInstructions {
       DrawInstructions::Gradient(p, d, c1, c2, u) => format!("Gradient/{}\x1E{}\x1E{}\x1E{}\x1E{}", array_to_string(p), array_to_string(d), array_to_string(c1), array_to_string(c2), u),
       DrawInstructions::Bmp(p, s, b) => format!("Bmp/{}\x1E{}\x1E{}", array_to_string(p), s, b),
       DrawInstructions::Circle(p, u, c) => format!("Circle/{}\x1E{}\x1E{}", array_to_string(p), u, array_to_string(c)),
+      DrawInstructions::Line(s, e, w, c) => format!("Line/{}\x1E{}\x1E{}\x1E{}", array_to_string(s), array_to_string(e), w, array_to_string(c)),
     }
   }
   fn deserialize(serialized: &str) -> Result<Self, ()> {
@@ -401,6 +402,35 @@ impl Serializable for DrawInstructions {
         }
         let c = get_color(arg.unwrap())?;
         Ok(DrawInstructions::Circle(p, u.unwrap(), c))
+      },
+      "Line" => {
+        let rest = get_rest_of_split(&mut parts, Some("/"));
+        //(s, e, w, c)
+        let mut args = rest.split("\x1E");
+        let arg = args.next();
+        if arg.is_none() {
+          return Err(());
+        }
+        let s = get_two_array(arg.unwrap())?;
+        let arg = args.next();
+        if arg.is_none() {
+          return Err(());
+        }
+        let e = get_two_array(arg.unwrap())?;
+        let arg = args.next();
+        if arg.is_none() {
+          return Err(());
+        }
+        let w = arg.unwrap().parse();
+        if w.is_err() {
+          return Err(());
+        }
+        let arg = args.next();
+        if arg.is_none() {
+          return Err(());
+        }
+        let c = get_color(arg.unwrap())?;
+        Ok(DrawInstructions::Line(s, e, w.unwrap(), c))
       },
       _ => Err(()),
     }
