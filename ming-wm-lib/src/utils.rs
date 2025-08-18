@@ -7,6 +7,14 @@ pub fn min(one: usize, two: usize) -> usize {
   if one > two { two } else { one } 
 }
 
+pub fn random_u32(seed: u32) -> u32 {
+  let mut seed = seed;
+  seed ^= seed << 13;
+  seed ^= seed >> 17;
+  seed ^= seed >> 5;
+  seed
+}
+
 pub trait Substring {
   fn substring(&self, start: usize, end: usize) -> &str;
   fn remove(&self, index: usize, len: usize) -> String;
@@ -86,18 +94,6 @@ pub fn calc_actual_lines<'a>(lines: impl Iterator<Item = &'a String>, max_chars_
     }
   }
   actual_lines
-}
-
-pub fn calc_new_cursor_pos(cursor_pos: usize, new_length: usize) -> usize {
-  if cursor_pos >= new_length {
-    if new_length == 0 {
-      0
-    } else {
-      new_length - 1
-    }
-  } else {
-    cursor_pos
-  }
 }
 
 pub fn concat_paths(current_path: &str, add_path: &str) -> Result<PathBuf, ()> {

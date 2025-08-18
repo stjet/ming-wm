@@ -35,7 +35,7 @@ fn font_chars_to_alphas(dir: &str) {
         ch.push(row);
       }
       let ch: Vec<String> = ch.into_iter().map(|row| {
-        row.join(",")
+        row.join(",").replace(",,,,", ":").replace(",,,", ";").replace(",,", ".")
       }).collect();
       let chars: Vec<char> = file_name[0].chars().collect();
       File::create(dir.to_string() + "/" + &chars[0].to_string() + ".alpha").unwrap().write_all(
@@ -61,7 +61,9 @@ fn main() {
   }
   //copy bmp folders to target
   let profile = env::var_os("PROFILE").unwrap().to_string_lossy().to_string();
+  Command::new("rm").arg("-rf").arg(format!("./target/{}/ming_bmps", profile)).output().unwrap(); //delete at target first so cp works
   Command::new("cp").arg("-r").arg("./bmps").arg(format!("./target/{}/ming_bmps", profile)).output().unwrap();
   //also copy the docs folder
+  Command::new("rm").arg("-rf").arg(format!("./target/{}/ming_docs", profile)).output().unwrap();
   Command::new("cp").arg("-r").arg("./docs").arg(format!("./target/{}/ming_docs", profile)).output().unwrap();
 }

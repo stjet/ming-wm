@@ -13,6 +13,7 @@ use ming_wm_lib::components::paragraph::Paragraph;
 pub struct About {
   dimensions: Dimensions,
   components: Vec<Box<dyn Component<()> + Send>>,
+  version: String,
 }
 
 impl WindowLike for About {
@@ -40,7 +41,7 @@ impl WindowLike for About {
 
   //properties
   fn title(&self) -> String {
-    "About".to_string()
+    "About".to_string() + " - v" + &self.version
   }
 
   fn subtype(&self) -> WindowLikeType {
@@ -53,10 +54,11 @@ impl WindowLike for About {
 }
 
 impl About {
-  pub fn new() -> Self {
+  pub fn new(version: String) -> Self {
     Self {
       dimensions: [0, 0],
       components: Vec::new(),
+      version,
     }
   }
 }

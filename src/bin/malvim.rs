@@ -9,7 +9,7 @@ use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, WindowManager
 use ming_wm_lib::themes::ThemeInfo;
 use ming_wm_lib::framebuffer_types::Dimensions;
 use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType };
-use ming_wm_lib::utils::{ calc_actual_lines, calc_new_cursor_pos, Substring };
+use ming_wm_lib::utils::{ calc_actual_lines, Substring };
 use ming_wm_lib::dirs::home;
 use ming_wm_lib::utils::{ get_rest_of_split, path_autocomplete };
 use ming_wm_lib::ipc::listen;
@@ -103,10 +103,22 @@ impl WindowLike for Malvim {
           self.mode = Mode::Command;
           self.command = Some(String::new());
           changed = false;
-        } else if (key_press.key == 'i' || key_press.key == 'A') && self.mode == Mode::Normal && self.state == State::None && self.files.len() > 0 {
+        } else if (key_press.key == 'i' || key_press.key == 'A' || key_press.key == 'o' || key_press.key == 'O') && self.mode == Mode::Normal && self.state == State::None && self.files.len() > 0 {
+          let current_file = &mut self.files[self.current_file_index];
           if key_press.key == 'A' {
-            let current_file = &mut self.files[self.current_file_index];
             current_file.cursor_pos = current_file.content[current_file.line_pos].chars().count();
+          } else if key_press.key == 'o' || key_press.key == 'O' {
+            let current_line = &current_file.content[current_file.line_pos];
+            let spaces = Malvim::calc_spaces(self.autoindent, current_line);
+            let n = if key_press.key == 'o' {
+              current_file.line_pos + 1
+            } else {
+              current_file.line_pos
+            };
+            current_file.content.insert(n, " ".repeat(spaces));
+            current_file.line_pos = n;
+            current_file.cursor_pos = spaces;
+            new = true;
           }
           self.mode = Mode::Insert;
           changed = false;
@@ -120,20 +132,7 @@ impl WindowLike for Malvim {
             let left = left.into_iter().map(|c| c.to_string()).collect::<Vec<String>>().join("");
             let right = right.into_iter().map(|c| c.to_string()).collect::<Vec<String>>().join("");
             current_file.content[current_file.line_pos] = left.to_string();
-            let spaces = if self.autoindent {
-              //find out how many spaces the line starts with, copy that to the new line
-              let mut spaces = 0;
-              for c in left.chars() {
-                if c == ' ' {
-                  spaces += 1;
-                } else {
-                  break;
-                }
-              }
-              spaces
-            } else {
-              0
-            };
+            let spaces = Malvim::calc_spaces(self.autoindent, &left);
             current_file.content.insert(current_file.line_pos + 1, " ".repeat(spaces) + &right);
             current_file.line_pos += 1;
             current_file.cursor_pos = spaces;
@@ -178,7 +177,7 @@ impl WindowLike for Malvim {
                 }
               }
               let new_length = current_file.content[current_file.line_pos].chars().count();
-              current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
+              current_file.cursor_pos = Malvim::calc_new_cursor_pos(current_file.cursor_pos, new_length);
             } else if key_press.key == 'w' || key_press.key == '$' {
               let line = &current_file.content[current_file.line_pos];
               let line_len = line.chars().count();
@@ -198,7 +197,7 @@ impl WindowLike for Malvim {
                 };
                 current_file.content[current_file.line_pos] = line.remove(current_file.cursor_pos, offset);
                 let new_length = current_file.content[current_file.line_pos].chars().count();
-                current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
+                current_file.cursor_pos = Malvim::calc_new_cursor_pos(current_file.cursor_pos, new_length);
               }
             }
             self.state = State::None;
@@ -209,7 +208,7 @@ impl WindowLike for Malvim {
                 current_file.line_pos = current_file.content.len() - 1;
               }
               let new_length = current_file.content[current_file.line_pos].chars().count();
-              current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
+              current_file.cursor_pos = Malvim::calc_new_cursor_pos(current_file.cursor_pos, new_length);
             }
             changed = false;
             self.state = State::None;
@@ -265,7 +264,7 @@ impl WindowLike for Malvim {
               current_file.line_pos = current_file.line_pos.checked_sub(self.maybe_num.unwrap_or(1)).unwrap_or(0);
             }
             let new_length = current_file.content[current_file.line_pos].chars().count();
-            current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
+            current_file.cursor_pos = Malvim::calc_new_cursor_pos(current_file.cursor_pos, new_length);
             changed = false;
           } else if key_press.key == 'l' || key_press.is_right_arrow() {
             if current_length > 0 {
@@ -298,7 +297,7 @@ impl WindowLike for Malvim {
           } else if key_press.key == 'G' {
             current_file.line_pos = current_file.content.len() - 1;
             let new_length = current_file.content[current_file.line_pos].chars().count();
-            current_file.cursor_pos = calc_new_cursor_pos(current_file.cursor_pos, new_length);
+            current_file.cursor_pos = Malvim::calc_new_cursor_pos(current_file.cursor_pos, new_length);
             changed = false;
           } else if key_press.key == 'f' {
             self.state = State::Find;
@@ -424,7 +423,7 @@ impl WindowLike for Malvim {
             }
           } else if key_press.is_backspace() {
             if command.len() > 0 {
-              self.command = Some(command[..command.len() - 1].to_string());
+              self.command = Some(command.remove_last());
             }
           } else {
             self.command = Some(command.to_string() + &key_press.key.to_string());
@@ -592,6 +591,34 @@ impl WindowLike for Malvim {
 impl Malvim {
   pub fn new() -> Self {
     Default::default()
+  }
+
+  fn calc_spaces(autoindent: bool, left: &str) -> usize {
+    if autoindent {
+      let mut spaces = 0;
+      for c in left.chars() {
+        if c == ' ' {
+          spaces += 1;
+        } else {
+          break;
+        }
+      }
+      spaces
+    } else {
+      0
+    }
+  }
+
+  fn calc_new_cursor_pos(cursor_pos: usize, new_length: usize) -> usize {
+    if cursor_pos >= new_length {
+      if new_length == 0 {
+        0
+      } else {
+        new_length - 1
+      }
+    } else {
+      cursor_pos
+    }
   }
 
   fn calc_top_line_pos(&mut self) {

@@ -148,7 +148,9 @@ impl FramebufferWriter {
 
   pub fn draw_pixel(&mut self, point: Point, color: RGBColor) {
     let start_pos = (point[1] * self.info.stride + point[0]) * self.info.bytes_per_pixel;
-    self._draw_pixel(start_pos, color);
+    if self.info.byte_len > start_pos {
+      self._draw_pixel(start_pos, color);
+    }
   }
   
   //shapes

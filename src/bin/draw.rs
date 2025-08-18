@@ -11,7 +11,7 @@ use ming_wm_lib::ipc::listen;
 enum DrawAction {
   Line(Point, Option<Point>, usize, RGBColor),
   Rect(Point, Option<Dimensions>, RGBColor),
-  //
+  Circle(Point, Option<usize>, RGBColor),
 }
 
 impl DrawAction {
@@ -19,6 +19,7 @@ impl DrawAction {
     match self {
       DrawAction::Line(_, _, _, _) => "Line",
       DrawAction::Rect(_, _, _) => "Rect",
+      DrawAction::Circle(_, _, _) => "Circle",
     }.to_string()
   }
 }
@@ -49,6 +50,10 @@ impl WindowLike for Draw {
         self.dimensions = dimensions;
         WindowMessageResponse::JustRedraw
       },
+      WindowMessage::ChangeDimensions(dimensions) => {
+        self.dimensions = dimensions;
+        WindowMessageResponse::JustRedraw
+      },
       WindowMessage::KeyPress(key_press) => {
         if key_press.is_escape() && (self.current_action.is_some() || self.mode != Mode::Move) {
           self.current_action = None;
@@ -69,7 +74,10 @@ impl WindowLike for Draw {
               "rect" | "r" => {
                 self.current_action = Some(DrawAction::Rect(self.current_location, None, self.current_color));
               },
-              "colour" | "color" | "c" => {
+              "circle" | "c" => {
+                self.current_action = Some(DrawAction::Circle(self.current_location, None, self.current_color));
+              },
+              "colour" | "color" | "co" => {
                 //hex to u8
                 if let Some(hex_color) = parts.next() {
                   if hex_color.len() == 6 && hex_color.chars().all(|c| HEX_CHARS.contains(&c)) {
@@ -135,6 +143,10 @@ impl WindowLike for Draw {
                 ];
                 DrawAction::Rect(tl, Some(d), *r)
               },
+              DrawAction::Circle(p, _, c) => {
+                let r = ((self.current_location[1] as f64 - p[1] as f64).powi(2) + (self.current_location[0] as f64 - p[0] as f64).powi(2)).sqrt();
+                DrawAction::Circle(*p, Some(r.round() as usize), *c)
+              },
             });
             self.current_action = None;
             WindowMessageResponse::JustRedraw
@@ -184,6 +196,7 @@ impl WindowLike for Draw {
       instructions.push(match action {
         DrawAction::Line(p1, p2, lw, c) => DrawInstructions::Line(*p1, p2.unwrap(), *lw, *c),
         DrawAction::Rect(p, d, c) => DrawInstructions::Rect(*p, d.unwrap(), *c),
+        DrawAction::Circle(p, r, c) => DrawInstructions::Circle(*p, r.unwrap(), *c),
       });
     }
     //draw cursor (crosshair)
@@ -219,6 +232,10 @@ impl WindowLike for Draw {
 
   fn ideal_dimensions(&self, _dimensions: Dimensions) -> Dimensions {
     [410, 410]
+  }
+
+  fn resizable(&self) -> bool {
+    true
   }
 }
 

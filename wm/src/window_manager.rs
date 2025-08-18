@@ -51,6 +51,7 @@ impl fmt::Debug for WindowLikeInfo {
   }
 }
 
+
 pub struct WindowManager {
   writer: RefCell<FramebufferWriter>,
   rotate: bool,
@@ -65,13 +66,14 @@ pub struct WindowManager {
   current_workspace: u8,
   framebuffer: Framebuffer,
   clipboard: Option<String>,
+  version: String,
   password_hash: [u8; 64],
 }
 
 //1 is up, 2 is down
 
 impl WindowManager {
-  pub fn new(writer: FramebufferWriter, framebuffer: Framebuffer, dimensions: Dimensions, rotate: bool, grayscale: bool, password_hash: [u8; 64]) -> Self {
+  pub fn new(writer: FramebufferWriter, framebuffer: Framebuffer, dimensions: Dimensions, rotate: bool, grayscale: bool, version: String, password_hash: [u8; 64]) -> Self {
     //println!("bg: {}x{}", dimensions[0], dimensions[1] - TASKBAR_HEIGHT - INDICATOR_HEIGHT);
     let mut wm = WindowManager {
       writer: RefCell::new(writer),
@@ -87,6 +89,7 @@ impl WindowManager {
       current_workspace: 0,
       framebuffer,
       clipboard: None,
+      version,
       password_hash,
     };
     wm.lock();
@@ -594,7 +597,7 @@ impl WindowManager {
         }
         let w: Option<WindowBox> = match w.as_str() {
           "StartMenu" => Some(Box::new(StartMenu::new())),
-          "About" => Some(Box::new(About::new())),
+          "About" => Some(Box::new(About::new(self.version.clone()))),
           "Help" => Some(Box::new(Help::new())),
           _ => Some(Box::new(ProxyWindowLike::new(&w))),
         };

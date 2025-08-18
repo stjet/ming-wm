@@ -7,7 +7,7 @@ use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLik
 use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse };
 use ming_wm_lib::framebuffer_types::Dimensions;
 use ming_wm_lib::themes::ThemeInfo;
-use ming_wm_lib::utils::{ u8_to_hex, hex_to_u8, HEX_CHARS };
+use ming_wm_lib::utils::{ random_u32, u8_to_hex, hex_to_u8, HEX_CHARS };
 use ming_wm_lib::ipc::listen;
 
 //16x16 with 40 mines
@@ -252,11 +252,7 @@ impl Minesweeper {
   //https://en.wikipedia.org/wiki/Xorshift
   //from 0 to 15
   pub fn random(&mut self) -> usize {
-    let mut x = self.random_seed;
-    x ^= x << 13;
-    x ^= x >> 17;
-    x ^= x << 5;
-    self.random_seed = x;
+    self.random_seed = random_u32(self.random_seed);
     self.random_seed as usize % 16
   }
 

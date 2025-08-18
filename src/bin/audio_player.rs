@@ -2,13 +2,13 @@ use std::vec::Vec;
 use std::vec;
 use std::io::BufReader;
 use std::path::PathBuf;
+use std::collections::HashMap;
 use std::fs::{ read_to_string, File };
 use std::time::{ Duration, SystemTime, UNIX_EPOCH };
 use std::thread;
 use std::sync::{ Arc, Mutex };
 
 use rodio::{ Decoder, OutputStream, Sink, Source };
-use rand::{ SeedableRng, prelude::SliceRandom, rngs::SmallRng };
 use id3::TagLike;
 use mp4ameta;
 use metaflac;
@@ -17,7 +17,7 @@ use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLik
 use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest, ShortcutType };
 use ming_wm_lib::framebuffer_types::Dimensions;
 use ming_wm_lib::themes::ThemeInfo;
-use ming_wm_lib::utils::{ concat_paths, get_all_files, path_autocomplete, format_seconds, Substring };
+use ming_wm_lib::utils::{ concat_paths, random_u32, get_all_files, path_autocomplete, format_seconds, Substring };
 use ming_wm_lib::dirs::home;
 use ming_wm_lib::ipc::listen;
 
@@ -253,8 +253,13 @@ impl AudioPlayer {
               } else {
                 get_all_files(PathBuf::from(new_path))
               };
-              let mut rng = SmallRng::seed_from_u64(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs());
-              queue.shuffle(&mut rng);
+              let mut seed = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().subsec_millis();
+              let mut q_weights: HashMap<PathBuf, u32> = HashMap::new();
+              for q in &queue {
+                seed = random_u32(seed);
+                q_weights.insert(q.to_path_buf(), seed);
+              }
+              queue.sort_by(|a, b| q_weights[a].cmp(&q_weights[b]));
               if self.command.starts_with("p ") {
                 let mut locked_internal = self.internal.lock().unwrap();
                 (*locked_internal).sink.clear();

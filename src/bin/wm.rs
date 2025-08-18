@@ -72,7 +72,7 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
 
   writer.init(framebuffer_info.clone());
 
-  let mut wm: WindowManager = WindowManager::new(writer, framebuffer, dimensions, rotate, grayscale, PASSWORD_HASH);
+  let mut wm: WindowManager = WindowManager::new(writer, framebuffer, dimensions, rotate, grayscale, env!("CARGO_PKG_VERSION").to_string(), PASSWORD_HASH);
 
   let mut stdout = RawStdout::new(stdout());
   stdout.enter_raw_mode().unwrap();
@@ -110,7 +110,6 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
 
   //read touchscreen presses (hopefully)
   thread::spawn(move || {
-    //spawn evtest, parse it for touch coords
     if touch {
       let mut events = Input::new("/dev/input/by-path/first-touchscreen").unwrap(); //panics in threads don't matter in this case
       let mut x: Option<usize> = None;
