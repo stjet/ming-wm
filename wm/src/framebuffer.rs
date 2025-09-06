@@ -4,9 +4,7 @@ use std::vec::Vec;
 use bmp_rust::bmp::BMP;
 
 use ming_wm_lib::framebuffer_types::*;
-use crate::fs::get_font_char_from_fonts;
-
-type FontChar = (char, Vec<Vec<u8>>, u8);
+use ming_wm_lib::fonts::{ CachedFontCharGetter, FontCharInfo };
 
 fn color_with_alpha(color: RGBColor, bg_color: RGBColor, alpha: u8) -> RGBColor {
   /*let factor: f32 = alpha as f32 / 255.0;
@@ -47,6 +45,7 @@ pub struct FramebufferInfo {
 //currently doesn't check if writing onto next line accidentally
 pub struct FramebufferWriter {
   info: FramebufferInfo,
+  fc_getter: CachedFontCharGetter,
   buffer: Vec<u8>,
   saved_buffer: Option<Vec<u8>>,
   rotate_buffer: Option<Vec<u8>>,
@@ -57,6 +56,7 @@ impl FramebufferWriter {
   pub fn new(grayscale: bool) -> Self {
     Self {
       info: Default::default(),
+      fc_getter: CachedFontCharGetter::new(128), //an arbitrary high-ish number for max cache size
       buffer: Vec::new(),
       saved_buffer: None,
       rotate_buffer: None,
@@ -128,12 +128,11 @@ impl FramebufferWriter {
     }
   }
 
-  pub fn draw_char(&mut self, top_left: Point, char_info: &FontChar, color: RGBColor, bg_color: RGBColor) {
+  pub fn draw_char(&mut self, top_left: Point, char_info: &FontCharInfo, color: RGBColor, bg_color: RGBColor) {
     let mut start_pos;
-    for row in 0..char_info.1.len() {
-      //char_info.2 is vertical offset
-      start_pos = ((top_left[1] + row + char_info.2 as usize) * self.info.stride + top_left[0]) * self.info.bytes_per_pixel;
-      for col in &char_info.1[row] {
+    for row in 0..char_info.height {
+      start_pos = ((top_left[1] + row + char_info.top_offset as usize) * self.info.stride + top_left[0]) * self.info.bytes_per_pixel;
+      for col in &char_info.data[row] {
         if col > &0 {
           if start_pos + 3 < self.info.byte_len {
             self._draw_pixel(start_pos, color_with_alpha(color, bg_color, *col));
@@ -226,8 +225,8 @@ impl FramebufferWriter {
       if c == ' ' {
         top_left[0] += mono_width.unwrap_or(5) as usize;
       } else {
-        let char_info = get_font_char_from_fonts(&fonts, c);
-        let char_width = char_info.1[0].len();
+        let char_info = self.fc_getter.get(&fonts, c);
+        let char_width = char_info.width;
         let add_after: usize;
         if let Some(mono_width) = mono_width {
           let mono_width = mono_width as usize;

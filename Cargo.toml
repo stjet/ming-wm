@@ -1,6 +1,6 @@
 [package]
 name = "ming-wm"
-version = "1.2.0"
+version = "1.2.1"
 repository = "https://github.com/stjet/ming-wm"
 license = "GPL-3.0-or-later"
 edition = "2021"

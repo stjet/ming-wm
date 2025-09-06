@@ -14,22 +14,28 @@ It is probably best to read a Vim tutorial for the basics. All supportd keystrok
 - `w[rite]`
 - `/<query>`
 
-Tab completion is supported for the `<file>` argument.
+Tab completion is supported for the `<file>` argument. Down arrow will clear the current command, and up arrow will fill in the last ran command.
 
 ### Supported in Normal Mode
 
 - `:`
 - `i`
+- `o`, `O`
 - `A`
 - `r`
 - `dd`
-- `dw`
+- `<number>dd`
+- `dw` (`dw` is not identical to vim's behaviour), `dW`
 - `d$`
 - `G`
 - `gg`
 - `<number>gg`
-- `f<char>`
-- `F<char>`
+- `f<char>`, `F<char>`
+- `<number>f<char>`, `<number>F<char>`
+- `;` (same as `f<char>` but with the char the cursor is on, so not the same as vim)
+- `<num>;`
+- `,` (same as `F<char>` but with the char the cursor is on, so not the same as vim)
+- `<num>,`
 - `x`
 - `h` (or left arrow), `j` (or down arrow), `k` (or up arrow), `l` (or right arrow)
 - `<num>h`, `<num>j` (or down arrow), `<num>k` (or up arrow), `<num>l`

@@ -1,6 +1,6 @@
 [package]
 name = "ming-wm-lib"
-version = "0.2.1"
+version = "0.2.2"
 repository = "https://github.com/stjet/ming-wm"
 description = "library for building windows for ming-wm in rust"
 readme = "README.md"

@@ -5,6 +5,7 @@ pub mod serialize;
 pub mod messages;
 pub mod ipc;
 pub mod components;
+pub mod fonts;
 pub mod dirs;
 pub mod utils;
 pub mod logging;

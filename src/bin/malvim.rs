@@ -19,6 +19,8 @@ const LINE_HEIGHT: usize = 18;
 const PADDING: usize = 2;
 const BAND_HEIGHT: usize = 19;
 
+const WORD_END: [char; 8] = ['.', ',', ':', '[', ']', '{', '}', ' '];
+
 struct FileInfo {
   pub name: String,
   pub path: String,
@@ -41,6 +43,12 @@ enum State {
   Find,
   BackFind,
   //
+}
+
+impl State {
+  fn is_numberable(&self) -> bool {
+    *self == State::Maybeg || *self == State::Find || *self == State::BackFind
+  }
 }
 
 #[derive(Default, PartialEq)]
@@ -77,6 +85,7 @@ struct Malvim {
   state: State,
   mode: Mode,
   command: Option<String>,
+  prev_command: Option<String>,
   bottom_message: Option<String>,
   maybe_num: Option<usize>,
   files: Vec<FileInfo>,
@@ -178,7 +187,7 @@ impl WindowLike for Malvim {
               }
               let new_length = current_file.content[current_file.line_pos].chars().count();
               current_file.cursor_pos = Malvim::calc_new_cursor_pos(current_file.cursor_pos, new_length);
-            } else if key_press.key == 'w' || key_press.key == '$' {
+            } else if key_press.key == 'w' || key_press.key == 'W' || key_press.key == '$' {
               let line = &current_file.content[current_file.line_pos];
               let line_len = line.chars().count();
               if line_len > 0 && current_file.cursor_pos < line_len {
@@ -186,11 +195,19 @@ impl WindowLike for Malvim {
                 let mut line_chars = line.chars().skip(current_file.cursor_pos).peekable();
                 //deref is Copy
                 let current_char = *line_chars.peek().unwrap();
-                let offset = if key_press.key == 'w' {
-                  line_chars.position(|c| if current_char == ' ' {
-                    c != ' '
+                let offset = if key_press.key == 'W' || key_press.key == 'w' {
+                  line_chars.position(|c| if key_press.key == 'w' {
+                    if WORD_END.contains(&current_char) {
+                      c != current_char
+                    } else {
+                      WORD_END.contains(&c)
+                    }
                   } else {
-                    c == ' '
+                    if current_char == ' ' {
+                      c != ' '
+                    } else {
+                      c == ' '
+                    }
                   }).unwrap_or(line_len - current_file.cursor_pos)
                 } else {
                   line_chars.count()
@@ -212,33 +229,41 @@ impl WindowLike for Malvim {
             }
             changed = false;
             self.state = State::None;
-          } else if self.state == State::Find || self.state == State::BackFind {
-            let old_pos = current_file.cursor_pos;
-            let find_pos = if self.state == State::Find {
-              if old_pos < current_file.content[current_file.line_pos].chars().count() {
-                let found_index = current_file.content[current_file.line_pos].chars().skip(old_pos + 1).position(|c| c == key_press.key);
-                if let Some(found_index) = found_index {
-                  old_pos + found_index + 1
-                } else {
-                  old_pos
-                }
-              } else {
-                old_pos
-              }
+          } else if self.state == State::Find || self.state == State::BackFind || key_press.key == ';' || key_press.key == ',' {
+            let mut old_pos = current_file.cursor_pos;
+            let find_char = if self.state == State::Find || self.state == State::BackFind {
+              key_press.key
             } else {
-              //how does this work again? no idea
-              if old_pos != 0 {
-                let found_index = current_file.content[current_file.line_pos].chars().rev().skip(current_length - old_pos).position(|c| c == key_press.key);
-                if let Some(found_index) = found_index {
-                  old_pos - found_index - 1
+              current_file.content[current_file.line_pos].chars().nth(old_pos).unwrap()
+            };
+            for _ in 0..self.maybe_num.unwrap_or(1) {
+              let find_pos = if self.state == State::Find || key_press.key == ';' {
+                if old_pos < current_file.content[current_file.line_pos].chars().count() {
+                  let found_index = current_file.content[current_file.line_pos].chars().skip(old_pos + 1).position(|c| c == find_char);
+                  if let Some(found_index) = found_index {
+                    old_pos + found_index + 1
+                  } else {
+                    old_pos
+                  }
                 } else {
                   old_pos
                 }
               } else {
-                old_pos //0
-              }
-            };
-            current_file.cursor_pos = find_pos;
+                //how does this work again? no idea
+                if old_pos != 0 {
+                  let found_index = current_file.content[current_file.line_pos].chars().rev().skip(current_length - old_pos).position(|c| c == find_char);
+                  if let Some(found_index) = found_index {
+                    old_pos - found_index - 1
+                  } else {
+                    old_pos
+                  }
+                } else {
+                  old_pos //0
+                }
+              };
+              current_file.cursor_pos = find_pos;
+              old_pos = current_file.cursor_pos;
+            }
             changed = false;
             self.state = State::None;
           } else if key_press.key == 'x' {
@@ -394,7 +419,7 @@ impl WindowLike for Malvim {
             changed = false;
           }
           //reset maybe_num if not num
-          if !numbered && self.state != State::Maybeg && self.state != State::MaybeDelete {
+          if !numbered && !self.state.is_numberable() {
             self.maybe_num = None;
           }
         } else if self.mode == Mode::Command {
@@ -402,7 +427,8 @@ impl WindowLike for Malvim {
           let command = self.command.clone().unwrap_or("".to_string());
           if key_press.is_enter() {
             new = self.process_command();
-            self.command = None;
+            self.prev_command = self.command.take();
+            //line above does same as `self.command = None`
             self.mode = Mode::Normal;
           } else if key_press.key == '\t' { //tab
             let mut parts = command.split(" ").skip(1);
@@ -424,6 +450,12 @@ impl WindowLike for Malvim {
           } else if key_press.is_backspace() {
             if command.len() > 0 {
               self.command = Some(command.remove_last());
+            }
+          } else if key_press.is_arrow() {
+            if key_press.is_up_arrow() {
+              self.command = self.prev_command.clone();
+            } else if key_press.is_down_arrow() {
+              self.command = Some(String::new());
             }
           } else {
             self.command = Some(command.to_string() + &key_press.key.to_string());

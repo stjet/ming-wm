@@ -17,6 +17,7 @@ use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLik
 use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest, ShortcutType };
 use ming_wm_lib::framebuffer_types::Dimensions;
 use ming_wm_lib::themes::ThemeInfo;
+use ming_wm_lib::fonts::measure_text;
 use ming_wm_lib::utils::{ concat_paths, random_u32, get_all_files, path_autocomplete, format_seconds, Substring };
 use ming_wm_lib::dirs::home;
 use ming_wm_lib::ipc::listen;
@@ -150,11 +151,15 @@ impl WindowLike for AudioPlayer {
       let queue = &internal_locked.queue;
       let current = &queue[queue.len() - sink_len];
       let current_name = current.0.file_name().unwrap().to_string_lossy().into_owned();
-      instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - current_name.len() * MONO_WIDTH as usize / 2, 2], vec!["nimbus-romono".to_string(), "shippori-mincho".to_string()], current_name.clone(), theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)));
+      let fonts = ["nimbus-roman".to_string(), "shippori-mincho".to_string()];
+      let cn_width = measure_text(&fonts, current_name.clone()).width;
+      instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - cn_width / 2, 2], fonts.to_vec(), current_name.clone(), theme_info.text, theme_info.background, Some(0), None));
       if let Some(artist) = &current.2 {
         let artist_string = "by ".to_string() + &artist;
-        instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - artist_string.len() * MONO_WIDTH as usize / 2, LINE_HEIGHT + 2], vec!["nimbus-romono".to_string()], artist_string, theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)));
+        let as_width = measure_text(&fonts, artist_string.clone()).width;
+        instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - as_width / 2, LINE_HEIGHT + 2], fonts.to_vec(), artist_string, theme_info.text, theme_info.background, Some(0), None));
       }
+      //in this case no chance of mincho so MONO_WIDTH method of calculating width is ok
       let time_string = format!("{}/{}", format_seconds(internal_locked.sink.get_pos().as_secs()), format_seconds(current.1));
       instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - time_string.len() * MONO_WIDTH as usize / 2, LINE_HEIGHT * 2 + 2], vec!["nimbus-romono".to_string()], time_string, theme_info.text, theme_info.background, Some(0), Some(MONO_WIDTH)));
     } else {
