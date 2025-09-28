@@ -1,5 +1,6 @@
 use std::vec::Vec;
 use std::vec;
+use std::cmp::Ordering;
 
 use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType };
 use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse };
@@ -101,13 +102,11 @@ impl WindowLike for Reversi {
                     }
                   }
                 }
-                if white_tiles == black_tiles {
-                  self.state = State::Tie;
-                } else if white_tiles > black_tiles {
-                  self.state = State::WhiteWin;
-                } else {
-                  self.state = State::BlackWin;
-                }
+                self.state = match white_tiles.cmp(&black_tiles) {
+                  Ordering::Equal => State::Tie,
+                  Ordering::Greater => State::WhiteWin,
+                  Ordering::Less => State::BlackWin,
+                };
               }
             }
             self.current_number = None;

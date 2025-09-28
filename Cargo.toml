@@ -1,6 +1,6 @@
 [package]
 name = "ming-wm"
-version = "1.2.1"
+version = "1.2.2"
 repository = "https://github.com/stjet/ming-wm"
 license = "GPL-3.0-or-later"
 edition = "2021"
@@ -10,6 +10,20 @@ default-run = "ming"
 
 [workspace]
 members = [ "wm", "linux" ]
+
+[workspace.lints.clippy]
+len_zero = "allow"
+comparison_to_empty = "allow"
+manual_saturating_arithmetic = "allow"
+result_unit_err = "allow"
+needless_borrow = "allow"
+needless_borrows_for_generic_args = "allow"
+redundant_static_lifetimes = "allow"
+collapsible_else_if = "allow"
+too_many_arguments = "allow"
+
+[lints]
+workspace = true
 
 [build-dependencies]
 bmp-rust = "0.5.0"

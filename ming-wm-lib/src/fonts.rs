@@ -20,9 +20,9 @@ fn get_font_char(dir: &str, c: char) -> Option<FontCharInfo> {
     let mut contents = String::new();
     file.read_to_string(&mut contents).unwrap();
     let lines: Vec<&str> = contents.split("\n").collect();
-    for ln in 1..lines.len() {
+    for ln in lines.iter().skip(1) {
       //.unwrap_or(0) is important because zeroes are just empty
-      ch.push(lines[ln].replace(":", ",,,,").replace(";", ",,,").replace(".", ",,").split(",").map(|n| n.parse().unwrap_or(0)).collect());
+      ch.push(ln.replace(":", ",,,,").replace(";", ",,,").replace(".", ",,").split(",").map(|n| n.parse().unwrap_or(0)).collect());
     }
     return Some(FontCharInfo {
       c,
@@ -58,8 +58,7 @@ pub struct MeasureInfo {
   pub width: usize,
 }
 
-/// Doesn't take into account `horiz_spacing`, which defaults to 1 per character
-pub fn measure_text(fonts: &[String], text: String) -> MeasureInfo {
+pub fn measure_text(fonts: &[String], text: &str, horiz_spacing: Option<usize>) -> MeasureInfo {
   let mut height = 0;
   let mut width = 0;
   for c in text.chars() {
@@ -68,8 +67,27 @@ pub fn measure_text(fonts: &[String], text: String) -> MeasureInfo {
     if c_height > height {
       height = c_height;
     }
-    width += i.width;
+    width += i.width + horiz_spacing.unwrap_or(1);
   }
+  width -= horiz_spacing.unwrap_or(1);
+  MeasureInfo {
+    height,
+    width,
+  }
+}
+
+pub fn measure_text_with_cache(fc_getter: &mut CachedFontCharGetter, fonts: &[String], text: &str, horiz_spacing: Option<usize>) -> MeasureInfo {
+  let mut height = 0;
+  let mut width = 0;
+  for c in text.chars() {
+    let i = fc_getter.get(fonts, c);
+    let c_height = i.top_offset as usize + i.height;
+    if c_height > height {
+      height = c_height;
+    }
+    width += i.width + horiz_spacing.unwrap_or(1);
+  }
+  width -= horiz_spacing.unwrap_or(1);
   MeasureInfo {
     height,
     width,
@@ -85,9 +103,10 @@ pub struct CachedFontCharGetter {
 
 impl CachedFontCharGetter {
   pub fn new(max_cache_size: usize) -> Self {
-    let mut s: Self = Default::default();
-    s.max_cache_size = max_cache_size;
-    s
+    Self {
+      max_cache_size,
+      ..Default::default()
+    }
   }
 
   pub fn get(&mut self, fonts: &[String], c: char) -> FontCharInfo {

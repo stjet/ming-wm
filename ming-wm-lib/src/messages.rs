@@ -44,11 +44,7 @@ pub enum WindowMessageResponse {
 
 impl WindowMessageResponse {
   pub fn is_key_char_request(&self) -> bool {
-    if let WindowMessageResponse::Request(WindowManagerRequest::DoKeyChar(_)) = self {
-      true
-    } else {
-      false
-    }
+    matches!(self, WindowMessageResponse::Request(WindowManagerRequest::DoKeyChar(_)))
   }
 }
 

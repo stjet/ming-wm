@@ -152,11 +152,11 @@ impl WindowLike for AudioPlayer {
       let current = &queue[queue.len() - sink_len];
       let current_name = current.0.file_name().unwrap().to_string_lossy().into_owned();
       let fonts = ["nimbus-roman".to_string(), "shippori-mincho".to_string()];
-      let cn_width = measure_text(&fonts, current_name.clone()).width;
+      let cn_width = measure_text(&fonts, &current_name, None).width;
       instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - cn_width / 2, 2], fonts.to_vec(), current_name.clone(), theme_info.text, theme_info.background, Some(0), None));
       if let Some(artist) = &current.2 {
         let artist_string = "by ".to_string() + &artist;
-        let as_width = measure_text(&fonts, artist_string.clone()).width;
+        let as_width = measure_text(&fonts, &artist_string, None).width;
         instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - as_width / 2, LINE_HEIGHT + 2], fonts.to_vec(), artist_string, theme_info.text, theme_info.background, Some(0), None));
       }
       //in this case no chance of mincho so MONO_WIDTH method of calculating width is ok

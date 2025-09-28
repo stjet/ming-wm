@@ -1,7 +1,8 @@
-Ming-wm is a keyboard-based, retro-themed window manager for Linux. It is neither for Wayland or the X Window System - it writes directly to the framebuffer. Inspirations include i3, Haiku, SerenityOS, and Windows98, and it is a conceptual successor to my previous projects [ming-de](https://github.com/stjet/mingde) and [ming-os](https://github.com/stjet/ming-os).
+Ming-wm is a keyboard-based, retro-themed window manager for Linux. It is neither for Wayland or the X Window System - it writes directly to the framebuffer. Inspirations include i3, Haiku, SerenityOS, and Windows98.
 
 ![example 1](/docs/images/ws1.png)
 ![example 2](/docs/images/ws3.png)
+https://github.com/user-attachments/assets/2efc0122-80fa-48dd-8d31-f307217c2961
 
 The [Koxinga web browser](https://github.com/stjet/koxinga) can be separately installed.
 

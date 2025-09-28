@@ -71,9 +71,9 @@ impl Iterator for RawStdin {
             b'D' => Key::ArrowLeft,
             _ => Key::Other(n),
           }
-        } else if n.is_ok() {
+        } else if let Ok(n) = n {
           //Alt+<char> sends Esc+<char>
-          Key::Alt(char::from(n.unwrap()))
+          Key::Alt(char::from(n))
         } else {
           Key::Esc
         }

@@ -5,6 +5,9 @@ repository = "https://github.com/stjet/ming-wm"
 license = "GPL-3.0-or-later"
 edition = "2021"
 
+[lints]
+workspace = true
+
 [dependencies]
 ming-wm-lib = { path = "../ming-wm-lib" }
 linux = { path = "../linux" }

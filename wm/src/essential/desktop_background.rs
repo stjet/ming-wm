@@ -53,7 +53,7 @@ impl WindowLike for DesktopBackground {
           }
         } else if line.len() > 1 {
           //first character of line is either r or any other character, but is not part of the path
-          return vec![DrawInstructions::Bmp([0, 0], line[1..].to_string(), line.chars().next().unwrap() == 'r')];
+          return vec![DrawInstructions::Bmp([0, 0], line[1..].to_string(), line.starts_with('r'))];
         }
       }
     }

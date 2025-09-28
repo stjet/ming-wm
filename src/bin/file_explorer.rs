@@ -111,13 +111,12 @@ impl WindowLike for FileExplorer {
             self.metadata = Some(metadata(&selected_entry.path).unwrap());
           }
           WindowMessageResponse::JustRedraw
+        } else if self.state == State::Info {
+          //pressing any key to exit info mode
+          self.state = State::List;
+          WindowMessageResponse::JustRedraw
         } else {
-          if self.state == State::Info {
-            self.state = State::List;
-            WindowMessageResponse::JustRedraw
-          } else {
-            WindowMessageResponse::DoNothing
-          }
+          WindowMessageResponse::DoNothing
         }
       },
       _ => WindowMessageResponse::DoNothing,
@@ -128,7 +127,7 @@ impl WindowLike for FileExplorer {
     let mut instructions = Vec::new();
     if self.state == State::List {
       //top bar with path name
-      instructions.push(DrawInstructions::Text([5, 0], vec!["nimbus-roman".to_string(), "shippori-mincho".to_string()], "Current: ".to_string() + &self.current_path.to_string_lossy().to_string(), theme_info.text, theme_info.background, None, None));
+      instructions.push(DrawInstructions::Text([5, 0], vec!["nimbus-roman".to_string(), "shippori-mincho".to_string()], "Current: ".to_string() + self.current_path.to_string_lossy().as_ref(), theme_info.text, theme_info.background, None, None));
       //the actual files and directories
       let mut start_y = HEIGHT;
       let mut i = self.top_position;
@@ -142,10 +141,10 @@ impl WindowLike for FileExplorer {
         }
         //unwrap_or not used because "Arguments passed to unwrap_or are eagerly evaluated", apparently
         let name = entry.override_name.clone();
-        let name = if name.is_none() {
-          entry.path.file_name().unwrap().to_os_string().into_string().unwrap()
+        let name = if let Some(name) = name {
+          name
         } else {
-          name.unwrap()
+          entry.path.file_name().unwrap().to_os_string().into_string().unwrap()
         };
         instructions.push(DrawInstructions::Text([5, start_y + 4], vec!["nimbus-roman".to_string(), "shippori-mincho".to_string()], name, if is_selected { theme_info.top_text } else { theme_info.text }, if is_selected { theme_info.top } else { theme_info.background }, None, None));
         start_y += HEIGHT;

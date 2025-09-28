@@ -1,10 +1,21 @@
 [package]
 name = "ming-wm-lib"
-version = "0.2.2"
+version = "0.2.3"
 repository = "https://github.com/stjet/ming-wm"
 description = "library for building windows for ming-wm in rust"
 readme = "README.md"
 license = "GPL-3.0-or-later"
 edition = "2021"
+
+[lints.clippy]
+len_zero = "allow"
+comparison_to_empty = "allow"
+manual_saturating_arithmetic = "allow"
+result_unit_err = "allow"
+needless_borrow = "allow"
+needless_borrows_for_generic_args = "allow"
+redundant_static_lifetimes = "allow"
+collapsible_else_if = "allow"
+too_many_arguments = "allow"
 
 [dependencies]

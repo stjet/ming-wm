@@ -138,8 +138,8 @@ impl WindowLike for Malvim {
           if key_press.is_enter() {
             let mut line: Vec<char> = line.chars().collect();
             let (left, right) = line.split_at_mut(current_file.cursor_pos);
-            let left = left.into_iter().map(|c| c.to_string()).collect::<Vec<String>>().join("");
-            let right = right.into_iter().map(|c| c.to_string()).collect::<Vec<String>>().join("");
+            let left = left.iter_mut().map(|c| c.to_string()).collect::<Vec<String>>().join("");
+            let right = right.iter_mut().map(|c| c.to_string()).collect::<Vec<String>>().join("");
             current_file.content[current_file.line_pos] = left.to_string();
             let spaces = Malvim::calc_spaces(self.autoindent, &left);
             current_file.content.insert(current_file.line_pos + 1, " ".repeat(spaces) + &right);
@@ -495,7 +495,7 @@ impl WindowLike for Malvim {
                 if i == 0 {
                   //modify current line
                   let line = &current_file.content[current_file.line_pos];
-                  current_file.content[current_file.line_pos] = line.substring(0, current_file.cursor_pos).to_string() + &cs + line.substring(current_file.cursor_pos, line.chars().count());
+                  current_file.content[current_file.line_pos] = line.substring(0, current_file.cursor_pos).to_string() + cs + line.substring(current_file.cursor_pos, line.chars().count());
                   current_file.cursor_pos += copy_string.len();
                 } else {
                   //insert a new line
@@ -750,7 +750,7 @@ impl Malvim {
       }
     } else if self.files.len() == 0 {
       self.bottom_message = Some("No files are open, so can only do :e(dit)".to_string());
-    } else if first.starts_with("/") {
+    } else if let Some(s_first) = first.strip_prefix("/") {
       let current_file = &mut self.files[self.current_file_index];
       if current_file.content.len() > 0 {
         let p1 = if arg == "" {
@@ -764,7 +764,7 @@ impl Malvim {
         } else {
           " ".to_string() + &rest
         };
-        let query = first[1..].to_string() + &p1 + &rest;
+        let query = s_first.to_string() + &p1 + &rest;
         let mut lines = current_file.content.iter().skip(current_file.line_pos);
         for i in 0..(current_file.content.len() - current_file.line_pos) {
           let line = if i == 0 {

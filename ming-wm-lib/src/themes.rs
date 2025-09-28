@@ -11,15 +11,17 @@ pub enum Themes {
   //Parchment,
 }
 
-impl Themes {
-  pub fn from_str(name: &str) -> Option<Self> {
+impl std::str::FromStr for Themes {
+  type Err = ();
+
+  fn from_str(name: &str) -> Result<Self, Self::Err> {
     match name {
-      "Standard" => Some(Themes::Standard),
-      "Night" => Some(Themes::Night),
-      "Industrial" => Some(Themes::Industrial),
-      "Forest" => Some(Themes::Forest),
-      "Royal" => Some(Themes::Royal),
-      _ => None,
+      "Standard" => Ok(Themes::Standard),
+      "Night" => Ok(Themes::Night),
+      "Industrial" => Ok(Themes::Industrial),
+      "Forest" => Ok(Themes::Forest),
+      "Royal" => Ok(Themes::Royal),
+      _ => Err(()),
     }
   }
 }

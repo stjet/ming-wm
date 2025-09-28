@@ -6,7 +6,7 @@ use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLik
 use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest, ShortcutType, InfoType, WindowsVec };
 use ming_wm_lib::framebuffer_types::Dimensions;
 use ming_wm_lib::themes::ThemeInfo;
-use ming_wm_lib::fonts::measure_text;
+use ming_wm_lib::utils::trunc_words;
 use ming_wm_lib::components::Component;
 use ming_wm_lib::components::toggle_button::ToggleButton;
 
@@ -80,24 +80,7 @@ impl WindowLike for Taskbar {
       }
       let info = &self.windows_in_workspace[wi];
       let max_text_width = META_WIDTH - PADDING * 2;
-      //horiz_spacing is by default 1 per char, which measure_text doesn't take into account
-      let to_measure = info.1.clone();
-      let to_measure_len = to_measure.chars().count();
-      let name = if measure_text(&["nimbus-roman".to_string()], to_measure).width + to_measure_len > max_text_width {
-        let mut current = String::new();
-        for c in info.1.chars() {
-          //horiz_spacing is 1 by default
-          let to_measure = current.clone() + &c.to_string() + "...";
-          let to_measure_len = to_measure.chars().count();
-          if measure_text(&["nimbus-roman".to_string()], to_measure).width + to_measure_len > max_text_width {
-            break;
-          }
-          current += &c.to_string();
-        }
-        current + "..."
-      } else {
-        info.1.clone()
-      };
+      let name = trunc_words(&["nimbus-roman".to_string()], info.1.clone(), None, max_text_width);
       let mut b = ToggleButton::new(name.to_string() + "-window", [PADDING * 2 + 44 + (META_WIDTH + PADDING) * wi, PADDING], [META_WIDTH, self.dimensions[1] - (PADDING * 2)], name.to_string(), TaskbarMessage::Nothing, TaskbarMessage::Nothing);
       b.inverted = info.0 == self.focused_id;
       instructions.extend(b.draw(theme_info));

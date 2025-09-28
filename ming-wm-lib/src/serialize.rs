@@ -83,7 +83,7 @@ impl Serializable for ThemeInfo {
   }
   fn deserialize(serialized: &str) -> Result<Self, ()> {
     //strip newline at the end
-    let serialized = if serialized.ends_with("\n") { &serialized[..serialized.len() - 1] } else { serialized };
+    let serialized = serialized.strip_suffix("\n").unwrap_or(serialized);
     let mut theme_info: ThemeInfo = Default::default();
     let arrays = serialized.split(":");
     //won't error or panic if less than 9... rest will just be black by default I guess
@@ -162,7 +162,7 @@ impl Serializable for WindowMessageResponse {
   }
   fn deserialize(serialized: &str) -> Result<Self, ()> {
     //strip newline at the end
-    let serialized = if serialized.ends_with("\n") { &serialized[..serialized.len() - 1] } else { serialized };
+    let serialized = serialized.strip_suffix("\n").unwrap_or(serialized);
     let mut parts = serialized.split("/");
     match parts.next().unwrap_or("Invalid") {
       "JustRedraw" => Ok(WindowMessageResponse::JustRedraw),
@@ -444,12 +444,12 @@ impl Serializable for DrawInstructionsVec {
     if self.len() == 0 {
       return "empty".to_string();
     }
-    let collected: Vec<_> = self.into_iter().map(|ins| ins.serialize()).collect();
+    let collected: Vec<_> = self.iter().map(|ins| ins.serialize()).collect();
     collected.join("\x1D")
   }
   fn deserialize(serialized: &str) -> Result<Self, ()> {
     //strip newline at the end
-    let serialized = if serialized.ends_with("\n") { &serialized[..serialized.len() - 1] } else { serialized };
+    let serialized = serialized.strip_suffix("\n").unwrap_or(serialized);
     if serialized == "empty" {
       return Ok(Vec::new());
     }
@@ -504,7 +504,7 @@ impl Serializable for WindowLikeType {
     }
   }
   fn deserialize(serialized: &str) -> Result<Self, ()> {
-    let serialized = if serialized.ends_with("\n") { &serialized[..serialized.len() - 1] } else { serialized };
+    let serialized = serialized.strip_suffix("\n").unwrap_or(serialized);
     match serialized {
       "LockScreen" => Ok(WindowLikeType::LockScreen),
       "Window" => Ok(WindowLikeType::Window),
@@ -531,7 +531,7 @@ impl Serializable for Dimensions {
   }
   fn deserialize(serialized: &str) -> Result<Self, ()> {
     //strip newline at the end
-    let serialized = if serialized.ends_with("\n") { &serialized[..serialized.len() - 1] } else { serialized };
+    let serialized = serialized.strip_suffix("\n").unwrap_or(serialized);
     let d = get_two_array(serialized)?;
     Ok(d)
   }
@@ -592,7 +592,7 @@ impl Serializable for WindowMessage {
     }
   }
   fn deserialize(serialized: &str) -> Result<Self, ()> {
-    let serialized = if serialized.ends_with("\n") { &serialized[..serialized.len() - 1] } else { serialized };
+    let serialized = serialized.strip_suffix("\n").unwrap_or(serialized);
     let mut parts = serialized.split("/");
     match parts.next().unwrap_or("Invalid") {
       "Init" => {
@@ -716,9 +716,9 @@ impl Serializable for WindowMessage {
           return Err(());
         }
         if let Ok(n) = arg2.unwrap().parse() {
-          return Ok(WindowMessage::Info(InfoType::WindowsInWorkspace(w_vec, n)));
+          Ok(WindowMessage::Info(InfoType::WindowsInWorkspace(w_vec, n)))
         } else {
-          return Err(());
+          Err(())
         }
       },
       "Focus" => Ok(WindowMessage::Focus),

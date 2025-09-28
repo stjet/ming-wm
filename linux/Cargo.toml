@@ -4,5 +4,18 @@ version = "0.1.0"
 license = "GPL-3.0-or-later"
 edition = "2021"
 
+[lints.clippy]
+len_zero = "allow"
+comparison_to_empty = "allow"
+manual_saturating_arithmetic = "allow"
+result_unit_err = "allow"
+needless_borrow = "allow"
+needless_borrows_for_generic_args = "allow"
+redundant_static_lifetimes = "allow"
+collapsible_else_if = "allow"
+too_many_arguments = "allow"
+useless_conversion = "allow"
+unnecessary_mut_passed = "allow"
+
 [dependencies]
 libc = "0.2"

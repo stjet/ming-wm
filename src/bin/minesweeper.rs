@@ -256,7 +256,7 @@ impl Minesweeper {
     self.random_seed as usize % 16
   }
 
-  pub fn on_adjacent_tiles(&self, x: usize, y: usize, mut action: impl FnMut(usize, usize) -> (), if_mine: bool) {
+  pub fn on_adjacent_tiles(&self, x: usize, y: usize, mut action: impl FnMut(usize, usize), if_mine: bool) {
     if y > 0 {
       //above
       if self.tiles[y - 1][x].mine == if_mine {

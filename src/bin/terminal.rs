@@ -149,27 +149,23 @@ impl WindowLike for Terminal {
           Mode::Running => {
             //update
             let mut changed = false;
-            loop {
-              if let Ok(ci) = self.pty_outerr_rx.as_mut().unwrap().recv_timeout(Duration::from_millis(5)) {
-                if char::from(ci) == '\n' {
-                  let append_line = strip_ansi_escape_codes(bytes_to_string(self.process_current_line.clone()));
-                  self.output += &append_line;
-                  self.output += "\n";
-                  self.lines.push(append_line);
-                  self.process_current_line = Vec::new();
-                } else if char::from(ci) == '\r' {
-                  //for now, ignore
-                  //
-                } else if char::from(ci) == '\t' {
-                  //for now, interpret as space
-                  self.process_current_line.push(b' ');
-                } else {
-                  self.process_current_line.push(ci);
-                }
-                changed = true;
+            while let Ok(ci) = self.pty_outerr_rx.as_mut().unwrap().recv_timeout(Duration::from_millis(5)) {
+              if char::from(ci) == '\n' {
+                let append_line = strip_ansi_escape_codes(bytes_to_string(self.process_current_line.clone()));
+                self.output += &append_line;
+                self.output += "\n";
+                self.lines.push(append_line);
+                self.process_current_line = Vec::new();
+              } else if char::from(ci) == '\r' {
+                //for now, ignore
+                //
+              } else if char::from(ci) == '\t' {
+                //for now, interpret as space
+                self.process_current_line.push(b' ');
               } else {
-                break;
+                self.process_current_line.push(ci);
               }
+              changed = true;
             }
             let running_process = self.running_process.as_mut().unwrap();
             if let Some(_status) = running_process.try_wait().unwrap() {
@@ -377,13 +373,9 @@ impl Terminal {
       let mut stdin = self.running_process.as_mut().unwrap().stdin.take().unwrap();
       let (tx2, rx2) = channel();
       thread::spawn(move || {
-        loop {
-          if let Ok(write_line) = rx2.recv() {
-            let write_line: String = write_line + "\n";
-            stdin.write(write_line.as_bytes()).unwrap();
-          } else {
-            break;
-          }
+        while let Ok(write_line) = rx2.recv() {
+          let write_line: String = write_line + "\n";
+          stdin.write_all(write_line.as_bytes()).unwrap();
         }
       });
       self.pty_outerr_rx = Some(rx1);

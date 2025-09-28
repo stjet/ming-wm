@@ -133,10 +133,8 @@ impl FramebufferWriter {
     for row in 0..char_info.height {
       start_pos = ((top_left[1] + row + char_info.top_offset as usize) * self.info.stride + top_left[0]) * self.info.bytes_per_pixel;
       for col in &char_info.data[row] {
-        if col > &0 {
-          if start_pos + 3 < self.info.byte_len {
-            self._draw_pixel(start_pos, color_with_alpha(color, bg_color, *col));
-          }
+        if col > &0 && start_pos + 3 < self.info.byte_len {
+          self._draw_pixel(start_pos, color_with_alpha(color, bg_color, *col));
         }
         start_pos += self.info.bytes_per_pixel;
       }

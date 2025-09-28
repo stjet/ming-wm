@@ -6,11 +6,12 @@ use std::boxed::Box;
 use std::cell::RefCell;
 use std::fs::File;
 use std::io::Read;
+use std::str::FromStr;
 
 use linux::fb::Framebuffer;
 use ming_wm_lib::framebuffer_types::{ Point, Dimensions };
 use ming_wm_lib::themes::{ Themes, get_theme_info };
-use ming_wm_lib::utils::{ min, point_inside };
+use ming_wm_lib::utils::{ min, point_inside, trunc_words };
 use ming_wm_lib::messages::*;
 use ming_wm_lib::dirs::config_dir;
 use ming_wm_lib::window_manager_types::*;
@@ -168,8 +169,9 @@ impl WindowManager {
   //if off_only is true, also handle request
   //written confusingly but it works I promise
   fn toggle_start_menu(&mut self, off_only: bool) -> WindowMessageResponse {
-    let start_menu_exists = self.window_infos.iter().find(|w| w.window_like.subtype() == WindowLikeType::StartMenu).is_some();
-    if (start_menu_exists && off_only) || !off_only {
+    let start_menu_exists = self.window_infos.iter().any(|w| w.window_like.subtype() == WindowLikeType::StartMenu);
+    //if (start_menu_exists && off_only) || !off_only {
+    if start_menu_exists || !off_only {
       let taskbar_index = self.window_infos.iter().position(|w| w.window_like.subtype() == WindowLikeType::Taskbar).unwrap();
       self.focused_id = self.window_infos[taskbar_index].id;
       if off_only {
@@ -710,13 +712,15 @@ impl WindowManager {
         //draw window background
         instructions.push_front(DrawInstructions::Rect([0, 0], window_dimensions, theme_info.background));
         //draw window top decorations and what not
+        let title = trunc_words(&["nimbus-roman".to_string()], window_info.window_like.title(), None, window_dimensions[0]);
         instructions.extend(vec![
           //left top border
           DrawInstructions::Rect([0, 0], [window_dimensions[0], 1], theme_info.border_left_top),
           DrawInstructions::Rect([0, 0], [1, window_dimensions[1]], theme_info.border_left_top),
           //top
           DrawInstructions::Rect([1, 1], [window_dimensions[0] - 2, WINDOW_TOP_HEIGHT - 3], theme_info.top),
-          DrawInstructions::Text([4, 4], vec!["nimbus-roman".to_string()], window_info.window_like.title().to_string(), theme_info.top_text, theme_info.top, None, None),
+          //window title
+          DrawInstructions::Text([4, 4], vec!["nimbus-roman".to_string()], title, theme_info.top_text, theme_info.top, None, None),
           //top bottom border
           DrawInstructions::Rect([1, WINDOW_TOP_HEIGHT - 2], [window_dimensions[0] - 2, 2], theme_info.border_left_top),
           //right bottom border

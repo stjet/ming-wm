@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use std::fs::read_dir;
 
+use crate::fonts::measure_text;
 use crate::framebuffer_types::{ Dimensions, Point };
 
 pub fn min(one: usize, two: usize) -> usize {
@@ -94,6 +95,23 @@ pub fn calc_actual_lines<'a>(lines: impl Iterator<Item = &'a String>, max_chars_
     }
   }
   actual_lines
+}
+
+/// truncate to ... if too long (uses `measure_text`)
+pub fn trunc_words(fonts: &[String], to_measure: String, horiz_spacing: Option<usize>, max_text_width: usize) -> String {
+  if measure_text(fonts, &to_measure, horiz_spacing).width > max_text_width {
+    let mut current = String::new();
+    for c in to_measure.chars() {
+      let to_measure = current.clone() + &c.to_string() + "...";
+      if measure_text(fonts, &to_measure, horiz_spacing).width > max_text_width {
+        break;
+      }
+      current += &c.to_string();
+    }
+    current + "..."
+  } else {
+    to_measure.clone()
+  }
 }
 
 pub fn concat_paths(current_path: &str, add_path: &str) -> Result<PathBuf, ()> {

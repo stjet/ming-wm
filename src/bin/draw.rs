@@ -241,9 +241,11 @@ impl WindowLike for Draw {
 
 impl Draw {
   pub fn new() -> Self {
-    let mut d: Self = Default::default();
-    d.current_linewidth = 1;
-    d
+    //apparently this is legal. thanks clippy
+    Self {
+      current_linewidth: 1,
+      ..Default::default() //no comma here allowed though??
+    }
   }
 }
 

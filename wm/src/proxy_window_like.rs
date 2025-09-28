@@ -88,7 +88,7 @@ impl ProxyWindowLike {
     if let Some(buffer) = buffer.stdout.as_mut() {
       let mut output = String::new();
       let mut reader = BufReader::new(buffer);
-      if let Ok(_) = reader.read_line(&mut output) {
+      if reader.read_line(&mut output).is_ok() {
         output
       } else {
         String::new()
