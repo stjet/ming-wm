@@ -107,6 +107,7 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
   });
 
   let touch = args.contains(&"touch".to_string());
+  let force_stdout = args.contains(&"force-stdout".to_string()); //write to stdout to force framebuffer redraw
 
   //read touchscreen presses (hopefully)
   thread::spawn(move || {
@@ -152,10 +153,17 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
   
   for message in rx {
     match message {
-      ThreadMessage::KeyChar(kc) => wm.handle_message(WindowManagerMessage::KeyChar(kc.clone())),
+      ThreadMessage::KeyChar(kc) => {
+        wm.handle_message(WindowManagerMessage::KeyChar(kc.clone()));
+        if force_stdout {
+           println!(" "); //without any stdout, on some user's devices, for some reason the framebuffer doesn't get redrawn to the screen
+        }
+      },
       ThreadMessage::Touch(x, y) => {
         wm.handle_message(WindowManagerMessage::Touch(x, y));
-        println!(" "); //without any stdout, on my phone, for some reason the framebuffer doesn't get redrawn to the screen
+        if force_stdout {
+          println!(" "); //without any stdout, on my phone, for some reason the framebuffer doesn't get redrawn to the screen
+        }
       },
       ThreadMessage::Clear => {
         write!(stdout.stdout, "{}", CLEAR_ALL).unwrap();

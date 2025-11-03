@@ -67,6 +67,20 @@ ming touch rotate
 
 <image alt="mobile example" src="/docs/images/mobile.png" width="50%">
 
+### Troubleshooting
+
+If key presses do nothing, that is, if on the lockscreen, despite key presses (physical or of the OSK), nothing happens (no asterisk characters show up), try adding the `force-stdout` arg. For example:
+
+```
+ming force-stdout
+```
+
+Or:
+
+```
+ming touch force-stdout
+```
+
 ## Philosophy
 
 See [/docs/philosophy.md](/docs/philosophy.md) for some hopefully interesting ramblings.
