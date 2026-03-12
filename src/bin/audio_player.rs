@@ -3,8 +3,9 @@ use std::vec;
 use std::io::BufReader;
 use std::path::PathBuf;
 use std::collections::HashMap;
+use std::io::Read;
+use std::time::Duration;
 use std::fs::{ read_to_string, File };
-use std::time::{ Duration, SystemTime, UNIX_EPOCH };
 use std::thread;
 use std::sync::{ Arc, Mutex };
 
@@ -144,14 +145,14 @@ impl WindowLike for AudioPlayer {
   }
 
   fn draw(&self, theme_info: &ThemeInfo) -> Vec<DrawInstructions> {
-    let mut instructions = vec![DrawInstructions::Text([2, self.dimensions[1] - LINE_HEIGHT], vec!["nimbus-roman".to_string()], if self.command.len() > 0 { self.command.clone() } else { self.response.clone() }, theme_info.text, theme_info.background, None, None)];
+    let fonts = ["nimbus-roman".to_string(), "shippori-mincho".to_string(), "linja-lipamanka".to_string()];
+    let mut instructions = vec![DrawInstructions::Text([2, self.dimensions[1] - LINE_HEIGHT], fonts.to_vec(), if self.command.len() > 0 { self.command.clone() } else { self.response.clone() }, theme_info.text, theme_info.background, None, None)];
     let internal_locked = self.internal.lock().unwrap();
     let sink_len = internal_locked.sink.len();
     if sink_len > 0 {
       let queue = &internal_locked.queue;
       let current = &queue[queue.len() - sink_len];
       let current_name = current.0.file_name().unwrap().to_string_lossy().into_owned();
-      let fonts = ["nimbus-roman".to_string(), "shippori-mincho".to_string()];
       let cn_width = measure_text(&fonts, &current_name, None).width;
       instructions.push(DrawInstructions::Text([self.dimensions[0] / 2 - cn_width / 2, 2], fonts.to_vec(), current_name.clone(), theme_info.text, theme_info.background, Some(0), None));
       if let Some(artist) = &current.2 {
@@ -258,7 +259,10 @@ impl AudioPlayer {
               } else {
                 get_all_files(PathBuf::from(new_path))
               };
-              let mut seed = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().subsec_millis();
+              let mut urandom = File::open("/dev/urandom").unwrap();
+              let mut seed = [0u8; 4];
+              urandom.read_exact(&mut seed).unwrap();
+              let mut seed = u32::from_be_bytes(seed.try_into().unwrap());
               let mut q_weights: HashMap<PathBuf, u32> = HashMap::new();
               for q in &queue {
                 seed = random_u32(seed);

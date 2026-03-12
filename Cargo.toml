@@ -1,6 +1,6 @@
 [package]
 name = "ming-wm"
-version = "1.2.3"
+version = "1.3.0-rc.0"
 repository = "https://github.com/stjet/ming-wm"
 license = "GPL-3.0-or-later"
 edition = "2021"
@@ -45,6 +45,7 @@ audio_player = [ "id3", "mp4ameta", "metaflac", "rodio" ]
 
 [profile.release]
 lto = true
+debug = "line-tables-only"
 
 [[bin]]
 name = "ming"

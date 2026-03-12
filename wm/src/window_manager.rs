@@ -25,6 +25,8 @@ use crate::essential::start_menu::StartMenu;
 use crate::essential::about::About;
 use crate::essential::help::Help;
 use crate::essential::onscreen_keyboard::OnscreenKeyboard;
+use crate::input_method::lat::Lat;
+use crate::input_method::tok::Tok;
 
 //todo: a lot of the usize should be changed to u16
 
@@ -52,7 +54,6 @@ impl fmt::Debug for WindowLikeInfo {
   }
 }
 
-
 pub struct WindowManager {
   writer: RefCell<FramebufferWriter>,
   rotate: bool,
@@ -65,6 +66,8 @@ pub struct WindowManager {
   focused_id: usize,
   pub locked: bool,
   current_workspace: u8,
+  im_list: Vec<Box<dyn InputMethod>>,
+  current_im: usize,
   framebuffer: Framebuffer,
   clipboard: Option<String>,
   version: String,
@@ -88,6 +91,8 @@ impl WindowManager {
       focused_id: 0,
       locked: false,
       current_workspace: 0,
+      im_list: vec![Box::new(Lat {}), Box::new(Tok::new())],
+      current_im: 0,
       framebuffer,
       clipboard: None,
       version,
@@ -151,7 +156,9 @@ impl WindowManager {
     self.window_infos = Vec::new();
     self.add_window_like(Box::new(DesktopBackground::new()), [0, INDICATOR_HEIGHT], None);
     self.add_window_like(Box::new(Taskbar::new()), [0, self.dimensions[1] - TASKBAR_HEIGHT], None);
-    self.add_window_like(Box::new(WorkspaceIndicator::new()), [0, 0], None);
+    let current_im = &self.im_list[self.current_im];
+    self.add_window_like(Box::new(WorkspaceIndicator::new(current_im.abbr().iter().collect()
+    )), [0, 0], None);
   }
 
   fn change_theme(&mut self) {
@@ -192,6 +199,24 @@ impl WindowManager {
       self.focused_id
     ));
     self.window_infos[taskbar_index].window_like.handle_message(message);
+  }
+
+  fn im_update(&mut self, old_buffer: Option<String>) -> bool {
+    let current_im = &self.im_list[self.current_im];
+    let indicator_index = self.window_infos.iter().position(|w| w.window_like.subtype() == WindowLikeType::WorkspaceIndicator);
+    //no window indicator on lockscreen
+    if let Some(indicator_index) = indicator_index {
+      let current_buffer = current_im.internal_buffer();
+      //if old_buffer is None, force sending message
+      if old_buffer.is_none() || current_buffer != old_buffer.unwrap_or_default() {
+        self.window_infos[indicator_index].window_like.handle_message(WindowMessage::Info(InfoType::InputMethod(current_im.abbr().iter().collect(), current_buffer)));
+        true
+      } else {
+        false
+      }
+    } else {
+      false
+    }
   }
 
   fn move_index_to_top(&mut self, index: usize) {
@@ -238,6 +263,8 @@ impl WindowManager {
                 //shrink window size
                 ('N', ShortcutType::ChangeWindowSize(Direction::Left)),
                 ('M', ShortcutType::ChangeWindowSize(Direction::Up)),
+                //
+                (' ', ShortcutType::NextInputMethod),
                 //no 10th workspace
                 ('1', ShortcutType::SwitchWorkspace(0)),
                 ('2', ShortcutType::SwitchWorkspace(1)),
@@ -383,6 +410,16 @@ impl WindowManager {
                       }
                     }
                   },
+                  &ShortcutType::NextInputMethod => {
+                    let im_count = self.im_list.len();
+                    if self.current_im + 1 == im_count {
+                      self.current_im = 0;
+                    } else {
+                      self.current_im += 1;
+                    }
+                    self.im_update(None);
+                    press_response = WindowMessageResponse::JustRedraw;
+                  },
                   &ShortcutType::SwitchWorkspace(workspace) => {
                     if self.current_workspace != workspace {
                       //close start menu if open
@@ -527,17 +564,32 @@ impl WindowManager {
             let mut press_response = WindowMessageResponse::DoNothing;
             //send to focused window
             if let Some(focused_index) = self.get_focused_index() {
-              press_response = self.window_infos[focused_index].window_like.handle_message(if key_char == KeyChar::Press(c) {
-                WindowMessage::KeyPress(KeyPress {
+              if key_char == KeyChar::Ctrl(c) {
+                press_response = self.window_infos[focused_index].window_like.handle_message(WindowMessage::CtrlKeyPress(KeyPress {
                   key: c,
-                })
+                }));
+                redraw_ids = Some(vec![self.window_infos[focused_index].id]);
               } else {
-                WindowMessage::CtrlKeyPress(KeyPress {
-                  key: c,
-                })
-              });
-              //at most, only the focused window needs to be redrawed
-              redraw_ids = Some(vec![self.window_infos[focused_index].id]);
+                let old_buffer = self.im_list[self.current_im].internal_buffer().clone();
+                //need to send the key to the input method
+                if let Some(ret_c) = self.im_list[self.current_im].add_key_press(KeyPress { key: c }) {
+                  press_response = self.window_infos[focused_index].window_like.handle_message(WindowMessage::KeyPress(KeyPress {
+                    key: ret_c,
+                  }));
+                }
+                redraw_ids = Some(vec![self.window_infos[focused_index].id]);
+                let wi_updated = self.im_update(Some(old_buffer));
+                if wi_updated {
+                  //ideally, make redraw_ids the focused window and the workspace indicator,
+                  //but that doesn't work for some reason
+                  if press_response == WindowMessageResponse::DoNothing {
+                    press_response = WindowMessageResponse::JustRedraw;
+                    redraw_ids = None;
+                  }
+                } else {
+                  redraw_ids = Some(vec![self.window_infos[focused_index].id]);
+                }
+              }
               //requests can result in window openings and closings, etc
               if press_response != WindowMessageResponse::JustRedraw {
                 redraw_ids = None;

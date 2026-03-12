@@ -546,6 +546,7 @@ impl Serializable for WindowMessage {
       WindowMessage::Shortcut(st) => format!("Shortcut/{}", match st {
         ShortcutType::StartMenu => "StartMenu".to_string(),
         ShortcutType::SwitchWorkspace(u) => format!("SwitchWorkspace/{}", u),
+        ShortcutType::NextInputMethod => "NextInputMethod".to_string(),
         ShortcutType::MoveWindowToWorkspace(u) => format!("MoveWindowToWorkspace/{}", u),
         ShortcutType::FocusPrevWindow => "FocusPrevWindow".to_string(),
         ShortcutType::FocusNextWindow => "FocusNextWindow".to_string(),
@@ -583,6 +584,7 @@ impl Serializable for WindowMessage {
           wv_string = wv_string[..wv_string.len() - 1].to_string();
           format!("WindowsInWorkspace/{}\x1E{}", wv_string, u)
         },
+        InfoType::InputMethod(abbr, buffer) => format!("InputMethod/{}\x1E{}", abbr, buffer),
       }),
       WindowMessage::Focus => "Focus".to_string(),
       WindowMessage::Unfocus => "Unfocus".to_string(),
@@ -627,6 +629,7 @@ impl Serializable for WindowMessage {
         let arg = arg.unwrap();
         let shortcut = match arg {
           "StartMenu" => Some(ShortcutType::StartMenu),
+          "NextInputMethod" => Some(ShortcutType::NextInputMethod),
           "SwitchWorkspace" | "MoveWindowToWorkspace" => {
             let narg = parts.next();
             if narg.is_none() {
@@ -686,37 +689,54 @@ impl Serializable for WindowMessage {
         }
       },
       "Info" => {
-        //skip WindowsInWorkspace cause that's the only possible InfoType atm
-        if parts.next().is_none() {
+        let t = parts.next();
+        if t.is_none() {
           return Err(());
         }
+        let t = t.unwrap();
         let arg = parts.next();
         if arg.is_none() {
           return Err(());
         }
         let mut parts2 = arg.unwrap().split("\x1E");
-        let arg2 = parts2.next();
-        if arg2.is_none() {
-          return Err(());
-        }
-        let mut w_tuple: (usize, String) = Default::default();
-        let mut w_vec = Vec::new();
-        for (i, a) in arg2.unwrap().split("\x1F").enumerate() {
-          if i % 2 == 0 {
-            if let Ok(n) = a.parse() {
-              w_tuple.0 = n;
-            }
-          } else {
-            w_tuple.1 = a.to_string();
-            w_vec.push(w_tuple.clone());
+        if t == "WindowsInWorkspace" {
+          let arg2 = parts2.next();
+          if arg2.is_none() {
+            return Err(());
           }
-        }
-        let arg2 = parts2.next();
-        if arg2.is_none() {
-          return Err(());
-        }
-        if let Ok(n) = arg2.unwrap().parse() {
-          Ok(WindowMessage::Info(InfoType::WindowsInWorkspace(w_vec, n)))
+          let mut w_tuple: (usize, String) = Default::default();
+          let mut w_vec = Vec::new();
+          for (i, a) in arg2.unwrap().split("\x1F").enumerate() {
+            if i % 2 == 0 {
+              if let Ok(n) = a.parse() {
+                w_tuple.0 = n;
+              }
+            } else {
+              w_tuple.1 = a.to_string();
+              w_vec.push(w_tuple.clone());
+            }
+          }
+          let arg2 = parts2.next();
+          if arg2.is_none() {
+            return Err(());
+          }
+          if let Ok(n) = arg2.unwrap().parse() {
+            Ok(WindowMessage::Info(InfoType::WindowsInWorkspace(w_vec, n)))
+          } else {
+            Err(())
+          }
+        } else if t == "InputMethod" {
+          let arg2 = parts2.next();
+          if arg2.is_none() {
+            return Err(());
+          }
+          let im = arg2.unwrap();
+          let arg2 = parts2.next();
+          if arg2.is_none() {
+            return Err(());
+          }
+          let buf = arg2.unwrap();
+          Ok(WindowMessage::Info(InfoType::InputMethod(im.to_string(), buf.to_string())))
         } else {
           Err(())
         }

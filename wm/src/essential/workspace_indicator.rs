@@ -3,7 +3,7 @@ use std::vec::Vec;
 use std::time::{ SystemTime, UNIX_EPOCH };
 
 use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType, INDICATOR_HEIGHT };
-use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, ShortcutType };
+use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, ShortcutType, InfoType };
 use ming_wm_lib::framebuffer_types::Dimensions;
 use ming_wm_lib::themes::ThemeInfo;
 
@@ -15,6 +15,8 @@ const ONE_DAY: u64 = 24 * ONE_HOUR;
 pub struct WorkspaceIndicator {
   dimensions: Dimensions,
   current_workspace: u8,
+  im_abbr: String,
+  im_buffer: String,
 }
 
 impl WindowLike for WorkspaceIndicator {
@@ -31,6 +33,15 @@ impl WindowLike for WorkspaceIndicator {
             WindowMessageResponse::JustRedraw
           },
           _ => WindowMessageResponse::DoNothing,
+        }
+      },
+      WindowMessage::Info(info) => {
+        if let InfoType::InputMethod(im_abbr, im_buffer) = info {
+          self.im_abbr = im_abbr;
+          self.im_buffer = im_buffer;
+          WindowMessageResponse::JustRedraw
+        } else {
+          WindowMessageResponse::DoNothing
         }
       },
       _ => WindowMessageResponse::DoNothing,
@@ -53,6 +64,14 @@ impl WindowLike for WorkspaceIndicator {
         instructions.push(DrawInstructions::Text([w * WIDTH + 5, 4], vec!["nimbus-roman".to_string()], (w + 1).to_string(), theme_info.text, theme_info.background, None, None));
       }
     }
+    //input method and buffer
+    let im_buffer = if self.im_buffer.len() > 6 {
+      self.im_buffer[0..6].to_string() + "..."
+    } else {
+      self.im_buffer.clone()
+    };
+    let im_info = format!("{}: {}", self.im_abbr, im_buffer);
+    instructions.push(DrawInstructions::Text([self.dimensions[0] - 200, 4], vec!["nimbus-roman".to_string()], im_info, theme_info.text, theme_info.background, None, None));
     //also add the utc time in the right edge
     let today_secs = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() % ONE_DAY;
     let hours = (today_secs / ONE_HOUR).to_string();
@@ -73,10 +92,12 @@ impl WindowLike for WorkspaceIndicator {
 }
 
 impl WorkspaceIndicator {
-  pub fn new() -> Self {
+  pub fn new(im_abbr: String) -> Self {
     Self {
       dimensions: [0, 0],
       current_workspace: 0,
+      im_abbr,
+      im_buffer: String::new(),
     }
   }
 }

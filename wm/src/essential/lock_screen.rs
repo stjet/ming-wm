@@ -51,11 +51,11 @@ impl WindowLike for LockScreen {
   fn draw(&self, _theme_info: &ThemeInfo) -> Vec<DrawInstructions> {
     vec![
       DrawInstructions::Rect([0, 0], self.dimensions, [0, 0, 0]),
-      DrawInstructions::Text([4, 4], vec!["nimbus-roman".to_string()], self.lines[0].clone(), [255, 255, 255], [0, 0, 0], None, None),
+      DrawInstructions::Text([4, 4], vec!["nimbus-roman".to_string(), "shippori-mincho".to_string(), "linja-lipamanka".to_string()], self.lines[0].clone(), [255, 255, 255], [0, 0, 0], None, None),
       //He is my brother.
-      DrawInstructions::Text([4, 4 + 16], vec!["nimbus-roman".to_string()], self.lines[1].clone(), [255, 255, 255], [0, 0, 0], None, None),
+      DrawInstructions::Text([4, 4 + 16], vec!["nimbus-roman".to_string(), "shippori-mincho".to_string(), "linja-lipamanka".to_string()], self.lines[1].clone(), [255, 255, 255], [0, 0, 0], None, None),
       //But I must kill him and keep strong to do it.
-      DrawInstructions::Text([4, 4 + 16 * 2], vec!["nimbus-roman".to_string()], self.lines[2].clone(), [255, 255, 255], [0, 0, 0], None, None),
+      DrawInstructions::Text([4, 4 + 16 * 2], vec!["nimbus-roman".to_string(), "shippori-mincho".to_string(), "linja-lipamanka".to_string()], self.lines[2].clone(), [255, 255, 255], [0, 0, 0], None, None),
       DrawInstructions::Text([4, 4 + 16 * 3], vec!["nimbus-roman".to_string()], "Password: ".to_string(), [255, 255, 255], [0, 0, 0], None, None),
       DrawInstructions::Text([80, 4 + 16 * 3], vec!["nimbus-roman".to_string()], "*".repeat(self.input_password.len()), [255, 255, 255], [0, 0, 0], None, None),
     ]
@@ -83,6 +83,16 @@ impl LockScreen {
         "The bulldozer outside the kitchen window was quite a big one.".to_string(),
         "\"Yellow,\" he thought, and stomped off back to his bedroom to get dressed.".to_string(),
         "He stared at it.".to_string()
+      ],
+      [
+        "\"󱥉󱥶󱤧󱥔󱥩󱤴\"".to_string(),
+        "\"󱤟󱥍󱤻󱥛\"".to_string(),
+        "\"󱥁󱤧󱥊󱥶\"".to_string()
+      ],
+      [
+        "安心".to_string(),
+        "アンコール".to_string(),
+        "ワット".to_string(),
       ],
     ];
     let rand_index = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as usize % possible_lines.len();

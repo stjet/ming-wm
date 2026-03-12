@@ -16,6 +16,8 @@ fn color_with_alpha(color: RGBColor, bg_color: RGBColor, alpha: u8) -> RGBColor 
   //255 * 255 < max(u16)
   if alpha == 255 {
     color
+  } else if alpha == 0 {
+    bg_color
   } else {
     let alpha = alpha as u16;
     [
@@ -128,7 +130,7 @@ impl FramebufferWriter {
     }
   }
 
-  pub fn draw_char(&mut self, top_left: Point, char_info: &FontCharInfo, color: RGBColor, bg_color: RGBColor) {
+  fn _draw_char(&mut self, top_left: Point, char_info: &FontCharInfo, color: RGBColor, bg_color: RGBColor) {
     let mut start_pos;
     for row in 0..char_info.height {
       start_pos = ((top_left[1] + row + char_info.top_offset as usize) * self.info.stride + top_left[0]) * self.info.bytes_per_pixel;
@@ -238,7 +240,7 @@ impl FramebufferWriter {
         } else {
           add_after = char_width + horiz_spacing;
         }
-        self.draw_char(top_left, &char_info, color, bg_color);
+        self._draw_char(top_left, &char_info, color, bg_color);
         top_left[0] += add_after;
       }
     }

@@ -28,6 +28,15 @@ pub enum DrawInstructions {
   Line(Point, Point, usize, RGBColor),
 }
 
+pub trait InputMethod {
+  fn abbr(&self) -> [char; 3];
+
+  fn internal_buffer(&self) -> String;
+
+  //ideally should return Option<String>, but this is simpler for now
+  fn add_key_press(&mut self, press: KeyPress) -> Option<char>;
+}
+
 #[derive(Debug, PartialEq)]
 pub enum WindowLikeType {
   LockScreen,

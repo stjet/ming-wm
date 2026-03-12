@@ -232,37 +232,39 @@ impl WindowLike for Malvim {
           } else if self.state == State::Find || self.state == State::BackFind || key_press.key == ';' || key_press.key == ',' {
             let mut old_pos = current_file.cursor_pos;
             let find_char = if self.state == State::Find || self.state == State::BackFind {
-              key_press.key
+              Some(key_press.key)
             } else {
-              current_file.content[current_file.line_pos].chars().nth(old_pos).unwrap()
+              current_file.content[current_file.line_pos].chars().nth(old_pos)
             };
-            for _ in 0..self.maybe_num.unwrap_or(1) {
-              let find_pos = if self.state == State::Find || key_press.key == ';' {
-                if old_pos < current_file.content[current_file.line_pos].chars().count() {
-                  let found_index = current_file.content[current_file.line_pos].chars().skip(old_pos + 1).position(|c| c == find_char);
-                  if let Some(found_index) = found_index {
-                    old_pos + found_index + 1
+            if let Some(find_char) = find_char {
+              for _ in 0..self.maybe_num.unwrap_or(1) {
+                let find_pos = if self.state == State::Find || key_press.key == ';' {
+                  if old_pos < current_file.content[current_file.line_pos].chars().count() {
+                    let found_index = current_file.content[current_file.line_pos].chars().skip(old_pos + 1).position(|c| c == find_char);
+                    if let Some(found_index) = found_index {
+                      old_pos + found_index + 1
+                    } else {
+                      old_pos
+                    }
                   } else {
                     old_pos
                   }
                 } else {
-                  old_pos
-                }
-              } else {
-                //how does this work again? no idea
-                if old_pos != 0 {
-                  let found_index = current_file.content[current_file.line_pos].chars().rev().skip(current_length - old_pos).position(|c| c == find_char);
-                  if let Some(found_index) = found_index {
-                    old_pos - found_index - 1
+                  //how does this work again? no idea
+                  if old_pos != 0 {
+                    let found_index = current_file.content[current_file.line_pos].chars().rev().skip(current_length - old_pos).position(|c| c == find_char);
+                    if let Some(found_index) = found_index {
+                      old_pos - found_index - 1
+                    } else {
+                      old_pos
+                    }
                   } else {
-                    old_pos
+                    old_pos //0
                   }
-                } else {
-                  old_pos //0
-                }
-              };
-              current_file.cursor_pos = find_pos;
-              old_pos = current_file.cursor_pos;
+                };
+                current_file.cursor_pos = find_pos;
+                old_pos = current_file.cursor_pos;
+              }
             }
             changed = false;
             self.state = State::None;
@@ -535,6 +537,7 @@ impl WindowLike for Malvim {
     for file_index in 0..self.files.len() {
       let file_info = &self.files[file_index];
       let future_used_width = used_width + 4 + (file_info.name.len() + if file_info.changed { 2 } else { 0 }) * MONO_WIDTH as usize + 15;
+      //TODO: handle properly
       //just cut off when too many file tabs open to fit
       if future_used_width > self.dimensions[0] {
         break;
@@ -570,7 +573,7 @@ impl WindowLike for Malvim {
         let x1 = current.line_num_width + PADDING * 2;
         //write actual line
         //line.2
-        instructions.push(DrawInstructions::Text([x1, y0], vec!["nimbus-romono".to_string()], line.2.clone(), theme_info.alt_text, theme_info.alt_background, Some(0), Some(MONO_WIDTH)));
+        instructions.push(DrawInstructions::Text([x1, y0], vec!["nimbus-romono".to_string(), "linja-lipamanka".to_string()], line.2.clone(), theme_info.alt_text, theme_info.alt_background, Some(0), Some(MONO_WIDTH)));
         sub_line_num += 1;
         let max = sub_line_num * current.max_chars_per_line;
         let min = max - current.max_chars_per_line;
@@ -580,7 +583,7 @@ impl WindowLike for Malvim {
           instructions.push(DrawInstructions::Rect(top_left, [MONO_WIDTH as usize, LINE_HEIGHT], theme_info.top));
           //draw the char over it
           if line.2.len() > 0 {
-            instructions.push(DrawInstructions::Text(top_left, vec!["nimbus-romono".to_string()], line.2.chars().nth(current_file.cursor_pos - min).unwrap().to_string(), theme_info.top_text, theme_info.top, Some(0), Some(MONO_WIDTH)));
+            instructions.push(DrawInstructions::Text(top_left, vec!["nimbus-romono".to_string(), "linja-lipamanka".to_string()], line.2.chars().nth(current_file.cursor_pos - min).unwrap().to_string(), theme_info.top_text, theme_info.top, Some(0), Some(MONO_WIDTH)));
           }
         }
       }
@@ -596,7 +599,7 @@ impl WindowLike for Malvim {
     instructions.push(DrawInstructions::Text([self.dimensions[0] - file_status.len() * (MONO_WIDTH as usize), self.dimensions[1] - BAND_HEIGHT * 2 + 2], vec!["nimbus-romono".to_string()], file_status, theme_info.top_text, theme_info.top, Some(0), Some(MONO_WIDTH)));
     //write command or bottom message
     if self.mode == Mode::Command {
-      instructions.push(DrawInstructions::Text([0, self.dimensions[1] - BAND_HEIGHT + 2], vec!["nimbus-romono".to_string()], ":".to_string() + &self.command.clone().unwrap_or("".to_string()), theme_info.top_text, theme_info.alt_background, Some(0), Some(MONO_WIDTH)));
+      instructions.push(DrawInstructions::Text([0, self.dimensions[1] - BAND_HEIGHT + 2], vec!["nimbus-romono".to_string(), "linja-lipamanka".to_string()], ":".to_string() + &self.command.clone().unwrap_or("".to_string()), theme_info.top_text, theme_info.alt_background, Some(0), Some(MONO_WIDTH)));
     } else if self.mode == Mode::Normal && self.bottom_message.is_some() {
       instructions.push(DrawInstructions::Text([0, self.dimensions[1] - BAND_HEIGHT + 2], vec!["nimbus-romono".to_string()], self.bottom_message.clone().unwrap(), theme_info.top_text, theme_info.alt_background, Some(0), Some(MONO_WIDTH)));
     }

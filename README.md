@@ -32,7 +32,7 @@ chmod +x ./install
 sudo ./install
 ```
 
-Alternatively, to move the binaries to `~/.local/bin` (which probably needs to be added to `PATH`, run the following:
+Alternatively, to move the binaries to `~/.local/bin` (which probably needs to be added to `PATH`), run the following:
 
 ```bash
 chmod +x local-install
@@ -105,5 +105,4 @@ Obviously, don't run the executable with `sudo` or `doas`, or as the root user!
 
 ## License
 
-Licensed under the GPLv3. The font data in the `bmps/shippori-mincho` folder are covered by the OFL. The font was created by FONTDASU. The font data in `bmps/nimbus-roman` are licensed under the AGPL. This is a very slightly modified version of the font was created by URW Studio. The font data in `bmps/nimbus-romono` is also licensed under the AGPL. This is a slightly modified version of the Nimbus Roman font by URW Studio.
-
+Licensed under the GPLv3. The font data in the `bmps/shippori-mincho` folder are covered by the OFL. The font was created by FONTDASU. The font data in `bmps/nimbus-roman` are licensed under the AGPL. This is a very slightly modified version of the font was created by URW Studio. The font data in `bmps/nimbus-romono` is also licensed under the AGPL. This is a slightly modified version of the Nimbus Roman font by URW Studio. The font data in the `bmps/linja-lipamanka` folder are covered by the OFL. The font was created by lipamanka.

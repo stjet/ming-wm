@@ -6,6 +6,7 @@
 - Alt+c: Centre window
 - Alt+f: Fullscreen window
 - Alt+w: Half width window
+- Alt+<Space>: Switch keyboard input method (switch language)
 - Alt+C: Clipboard copy
 - Alt+P: Clipboard paste
 - Alt+h: Move window left

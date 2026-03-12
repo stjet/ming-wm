@@ -105,6 +105,7 @@ pub enum Direction {
 pub enum ShortcutType {
   StartMenu,
   SwitchWorkspace(u8),
+  NextInputMethod,
   MoveWindowToWorkspace(u8),
   FocusPrevWindow,
   FocusNextWindow,
@@ -127,6 +128,8 @@ pub type WindowsVec = Vec<(usize, String)>;
 pub enum InfoType {
   /// Let taskbar know what the current windows in the workspace are
   WindowsInWorkspace(WindowsVec, usize), //Vec<(id, name)>, focused id
+  /// Let workspace indicator know the current input method
+  InputMethod(String, String), //abbr, internal buffer
   //
 }
 
