@@ -289,11 +289,7 @@ impl Serializable for DrawInstructions {
           "N" => None,
           _ => {
             if arg.len() > 1 {
-              if let Ok(n) = arg[1..].parse() {
-                Some(n)
-              } else {
-                None
-              }
+              arg[1..].parse().ok()
             } else {
               None
             }
@@ -308,11 +304,7 @@ impl Serializable for DrawInstructions {
           "N" => None,
           _ => {
             if arg.len() > 1 {
-              if let Ok(n) = arg[1..].parse() {
-                Some(n)
-              } else {
-                None
-              }
+              arg[1..].parse().ok()
             } else {
               None
             }

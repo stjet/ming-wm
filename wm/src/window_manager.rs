@@ -721,7 +721,7 @@ impl WindowManager {
       self.writer.borrow_mut().write_saved_buffer_to_raw();
     }
     //get windows to redraw
-    let redraw_ids = maybe_redraw_ids.unwrap_or(Vec::new());
+    let redraw_ids = maybe_redraw_ids.unwrap_or_default();
     let mut all_in_workspace = self.get_windows_in_workspace(true);
     if let Some(osk) = &self.osk {
       all_in_workspace.push(osk);

@@ -3,14 +3,14 @@ use std::vec;
 use std::io::BufReader;
 use std::path::PathBuf;
 use std::collections::HashMap;
-use std::io::Read;
+use std::io::{ Read, Seek };
 use std::time::Duration;
 use std::fs::{ read_to_string, File };
 use std::thread;
 use std::sync::{ Arc, Mutex };
 
 use rodio::{ Decoder, OutputStream, Sink, Source };
-use id3::TagLike;
+//use id3::TagLike;
 use mp4ameta;
 use metaflac;
 
@@ -37,8 +37,27 @@ fn get_artist(path: &PathBuf) -> Option<String> {
     };
     x
   } else if ext == "mp3" {
-    let tag = id3::Tag::read_from_path(path).unwrap();
-    tag.artist().map(|s| s.to_string())
+    //let tag = id3::Tag::read_from_path(path).unwrap();
+    //tag.artist().map(|s| s.to_string())
+    //read id3v1 tag at end of file
+    let mut tag = File::open(path).unwrap();
+    tag.seek(std::io::SeekFrom::End(-128)).unwrap();
+    let mut tag_constant = vec![0; 3];
+    tag.read_exact(&mut tag_constant).unwrap();
+    //look for "TAG"
+    if tag_constant == vec![84, 65, 71] {
+      //first 30 chars are title, next 30 are artist, then next 30 are album
+      tag.seek_relative(30).unwrap();
+      let mut artist = vec![0; 30];
+      tag.read_exact(&mut artist).unwrap();
+      //I hope stackoverflow doesn't die
+      if let Some(first) = artist.iter().position(|b| *b == 0) {
+        artist.truncate(first);
+      }
+      Some(String::from_utf8(artist).unwrap_or_default())
+    } else {
+      None
+    }
   } else {
     None
   }

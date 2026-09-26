@@ -278,6 +278,11 @@ impl WindowLike for Malvim {
             } else {
               changed = false;
             }
+          } else if key_press.key == '>' {
+            let num = self.maybe_num.unwrap_or(2);
+            let line = &current_file.content[current_file.line_pos];
+            current_file.content[current_file.line_pos] = " ".repeat(num) + line;
+            current_file.cursor_pos += num;
           } else if key_press.key == 'h' || key_press.is_left_arrow() {
             current_file.cursor_pos = current_file.cursor_pos.checked_sub(self.maybe_num.unwrap_or(1)).unwrap_or(0);
             changed = false;
@@ -485,7 +490,18 @@ impl WindowLike for Malvim {
           ShortcutType::ClipboardCopy => {
             if self.files.len() > 0 {
               let current_file = &mut self.files[self.current_file_index];
-              WindowMessageResponse::Request(WindowManagerRequest::ClipboardCopy(current_file.content[current_file.line_pos].clone()))
+              let line_count = self.maybe_num.unwrap_or(1);
+              let mut copy_lines = String::new();
+              for i in 0..line_count {
+                if current_file.content.len() == self.current_file_index + i {
+                  break;
+                }
+                if !copy_lines.is_empty() {
+                  copy_lines += "\n";
+                }
+                copy_lines += &current_file.content[current_file.line_pos + i];
+              }
+              WindowMessageResponse::Request(WindowManagerRequest::ClipboardCopy(copy_lines))
             } else {
               WindowMessageResponse::DoNothing
             }

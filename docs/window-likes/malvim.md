@@ -24,14 +24,14 @@ Tab completion is supported for the `<file>` argument. Down arrow will clear the
 - `A`
 - `r`
 - `dd`
-- `<number>dd`
+- `<num>dd`
 - `dw` (`dw` is not identical to vim's behaviour), `dW`
 - `d$`
 - `G`
 - `gg`
-- `<number>gg`
+- `<num>gg`
 - `f<char>`, `F<char>`
-- `<number>f<char>`, `<number>F<char>`
+- `<num>f<char>`, `<num>F<char>`
 - `;` (same as `f<char>` but with the char the cursor is on, so not the same as vim)
 - `<num>;`
 - `,` (same as `F<char>` but with the char the cursor is on, so not the same as vim)
@@ -45,3 +45,7 @@ Tab completion is supported for the `<file>` argument. Down arrow will clear the
 ### Malvim Specific
 
 In Command-line Mode, `autoindent` can be done to toggle auto-indenting (when making new line in Insert Mode [ie, by hitting Enter/Return], space indentation of the new line will be the same as the space indentation of the current line). **Toggling on `autoindent` is highly recommended when editing code.**
+
+- `>` indent two spaces
+- `<num>>` indent variable amount of spaces
+- `<num>Alt+C` copy variable amount of lines to clipboard (if no number, defaults to only the current line)

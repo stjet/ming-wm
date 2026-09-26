@@ -16,6 +16,10 @@ Tab completion is supported for the `<dir>` and `<dir / playlist file>` argument
 
 The copy shortcut will copy the currently playing song's file name, if there is a currently playing song.
 
+## Artist Name
+
+For mp3, artist name shows up only if there is an id3v1 tag present. For flac and mp4, the built-in metadata system should be supported.
+
 ## Playlists
 
 Example playlist file:

@@ -191,7 +191,7 @@ impl FileExplorer {
   //should include .. if not /
   fn get_current_dir_contents(&self) -> Vec<DirectoryChild> {
     let mut contents = Vec::new();
-    if self.current_path != PathBuf::from("/") {
+    if *self.current_path != *"/" {
       contents.push(DirectoryChild {
         override_name: Some("..".to_string()),
         is_file: false,

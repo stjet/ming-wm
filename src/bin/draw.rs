@@ -117,16 +117,8 @@ impl WindowLike for Draw {
               DrawAction::Line(p, _, u, r) => DrawAction::Line(*p, Some(self.current_location), *u, *r),
               DrawAction::Rect(p, _, r) => {
                 let d = [
-                  if self.current_location[0] > p[0] {
-                    self.current_location[0] - p[0]
-                  } else {
-                    p[0] - self.current_location[0]
-                  },
-                  if self.current_location[1] > p[1] {
-                    self.current_location[1] - p[1]
-                  } else {
-                    p[1] - self.current_location[1]
-                  }
+                  self.current_location[0].abs_diff(p[0]),
+                  self.current_location[1].abs_diff(p[1]),
                 ];
                 //find top left corner
                 let tl = [
