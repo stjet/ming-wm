@@ -81,17 +81,17 @@ pub struct Framebuffer {
 }
 
 impl Framebuffer {
-  pub fn open(path: &str) -> Result<Self, ()> {
-    let file = Framebuffer::open_file(path)?;
-    let vi = Framebuffer::get_vscreeninfo(file.as_raw_fd())?;
-    let fi = Framebuffer::get_fscreeninfo(file.as_raw_fd())?;
+  pub fn open(path: &str) -> Result<Self, &str> {
+    let file = Framebuffer::open_file(path).expect("failed to open_file");
+    let vi = Framebuffer::get_vscreeninfo(file.as_raw_fd()).expect("failed to get_vscreeninfo");
+    let fi = Framebuffer::get_fscreeninfo(file.as_raw_fd()).expect("failed to get_fscreeninfo");
     //then mmap or something
     let size = vi.yres_virtual * fi.line_length * (vi.bits_per_pixel / 8);
     let pointer = unsafe {
       mmap(ptr::null_mut(), size.try_into().unwrap(), libc::PROT_READ | libc::PROT_WRITE, libc::MAP_SHARED, file.as_raw_fd(), 0)
     };
     if pointer == libc::MAP_FAILED {
-      return Err(());
+      return Err("map failed");
     }
     Ok(Self {
       pointer,

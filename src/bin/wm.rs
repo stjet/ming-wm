@@ -88,6 +88,7 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
 
   let (tx, rx) = mpsc::channel();
 
+  #[cfg(target_os = "linux")] //for touchscreen
   let tx1 = tx.clone();
 
   //read key presses
