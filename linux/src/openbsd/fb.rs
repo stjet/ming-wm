@@ -2,24 +2,24 @@ use std::fs::{ File, OpenOptions };
 use std::os::fd::AsRawFd;
 use std::ptr;
 
-use libc::{ ioctl, mmap, munmap, c_ulong, c_int };
+use libc::{ ioctl, mmap, munmap, c_uint, c_int };
 
 //man.openbsd.org/wsdisplay
 //WIP
 
-const WSDISPLAYIO_SMODE: c_ulong = 0x0;
-const WSDISPLAYIO_MODE_DUMB: c_ulong = 0x0;
+const WSDISPLAYIO_SMODE: c_uint = 76;
+const WSDISPLAYIO_MODE_DUMBFB: c_uint = 2;
 
-const WSDISPLAYIO_GINFO: c_ulong = 0x0;
-const WSDISPLAYIO_LINEBYTES: c_ulong = 0x0;
+const WSDISPLAYIO_GINFO: c_uint = 65;
+const WSDISPLAYIO_LINEBYTES: c_uint = 95;
 
 #[derive(Default)]
 #[repr(C)]
 pub struct WSDISPLAY_FBINFO {
-  pub height: usize,
-  pub width: usize,
-  pub depth: usize,
-  pub cmsize: usize,
+  pub height: c_uint,
+  pub width: c_uint,
+  pub depth: c_uint,
+  pub cmsize: c_uint,
 }
 
 pub struct Framebuffer {
@@ -34,16 +34,16 @@ impl Framebuffer {
     let file = Framebuffer::open_file(path).expect("failed to open_file");
     //set mode
     let result = unsafe {
-      ioctl(file.as_raw_fd(), WSDISPLAYIO_SMODE.try_into().unwrap(), WSDISPLAYIO_MODE_DUMB)
+      ioctl(file.as_raw_fd(), WSDISPLAYIO_SMODE.try_into().unwrap(), WSDISPLAYIO_MODE_DUMBFB)
     };
     if result == -1 {
       return Err("Couldn't set mode to DUMBFB");
     }
     //get fb info and line bytes
     let info = Self::get_fbinfo(file.as_raw_fd()).expect("Couldn't get fb info");
-    let line_bytes = Self::get_line_bytes(file.as_raw_fd()).expect("Couldn't get bytes per line");
+    let line_bytes = Self::get_line_bytes(file.as_raw_fd()).expect("Couldn't get bytes per line") as usize;
     //then mmap or something
-    let size = info.height * line_bytes * (info.depth / 8);
+    let size = info.height as usize * line_bytes * (info.depth as usize / 8);
     let pointer = unsafe {
       mmap(ptr::null_mut(), size.try_into().unwrap(), libc::PROT_READ | libc::PROT_WRITE, libc::MAP_SHARED, file.as_raw_fd(), 0)
     };
@@ -54,7 +54,7 @@ impl Framebuffer {
       pointer,
       info,
       line_bytes,
-      size: size as usize,
+      size,
     })
   }
   
@@ -75,8 +75,8 @@ impl Framebuffer {
     }
   }
 
-  fn get_line_bytes(raw_fd: c_int) -> Result<usize, ()> {
-    let mut lb: usize = Default::default();
+  fn get_line_bytes(raw_fd: c_int) -> Result<c_uint, ()> {
+    let mut lb: c_uint = Default::default();
     //now WSDISPLAYIO_LINEBYTES
     let result = unsafe {
       ioctl(raw_fd, WSDISPLAYIO_LINEBYTES.try_into().unwrap(), &mut lb)

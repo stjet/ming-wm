@@ -205,11 +205,11 @@ fn main() {
   };
   #[cfg(target_os = "openbsd")]
   let fb_info = {
-    let bytes_per_pixel = fb.info.depth / 8;
+    let bytes_per_pixel = fb.info.depth as usize / 8;
     FramebufferInfo {
-      byte_len: fb.info.height * fb.line_bytes,
-      width: fb.info.width,
-      height: fb.info.height,
+      byte_len: fb.info.height as usize * fb.line_bytes,
+      width: fb.info.width as usize,
+      height: fb.info.height as usize,
       bytes_per_pixel,
       stride: fb.line_bytes / bytes_per_pixel,
       old_stride: None,
