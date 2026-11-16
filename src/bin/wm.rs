@@ -8,6 +8,7 @@ use std::env;
 use linux::fb::Framebuffer;
 use linux::raw::RawStdout;
 use linux::keys::{ RawStdin, Key };
+#[cfg(target_os = "linux")] //touch screen = linux only for now
 use linux::input::{ Input, EventType };
 use wm::framebuffer::{ FramebufferWriter, FramebufferInfo };
 use wm::window_manager::WindowManager;
@@ -110,6 +111,7 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
   let force_stdout = args.contains(&"force-stdout".to_string()); //write to stdout to force framebuffer redraw
 
   //read touchscreen presses (hopefully)
+  #[cfg(target_os = "linux")]
   thread::spawn(move || {
     if touch {
       let mut events = Input::new("/dev/input/by-path/first-touchscreen").unwrap(); //panics in threads don't matter in this case
