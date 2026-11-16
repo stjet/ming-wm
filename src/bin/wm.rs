@@ -184,15 +184,36 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
 }
 
 fn main() {
-  let fb = Framebuffer::open("/dev/fb0").unwrap();
-  let bytes_per_pixel = (fb.var_screen_info.bits_per_pixel as usize) / 8;
-  let fb_info = FramebufferInfo {
-    byte_len: (fb.var_screen_info.yres_virtual * fb.fix_screen_info.line_length) as usize,
-    width: fb.var_screen_info.xres_virtual as usize,
-    height: fb.var_screen_info.yres_virtual as usize,
-    bytes_per_pixel,
-    stride: fb.fix_screen_info.line_length as usize / bytes_per_pixel,
-    old_stride: None,
+  #[cfg(target_os = "linux")]
+  let fb_name = "/dev/fb0";
+  #[cfg(target_os = "openbsd")]
+  let fb_name = "/dev/ttyC0";
+
+  let fb = Framebuffer::open(fb_name).unwrap();
+
+  #[cfg(target_os = "linux")]
+  let fb_info = {
+    let bytes_per_pixel = (fb.var_screen_info.bits_per_pixel as usize) / 8;
+    FramebufferInfo {
+      byte_len: (fb.var_screen_info.yres_virtual * fb.fix_screen_info.line_length) as usize,
+      width: fb.var_screen_info.xres_virtual as usize,
+      height: fb.var_screen_info.yres_virtual as usize,
+      bytes_per_pixel,
+      stride: fb.fix_screen_info.line_length as usize / bytes_per_pixel,
+      old_stride: None,
+    }
+  };
+  #[cfg(target_os = "openbsd")]
+  let fb_info = {
+    let bytes_per_pixel = fb.info.depth / 8;
+    FramebufferInfo {
+      byte_len: fb.info.height * fb.line_bytes,
+      width: fb.info.width,
+      height: fb.info.height,
+      bytes_per_pixel,
+      stride: fb.line_bytes / bytes_per_pixel,
+      old_stride: None,
+    }
   };
 
   init(fb, fb_info);
