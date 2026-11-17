@@ -15,6 +15,7 @@ use wm::window_manager::WindowManager;
 
 use ming_wm_lib::window_manager_types::KeyChar;
 use ming_wm_lib::messages::*;
+use ming_wm_lib::logging::log;
 
 include!(concat!(env!("OUT_DIR"), "/password.rs"));
 
@@ -191,6 +192,8 @@ fn main() {
 
   let fb = Framebuffer::open(fb_name).unwrap();
 
+  log("wah");
+
   #[cfg(target_os = "linux")]
   let fb_info = {
     let bytes_per_pixel = (fb.var_screen_info.bits_per_pixel as usize) / 8;
@@ -206,7 +209,7 @@ fn main() {
   #[cfg(target_os = "openbsd")]
   let fb_info = {
     let bytes_per_pixel = fb.info.depth as usize / 8;
-    println!("{} {} {}", fb.info.height as usize, fb.info.width as usize, bytes_per_pixel);
+    log(&format!("{} {} {}", fb.info.height as usize, fb.info.width as usize, bytes_per_pixel));
     FramebufferInfo {
       byte_len: fb.info.height as usize * fb.line_bytes,
       width: fb.info.width as usize,
