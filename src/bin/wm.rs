@@ -75,18 +75,18 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
 
   let mut wm: WindowManager = WindowManager::new(writer, framebuffer, dimensions, rotate, grayscale, env!("CARGO_PKG_VERSION").to_string(), PASSWORD_HASH);
 
-  let mut stdout = RawStdout::new(stdout());
+  /*let mut stdout = RawStdout::new(stdout());
   stdout.enter_raw_mode().unwrap();
 
   write!(stdout.stdout, "{}", CLEAR_ALL).unwrap();
 
   write!(stdout.stdout, "{}", HIDE_CURSOR).unwrap();
 
-  stdout.stdout.flush().unwrap();
+  stdout.stdout.flush().unwrap();*/
 
   wm.draw(None, false);
 
-  let (tx, rx) = mpsc::channel();
+  /*let (tx, rx) = mpsc::channel();
 
   #[cfg(target_os = "linux")] //for touchscreen
   let tx1 = tx.clone();
@@ -180,7 +180,7 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
         }
       },
     };
-  }
+  }*/
 }
 
 fn main() {
@@ -206,6 +206,7 @@ fn main() {
   #[cfg(target_os = "openbsd")]
   let fb_info = {
     let bytes_per_pixel = fb.info.depth as usize / 8;
+    println!("{} {} {}", fb.info.height as usize, fb.info.width as usize, bytes_per_pixel);
     FramebufferInfo {
       byte_len: fb.info.height as usize * fb.line_bytes,
       width: fb.info.width as usize,

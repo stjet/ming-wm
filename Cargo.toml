@@ -56,27 +56,27 @@ name = "mingFiles_Audio_Player"
 path = "src/bin/audio_player.rs"
 required-features = [ "audio_player" ]
 
-[[bin]]
-name = "mingGames_Minesweeper"
-path = "src/bin/minesweeper.rs"
+#[[bin]]
+#name = "mingGames_Minesweeper"
+#path = "src/bin/minesweeper.rs"
 
 [[bin]]
 name = "mingUtils_Terminal"
 path = "src/bin/terminal.rs"
 required-features = [ "terminal" ]
 
-[[bin]]
-name = "mingFiles_File_Explorer"
-path = "src/bin/file_explorer.rs"
+#[[bin]]
+#name = "mingFiles_File_Explorer"
+#path = "src/bin/file_explorer.rs"
 
-[[bin]]
-name = "mingEditing_Malvim"
-path = "src/bin/malvim.rs"
+#[[bin]]
+#name = "mingEditing_Malvim"
+#path = "src/bin/malvim.rs"
 
 [[bin]]
 name = "mingGames_Reversi"
 path = "src/bin/reversi.rs"
 
-[[bin]]
-name = "mingUtils_Draw"
-path = "src/bin/draw.rs"
+#[[bin]]
+#name = "mingUtils_Draw"
+#path = "src/bin/draw.rs"

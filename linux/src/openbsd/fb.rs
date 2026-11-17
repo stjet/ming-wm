@@ -31,17 +31,22 @@ pub struct Framebuffer {
 
 impl Framebuffer {
   pub fn open(path: &str) -> Result<Self, &str> {
+    println!("start");
     let file = Framebuffer::open_file(path).expect("failed to open_file");
+    println!("open file");
     //set mode
     let result = unsafe {
-      ioctl(file.as_raw_fd(), WSDISPLAYIO_SMODE.try_into().unwrap(), WSDISPLAYIO_MODE_DUMBFB)
+      ioctl(file.as_raw_fd(), WSDISPLAYIO_SMODE.try_into().unwrap(), &WSDISPLAYIO_MODE_DUMBFB)
     };
+    println!("did smode ioctl");
     if result == -1 {
       return Err("Couldn't set mode to DUMBFB");
     }
     //get fb info and line bytes
     let info = Self::get_fbinfo(file.as_raw_fd()).expect("Couldn't get fb info");
+    println!("did fbinfo ioctl");
     let line_bytes = Self::get_line_bytes(file.as_raw_fd()).expect("Couldn't get bytes per line") as usize;
+    println!("did line bytes ioctl");
     //then mmap or something
     let size = info.height as usize * line_bytes * (info.depth as usize / 8);
     let pointer = unsafe {
