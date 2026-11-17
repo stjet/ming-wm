@@ -2,16 +2,16 @@ use std::fs::{ File, OpenOptions };
 use std::os::fd::AsRawFd;
 use std::ptr;
 
-use libc::{ ioctl, mmap, munmap, c_uint, c_int };
+use libc::{ ioctl, mmap, munmap, c_ulong, c_uint, c_int, _IOW, _IOR };
 
 //man.openbsd.org/wsdisplay
-//WIP
+//https://github.com/openbsd/src/blob/master/sys/dev/wscons/wsconsio.h
 
-const WSDISPLAYIO_SMODE: c_uint = 76;
+const WSDISPLAYIO_SMODE: c_ulong = _IOW::<c_uint>('W' as c_ulong, 76);
 const WSDISPLAYIO_MODE_DUMBFB: c_uint = 2;
 
-const WSDISPLAYIO_GINFO: c_uint = 65;
-const WSDISPLAYIO_LINEBYTES: c_uint = 95;
+const WSDISPLAYIO_GINFO: c_ulong = _IOR::<c_uint>('W' as c_ulong, 65);
+const WSDISPLAYIO_LINEBYTES: c_ulong = _IOR::<c_uint>('W' as c_ulong, 95);
 
 #[derive(Default)]
 #[repr(C)]
