@@ -13,13 +13,6 @@ const WSDISPLAYIO_SMODE: c_ulong = _IOW::<c_uint>('W' as c_ulong, 76);
 const WSDISPLAYIO_MODE_EMUL: c_uint = 0;
 const WSDISPLAYIO_MODE_DUMBFB: c_uint = 2;
 
-const WSDISPLAYIO_GINFO: c_ulong = _IOR::<c_uint>('W' as c_ulong, 65);
-//const WSDISPLAYIO_LINEBYTES: c_ulong = _IOR::<c_uint>('W' as c_ulong, 95);
-
-pub fn log(message: &str) {
-  let _ = writeln!(OpenOptions::new().append(true).create(true).open("/home/user/.local/share/ming-wm/logs.txt").unwrap(), "{}", message);
-}
-
 #[derive(Default, Debug)]
 #[repr(C)]
 pub struct WSDISPLAY_FBINFO {
@@ -29,6 +22,13 @@ pub struct WSDISPLAY_FBINFO {
   pub stride: c_uint, //in bytes
   pub offset: c_uint, //in bytes
   pub cmsize: c_uint, //in # of entries
+}
+
+const WSDISPLAYIO_GINFO: c_ulong = _IOR::<WSDISPLAY_FBINFO>('W' as c_ulong, 65);
+//const WSDISPLAYIO_LINEBYTES: c_ulong = _IOR::<c_uint>('W' as c_ulong, 95);
+
+pub fn log(message: &str) {
+  let _ = writeln!(OpenOptions::new().append(true).create(true).open("/home/user/.local/share/ming-wm/logs.txt").unwrap(), "{}", message);
 }
 
 pub struct Framebuffer {
@@ -89,6 +89,7 @@ impl Framebuffer {
     if result != -1 {
       Ok(fi)
     } else {
+      log("pakala");
       Err(())
     }
   }
