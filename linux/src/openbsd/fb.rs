@@ -2,6 +2,8 @@ use std::fs::{ File, OpenOptions };
 use std::os::fd::AsRawFd;
 use std::ptr;
 
+use std::io::Write;
+
 use libc::{ ioctl, mmap, munmap, c_ulong, c_uint, c_int, _IOW, _IOR };
 
 //man.openbsd.org/wsdisplay
@@ -15,7 +17,7 @@ const WSDISPLAYIO_GINFO: c_ulong = _IOR::<c_uint>('W' as c_ulong, 65);
 //const WSDISPLAYIO_LINEBYTES: c_ulong = _IOR::<c_uint>('W' as c_ulong, 95);
 
 pub fn log(message: &str) {
-  let _ = writeln!(OpenOptions::new().append(true).create(true).open(format!("/home/user/.local/share/ming-wm/logs.txt", data)).unwrap(), "{}", message);
+  let _ = writeln!(OpenOptions::new().append(true).create(true).open("/home/user/.local/share/ming-wm/logs.txt").unwrap(), "{}", message);
 }
 
 #[derive(Default, Debug)]
@@ -42,6 +44,7 @@ impl Framebuffer {
     println!("start");
     let file = Framebuffer::open_file(path).expect("failed to open_file");
     println!("open file");
+    log("doing smode");
     //set mode
     let result = unsafe {
       ioctl(file.as_raw_fd(), WSDISPLAYIO_SMODE.try_into().unwrap(), &WSDISPLAYIO_MODE_DUMBFB)
@@ -52,7 +55,7 @@ impl Framebuffer {
     log("set to dumbfb");
     //get fb info and line bytes
     let info = Self::get_fbinfo(file.as_raw_fd()).expect("Couldn't get fb info");
-    log(format!("got fbinfo {:?}", info));
+    log(&format!("got fbinfo {:?}", info));
     //let line_bytes = Self::get_line_bytes(file.as_raw_fd()).expect("Couldn't get bytes per line") as usize;
     //then mmap or something
     let size = info.height as usize * info.stride as usize;
@@ -115,8 +118,7 @@ impl Drop for Framebuffer {
     unsafe {
       munmap(self.pointer, self.size);
       //change mode back to text?
-      ioctl(self.raw_fd, WSDISPLAYIO_SMODE.try_into().unwrap(), &WSDISPLAYIO_MODE_EMUL)
+      ioctl(self.raw_fd, WSDISPLAYIO_SMODE.try_into().unwrap(), &WSDISPLAYIO_MODE_EMUL);
     }
   }
 }
-
