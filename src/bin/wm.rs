@@ -190,6 +190,8 @@ fn main() {
   #[cfg(target_os = "openbsd")]
   let fb_name = "/dev/ttyC0";
 
+  log("yay");
+
   let fb = Framebuffer::open(fb_name).unwrap();
 
   log("wah");
@@ -211,14 +213,16 @@ fn main() {
     let bytes_per_pixel = fb.info.depth as usize / 8;
     log(&format!("{} {} {}", fb.info.height as usize, fb.info.width as usize, bytes_per_pixel));
     FramebufferInfo {
-      byte_len: fb.info.height as usize * fb.line_bytes,
+      byte_len: fb.info.height as usize * fb.info.stride as usize,
       width: fb.info.width as usize,
       height: fb.info.height as usize,
       bytes_per_pixel,
-      stride: fb.line_bytes / bytes_per_pixel,
+      stride: fb.info.stride as usize,
       old_stride: None,
     }
   };
+
+  log("hurray");
 
   init(fb, fb_info);
 }

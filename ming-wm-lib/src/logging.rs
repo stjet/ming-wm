@@ -5,7 +5,7 @@ use crate::dirs::data_dir;
 
 /// Writes to `<XDG data directory>/ming-wm/logs.txt`. Use only for debugging!
 pub fn log(message: &str) {
-  let data = data_dir().unwrap().into_os_string().into_string().unwrap();
+  let data = data_dir().unwrap().into_os_string().into_string().unwrap(); //this needs to exist already
   let _ = create_dir(format!("{}/ming-wm", data));
   let _ = writeln!(OpenOptions::new().append(true).create(true).open(format!("{}/ming-wm/logs.txt", data)).unwrap(), "{}", message);
 }

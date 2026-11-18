@@ -8,25 +8,33 @@ use libc::{ ioctl, mmap, munmap, c_ulong, c_uint, c_int, _IOW, _IOR };
 //https://github.com/openbsd/src/blob/master/sys/dev/wscons/wsconsio.h
 
 const WSDISPLAYIO_SMODE: c_ulong = _IOW::<c_uint>('W' as c_ulong, 76);
+const WSDISPLAYIO_MODE_EMUL: c_uint = 0;
 const WSDISPLAYIO_MODE_DUMBFB: c_uint = 2;
 
 const WSDISPLAYIO_GINFO: c_ulong = _IOR::<c_uint>('W' as c_ulong, 65);
-const WSDISPLAYIO_LINEBYTES: c_ulong = _IOR::<c_uint>('W' as c_ulong, 95);
+//const WSDISPLAYIO_LINEBYTES: c_ulong = _IOR::<c_uint>('W' as c_ulong, 95);
 
-#[derive(Default)]
+pub fn log(message: &str) {
+  let _ = writeln!(OpenOptions::new().append(true).create(true).open(format!("/home/user/.local/share/ming-wm/logs.txt", data)).unwrap(), "{}", message);
+}
+
+#[derive(Default, Debug)]
 #[repr(C)]
 pub struct WSDISPLAY_FBINFO {
-  pub height: c_uint,
-  pub width: c_uint,
-  pub depth: c_uint,
-  pub cmsize: c_uint,
+  pub height: c_uint, //in px
+  pub width: c_uint, //in px
+  pub depth: c_uint, //in bits
+  pub stride: c_uint, //in bytes
+  pub offset: c_uint, //in bytes
+  pub cmsize: c_uint, //in # of entries
 }
 
 pub struct Framebuffer {
   pointer: *mut libc::c_void,
   pub info: WSDISPLAY_FBINFO,
-  pub line_bytes: usize,
+  //pub line_bytes: usize,
   size: usize,
+  raw_fd: c_int,
 }
 
 impl Framebuffer {
@@ -41,22 +49,27 @@ impl Framebuffer {
     if result == -1 {
       return Err("Couldn't set mode to DUMBFB");
     }
+    log("set to dumbfb");
     //get fb info and line bytes
     let info = Self::get_fbinfo(file.as_raw_fd()).expect("Couldn't get fb info");
-    let line_bytes = Self::get_line_bytes(file.as_raw_fd()).expect("Couldn't get bytes per line") as usize;
+    log(format!("got fbinfo {:?}", info));
+    //let line_bytes = Self::get_line_bytes(file.as_raw_fd()).expect("Couldn't get bytes per line") as usize;
     //then mmap or something
-    let size = info.height as usize * line_bytes * (info.depth as usize / 8);
+    let size = info.height as usize * info.stride as usize;
     let pointer = unsafe {
       mmap(ptr::null_mut(), size.try_into().unwrap(), libc::PROT_READ | libc::PROT_WRITE, libc::MAP_SHARED, file.as_raw_fd(), 0)
     };
+    log("tried mmap");
     if pointer == libc::MAP_FAILED {
       return Err("map failed");
     }
+    log("did mmap");
     Ok(Self {
       pointer,
       info,
-      line_bytes,
+      //line_bytes,
       size,
+      raw_fd: file.as_raw_fd(),
     })
   }
   
@@ -77,7 +90,7 @@ impl Framebuffer {
     }
   }
 
-  fn get_line_bytes(raw_fd: c_int) -> Result<c_uint, ()> {
+  /*fn get_line_bytes(raw_fd: c_int) -> Result<c_uint, ()> {
     let mut lb: c_uint = Default::default();
     //now WSDISPLAYIO_LINEBYTES
     let result = unsafe {
@@ -88,7 +101,7 @@ impl Framebuffer {
     } else {
       Err(())
     }
-  }
+  }*/
   
   pub fn write_frame(&mut self, frame: &[u8]) {
     unsafe {
@@ -102,7 +115,7 @@ impl Drop for Framebuffer {
     unsafe {
       munmap(self.pointer, self.size);
       //change mode back to text?
-      //
+      ioctl(self.raw_fd, WSDISPLAYIO_SMODE.try_into().unwrap(), &WSDISPLAYIO_MODE_EMUL)
     }
   }
 }
