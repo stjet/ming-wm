@@ -72,7 +72,11 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
 
   let mut writer: FramebufferWriter = FramebufferWriter::new(grayscale);
 
+  log("init writer");
+
   writer.init(framebuffer_info.clone());
+
+  log("init wm");
 
   let mut wm: WindowManager = WindowManager::new(writer, framebuffer, dimensions, rotate, grayscale, env!("CARGO_PKG_VERSION").to_string(), PASSWORD_HASH);
 
@@ -85,7 +89,11 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
 
   stdout.stdout.flush().unwrap();*/
 
+  init("init draw");
+
   wm.draw(None, false);
+
+  init("fin draw");
 
   /*let (tx, rx) = mpsc::channel();
 
@@ -211,7 +219,7 @@ fn main() {
   #[cfg(target_os = "openbsd")]
   let fb_info = {
     let bytes_per_pixel = fb.info.depth as usize / 8;
-    log(&format!("{} {} {}", fb.info.height as usize, fb.info.width as usize, bytes_per_pixel));
+    log(&format!("{:?}", fb.info));
     FramebufferInfo {
       byte_len: fb.info.height as usize * fb.info.stride as usize,
       width: fb.info.width as usize,

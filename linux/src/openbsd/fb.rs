@@ -41,10 +41,7 @@ pub struct Framebuffer {
 
 impl Framebuffer {
   pub fn open(path: &str) -> Result<Self, &str> {
-    println!("start");
     let file = Framebuffer::open_file(path).expect("failed to open_file");
-    println!("open file");
-    log("doing smode");
     //set mode
     let result = unsafe {
       ioctl(file.as_raw_fd(), WSDISPLAYIO_SMODE.try_into().unwrap(), &WSDISPLAYIO_MODE_DUMBFB)
@@ -52,21 +49,17 @@ impl Framebuffer {
     if result == -1 {
       return Err("Couldn't set mode to DUMBFB");
     }
-    log("set to dumbfb");
     //get fb info and line bytes
     let info = Self::get_fbinfo(file.as_raw_fd()).expect("Couldn't get fb info");
-    log(&format!("got fbinfo {:?}", info));
     //let line_bytes = Self::get_line_bytes(file.as_raw_fd()).expect("Couldn't get bytes per line") as usize;
     //then mmap or something
     let size = info.height as usize * info.stride as usize;
     let pointer = unsafe {
       mmap(ptr::null_mut(), size.try_into().unwrap(), libc::PROT_READ | libc::PROT_WRITE, libc::MAP_SHARED, file.as_raw_fd(), 0)
     };
-    log("tried mmap");
     if pointer == libc::MAP_FAILED {
       return Err("map failed");
     }
-    log("did mmap");
     Ok(Self {
       pointer,
       info,
@@ -82,21 +75,18 @@ impl Framebuffer {
   
   fn get_fbinfo(raw_fd: c_int) -> Result<WSDISPLAY_FBINFO, ()> {
     let mut fi: WSDISPLAY_FBINFO = Default::default();
-    //WSDISPLAYIO_GINFO
     let result = unsafe {
       ioctl(raw_fd, WSDISPLAYIO_GINFO.try_into().unwrap(), &mut fi)
     };
     if result != -1 {
       Ok(fi)
     } else {
-      log("pakala");
       Err(())
     }
   }
 
   /*fn get_line_bytes(raw_fd: c_int) -> Result<c_uint, ()> {
     let mut lb: c_uint = Default::default();
-    //now WSDISPLAYIO_LINEBYTES
     let result = unsafe {
       ioctl(raw_fd, WSDISPLAYIO_LINEBYTES.try_into().unwrap(), &mut lb)
     };
