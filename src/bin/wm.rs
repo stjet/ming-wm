@@ -49,6 +49,10 @@ pub enum ThreadMessage {
 }
 
 fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
+  std::panic::set_hook(Box::new(|info| {
+    log(&format!("{:?} {}", info.location().unwrap(), info.payload_as_str().unwrap_or("unknown")));
+  }));
+
   let args: Vec<_> = env::args().collect();
 
   let rotate = args.contains(&"rotate".to_string());
@@ -70,6 +74,8 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
   
   let grayscale = args.contains(&"grayscale".to_string()) || args.contains(&"greyscale".to_string());
 
+  let p = std::panic::catch_unwind(|| {
+
   let mut writer: FramebufferWriter = FramebufferWriter::new(grayscale);
 
   log("init writer");
@@ -89,11 +95,17 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
 
   stdout.stdout.flush().unwrap();*/
 
-  init("init draw");
+  log("init draw");
 
   wm.draw(None, false);
+  });
 
-  init("fin draw");
+  match p {
+    Ok(_) => println!("lol"),
+    Err(pl) => log(&format!("{:?}", pl)),
+  }
+
+  log("fin draw");
 
   /*let (tx, rx) = mpsc::channel();
 
