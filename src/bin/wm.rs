@@ -86,28 +86,22 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
 
   let mut wm: WindowManager = WindowManager::new(writer, framebuffer, dimensions, rotate, grayscale, env!("CARGO_PKG_VERSION").to_string(), PASSWORD_HASH);
 
-  /*let mut stdout = RawStdout::new(stdout());
+  let mut stdout = RawStdout::new(stdout());
   stdout.enter_raw_mode().unwrap();
 
   write!(stdout.stdout, "{}", CLEAR_ALL).unwrap();
 
   write!(stdout.stdout, "{}", HIDE_CURSOR).unwrap();
 
-  stdout.stdout.flush().unwrap();*/
+  stdout.stdout.flush().unwrap();
 
   log("init draw");
 
   wm.draw(None, false);
-  });
-
-  match p {
-    Ok(_) => println!("lol"),
-    Err(pl) => log(&format!("{:?}", pl)),
-  }
 
   log("fin draw");
 
-  /*let (tx, rx) = mpsc::channel();
+  let (tx, rx) = mpsc::channel();
 
   #[cfg(target_os = "linux")] //for touchscreen
   let tx1 = tx.clone();
@@ -129,52 +123,56 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
     }
   });
 
-  let touch = args.contains(&"touch".to_string());
   let force_stdout = args.contains(&"force-stdout".to_string()); //write to stdout to force framebuffer redraw
 
   //read touchscreen presses (hopefully)
   #[cfg(target_os = "linux")]
-  thread::spawn(move || {
-    if touch {
-      let mut events = Input::new("/dev/input/by-path/first-touchscreen").unwrap(); //panics in threads don't matter in this case
-      let mut x: Option<usize> = None;
-      let mut y: Option<usize> = None;
-      loop {
-        let event = events.next();
-        if let Some(event) = event {
-          //ABS_X = 0, ABS_Y = 1
-          if event.type_ == EventType::EV_ABS && (event.code == 0 || event.code == 1) {
-            if event.code == 0 {
-              x = Some(event.value as usize); //event.value is u16 so this should be fine. unless usize is u8, lmao
-            } else {
-              y = Some(event.value as usize);
-            }
-            if x.is_some() && y.is_some() {
-              let (x2, y2) = if rotate {
-                (dimensions[0] - y.unwrap(), x.unwrap())
+  {
+    let touch = args.contains(&"touch".to_string());
+
+    thread::spawn(move || {
+      if touch {
+        let mut events = Input::new("/dev/input/by-path/first-touchscreen").unwrap(); //panics in threads don't matter in this case
+        let mut x: Option<usize> = None;
+        let mut y: Option<usize> = None;
+        loop {
+          let event = events.next();
+          if let Some(event) = event {
+            //ABS_X = 0, ABS_Y = 1
+            if event.type_ == EventType::EV_ABS && (event.code == 0 || event.code == 1) {
+              if event.code == 0 {
+                x = Some(event.value as usize); //event.value is u16 so this should be fine. unless usize is u8, lmao
               } else {
-                (x.unwrap(), y.unwrap())
-              };
-              //top right, clear
-              //useful sometimes, I think.
-              if x2 > dimensions[0] - 100 && y2 < 100 {
-                tx1.send(ThreadMessage::Clear).unwrap();
+                y = Some(event.value as usize);
               }
-              tx1.send(ThreadMessage::Touch(x2, y2)).unwrap();
-              x = None;
-              y = None;
+              if x.is_some() && y.is_some() {
+                let (x2, y2) = if rotate {
+                  (dimensions[0] - y.unwrap(), x.unwrap())
+                } else {
+                  (x.unwrap(), y.unwrap())
+                };
+                //top right, clear
+                //useful sometimes, I think.
+                if x2 > dimensions[0] - 100 && y2 < 100 {
+                  tx1.send(ThreadMessage::Clear).unwrap();
+                }
+                tx1.send(ThreadMessage::Touch(x2, y2)).unwrap();
+                x = None;
+                y = None;
+              }
             }
           }
+          thread::sleep(Duration::from_millis(1));
         }
-        thread::sleep(Duration::from_millis(1));
       }
+    });
+
+    if touch {
+      //opens osk
+      wm.handle_message(WindowManagerMessage::Touch(1, 1));
     }
-  });
-  if touch {
-    //opens osk
-    wm.handle_message(WindowManagerMessage::Touch(1, 1));
   }
-  
+
   for message in rx {
     match message {
       ThreadMessage::KeyChar(kc) => {
@@ -201,7 +199,13 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
         }
       },
     };
-  }*/
+  }
+  });
+
+  match p {
+    Ok(_) => println!("lol"),
+    Err(pl) => log(&format!("{:?}", pl)),
+  }
 }
 
 fn main() {
@@ -213,8 +217,6 @@ fn main() {
   log("yay");
 
   let fb = Framebuffer::open(fb_name).unwrap();
-
-  log("wah");
 
   #[cfg(target_os = "linux")]
   let fb_info = {
@@ -241,8 +243,6 @@ fn main() {
       old_stride: None,
     }
   };
-
-  log("hurray");
 
   init(fb, fb_info);
 }
