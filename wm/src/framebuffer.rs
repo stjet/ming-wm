@@ -40,7 +40,7 @@ pub struct FramebufferInfo {
   pub width: usize,
   pub height: usize,
   pub bytes_per_pixel: usize,
-  pub stride: usize,
+  pub stride: usize, //in pixels
   pub old_stride: Option<usize>, //used/set only when rotate is true
 }
 

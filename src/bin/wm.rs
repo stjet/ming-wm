@@ -237,7 +237,7 @@ fn main() {
       width: fb.info.width as usize,
       height: fb.info.height as usize,
       bytes_per_pixel,
-      stride: fb.info.stride as usize,
+      stride: fb.info.stride as usize / bytes_per_pixel,
       old_stride: None,
     }
   };
