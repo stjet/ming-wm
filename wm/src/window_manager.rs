@@ -8,7 +8,7 @@ use std::fs::File;
 use std::io::Read;
 use std::str::FromStr;
 
-use linux::fb::Framebuffer;
+use unix::fb::Framebuffer;
 use ming_wm_lib::framebuffer_types::{ Point, Dimensions };
 use ming_wm_lib::themes::{ Themes, get_theme_info };
 use ming_wm_lib::utils::{ min, point_inside, trunc_words };

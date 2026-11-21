@@ -9,7 +9,7 @@ default-run = "ming"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace]
-members = [ "wm", "linux" ]
+members = [ "wm", "unix" ]
 
 [workspace.lints.clippy]
 len_zero = "allow"
@@ -32,14 +32,14 @@ bitcoin_hashes = { version = "0.16.0", default-features = false }
 [dependencies]
 ming-wm-lib = { path = "ming-wm-lib" }
 wm = { path = "wm", optional = true }
-linux = { path = "linux", optional = true }
+unix = { path = "unix", optional = true }
 rodio = { version = "0.19.0", default-features = false, features = [ "flac", "mp3", "symphonia-vorbis", "wav" ], optional = true }
 mp4ameta = { version = "0.11.0", optional = true }
 metaflac = { version = "0.2.5", optional = true }
 
 [features]
 default = [ "wm", "terminal" ]
-terminal = [ "linux" ]
+terminal = [ "unix" ]
 audio_player = [ "mp4ameta", "metaflac", "rodio" ]
 
 [profile.release]

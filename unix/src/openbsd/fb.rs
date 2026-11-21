@@ -2,8 +2,6 @@ use std::fs::{ File, OpenOptions };
 use std::os::fd::AsRawFd;
 use std::ptr;
 
-use std::io::Write;
-
 use libc::{ ioctl, mmap, munmap, c_ulong, c_uint, c_int, _IOW, _IOR };
 
 //man.openbsd.org/wsdisplay
@@ -26,10 +24,6 @@ pub struct WSDISPLAY_FBINFO {
 
 const WSDISPLAYIO_GINFO: c_ulong = _IOR::<WSDISPLAY_FBINFO>('W' as c_ulong, 65);
 //const WSDISPLAYIO_LINEBYTES: c_ulong = _IOR::<c_uint>('W' as c_ulong, 95);
-
-pub fn log(message: &str) {
-  let _ = writeln!(OpenOptions::new().append(true).create(true).open("/home/user/.local/share/ming-wm/logs.txt").unwrap(), "{}", message);
-}
 
 pub struct Framebuffer {
   pointer: *mut libc::c_void,

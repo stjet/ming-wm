@@ -1,4 +1,4 @@
-pub use linux;
+pub use unix;
 
 pub mod framebuffer;
 pub mod window_manager;

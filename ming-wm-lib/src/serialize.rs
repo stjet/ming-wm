@@ -624,10 +624,7 @@ impl Serializable for WindowMessage {
           "NextInputMethod" => Some(ShortcutType::NextInputMethod),
           "SwitchWorkspace" | "MoveWindowToWorkspace" => {
             let narg = parts.next();
-            if narg.is_none() {
-              None
-            } else {
-              let narg = narg.unwrap();
+            if let Some(narg) = narg {
               if let Ok(n) = narg.parse() {
                 if arg == "SwitchWorkspace" {
                   Some(ShortcutType::SwitchWorkspace(n))
@@ -637,6 +634,8 @@ impl Serializable for WindowMessage {
               } else {
                 None
               }
+            } else {
+              None
             }
           },
           "FocusPrevWindow" => Some(ShortcutType::FocusPrevWindow),

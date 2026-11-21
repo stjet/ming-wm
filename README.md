@@ -1,13 +1,13 @@
-Ming-wm is a keyboard-based, retro-themed window manager for Linux. It is neither for Wayland or the X Window System - it writes directly to the framebuffer. Inspirations include i3, Haiku, SerenityOS, and Windows98.
+Ming-wm is a keyboard-based, retro-themed window manager for Linux and also [OpenBSD](/docs/openbsd.md). It is on top neither Wayland or the X Window System - it writes directly to the framebuffer. Inspirations include i3, Haiku, SerenityOS, and Windows98.
 
 ![example 1](/docs/images/ws1.png)
 ![example 2](/docs/images/ws3.png)
 
 https://github.com/user-attachments/assets/5a598287-27d5-40f2-9b5f-9c1e67cab2f5
 
-The [Koxinga web browser](https://github.com/stjet/koxinga) can be separately installed.
+## Philosophy
 
-![koxinga browser example](/docs/images/koxinga.png)
+See [/docs/philosophy.md](/docs/philosophy.md) for some hopefully interesting ramblings. There are 0 lines of AI/LLM-written code in this codebase. All code is hand-written, with probably about a third written in the ming-wm text editor, Malvim.
 
 ## Building
 
@@ -35,7 +35,7 @@ sudo ./install
 Alternatively, to move the binaries to `~/.local/bin` (which probably needs to be added to `PATH`), run the following:
 
 ```bash
-chmod +x local-install
+chmod +x ./local-install
 sudo ./local-install
 ```
 
@@ -45,7 +45,7 @@ sudo ./local-install
 ming
 ```
 
-Type in the password to unlock. Open the start menu by doing `Alt+s`, and use the `j` and `k` keys to move up and down (like Vim), and press the `Enter` key to select a category / open a window.
+Type in the password you set earlier (v.s. the "Building" section) to unlock. Open the start menu by doing `Alt+s`, and use the `j` and `k` keys to move up and down (like Vim), and press the `Enter` key to select a category / open a window.
 
 Usage for most of the included windows and window-likes are included in `docs/window-likes`, which can also be accessed from the "Help" entry in the start menu.
 
@@ -81,17 +81,15 @@ Or:
 ming touch force-stdout
 ```
 
-## Philosophy
-
-See [/docs/philosophy.md](/docs/philosophy.md) for some hopefully interesting ramblings.
-
 ## Developing Windows
 
 Windows (may be called apps in other window managers) can be developed in any language, though it is easiest to do so in Rust because the `ming-wm-lib` crate can be used.
 
 The `docs` directory includes a [brief introduction to writing windows](docs/system/writing_windows.md), and (incomplete) documentation on the workings of ming-wm.
 
-See [koxinga](https://github.com/stjet/koxinga) or `src/bin` for examples.
+The [Koxinga web browser](https://git.elintra.net/stjet/koxinga) can be separately installed, and can be referenced as examples, along with the windows in `src/bin`.
+
+![koxinga browser example](/docs/images/koxinga.png)
 
 A (very poorly written, and WIP) window is being written in Lisp Scheme: [ming-flashcards](https://github.com/stjet/ming-flashcards).
 

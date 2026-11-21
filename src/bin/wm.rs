@@ -5,17 +5,16 @@ use std::io::{ stdin, stdout, Write };
 use std::process::exit;
 use std::env;
 
-use linux::fb::Framebuffer;
-use linux::raw::RawStdout;
-use linux::keys::{ RawStdin, Key };
+use unix::fb::Framebuffer;
+use unix::raw::RawStdout;
+use unix::keys::{ RawStdin, Key };
 #[cfg(target_os = "linux")] //touch screen = linux only for now
-use linux::input::{ Input, EventType };
+use unix::input::{ Input, EventType };
 use wm::framebuffer::{ FramebufferWriter, FramebufferInfo };
 use wm::window_manager::WindowManager;
 
 use ming_wm_lib::window_manager_types::KeyChar;
 use ming_wm_lib::messages::*;
-use ming_wm_lib::logging::log;
 
 include!(concat!(env!("OUT_DIR"), "/password.rs"));
 
@@ -49,10 +48,6 @@ pub enum ThreadMessage {
 }
 
 fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
-  std::panic::set_hook(Box::new(|info| {
-    log(&format!("{:?} {}", info.location().unwrap(), info.payload_as_str().unwrap_or("unknown")));
-  }));
-
   let args: Vec<_> = env::args().collect();
 
   let rotate = args.contains(&"rotate".to_string());
@@ -74,15 +69,9 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
   
   let grayscale = args.contains(&"grayscale".to_string()) || args.contains(&"greyscale".to_string());
 
-  let p = std::panic::catch_unwind(|| {
-
   let mut writer: FramebufferWriter = FramebufferWriter::new(grayscale);
 
-  log("init writer");
-
   writer.init(framebuffer_info.clone());
-
-  log("init wm");
 
   let mut wm: WindowManager = WindowManager::new(writer, framebuffer, dimensions, rotate, grayscale, env!("CARGO_PKG_VERSION").to_string(), PASSWORD_HASH);
 
@@ -95,11 +84,7 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
 
   stdout.stdout.flush().unwrap();
 
-  log("init draw");
-
   wm.draw(None, false);
-
-  log("fin draw");
 
   let (tx, rx) = mpsc::channel();
 
@@ -200,12 +185,6 @@ fn init(framebuffer: Framebuffer, framebuffer_info: FramebufferInfo) {
       },
     };
   }
-  });
-
-  match p {
-    Ok(_) => println!("lol"),
-    Err(pl) => log(&format!("{:?}", pl)),
-  }
 }
 
 fn main() {
@@ -213,8 +192,6 @@ fn main() {
   let fb_name = "/dev/fb0";
   #[cfg(target_os = "openbsd")]
   let fb_name = "/dev/ttyC0";
-
-  log("yay");
 
   let fb = Framebuffer::open(fb_name).unwrap();
 
@@ -233,7 +210,6 @@ fn main() {
   #[cfg(target_os = "openbsd")]
   let fb_info = {
     let bytes_per_pixel = fb.info.depth as usize / 8;
-    log(&format!("{:?}", fb.info));
     FramebufferInfo {
       byte_len: fb.info.height as usize * fb.info.stride as usize,
       width: fb.info.width as usize,

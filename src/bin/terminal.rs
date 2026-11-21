@@ -9,7 +9,7 @@ use std::time::Duration;
 use std::path::PathBuf;
 use std::fmt;
 
-use linux::pty::open_pty;
+use unix::pty::open_pty;
 
 use ming_wm_lib::window_manager_types::{ DrawInstructions, WindowLike, WindowLikeType };
 use ming_wm_lib::messages::{ WindowMessage, WindowMessageResponse, WindowManagerRequest, ShortcutType };
